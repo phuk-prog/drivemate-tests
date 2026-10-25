@@ -1,5 +1,42 @@
 # drivemate-tests
 
-The testing for DriveMate.
+The testing for DriveMate. Every test runs here, in this public repository.
 
 Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
+
+## Layout
+
+- `categories/NN-name/law/`: law tests. They check the app against the law and official sources
+  (GOV.UK, TSRGD, National Highways) only, never the register's decisions.
+- `categories/NN-name/decisions/`: decision checks. They check the app does what is decided
+  in that category's file in drivemate-app's `register/`. Each test names its question (e.g. `q1_6`).
+- `categories/NN-name/screen/`: screen checks, run on an Android emulator: the app draws its own
+  screens and the test checks what is on them, with a screenshot for the picture page.
+- `app-unit/`: the app's own unit tests (moved here from drivemate-app).
+- `ci/`: turns the results into `summary.json` and the picture page (`run-report.html`).
+- `.github/workflows/test-app.yml`: the test run.
+
+## How they run
+
+"Test the app" runs on every pull request here, on merges to main, and by hand (Actions → Test the
+app → Run workflow, optionally naming a drivemate-app branch or commit). It fetches drivemate-app
+(the branch with the same name as this one if there is one, else main), puts these tests in place of
+the app's unit tests, runs them, and publishes one artifact, `drivemate-tests-<app commit>`, with
+`summary.json` and `run-report.html`. App code is only built on the runner; it is never published.
+
+drivemate-app's APK build only goes ahead when that artifact shows every test passed for the exact
+app commit being built.
+
+## Setup (once)
+
+drivemate-app is private, so this repository needs a read-only token for it:
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
+   Repository access: only `phuk-prog/drivemate-app`. Permissions: Contents → Read-only.
+2. In this repository: Settings → Secrets and variables → Actions → New repository secret,
+   name `DRIVEMATE_APP_TOKEN`, value the token.
+
+## Not covered yet
+
+- Physical tests (in a real car) are not run here.
+- 1.9 and 1.18 mini-roundabouts: checked from the route and road data; the road data itself comes from drivemate-map's weekly build.

@@ -1,0 +1,1348 @@
+{
+  "coverage": "partial",
+  "regions": {
+    "bedfordshire": {
+      "bounds": [
+        -0.704092,
+        51.8036,
+        -0.142022,
+        52.32483
+      ],
+      "content_sha256": "2ccca6f113b2b49060499f82cc66d10c6ee084b00d4452e1c5abacb8026c3a57",
+      "id": "bedfordshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 47547,
+        "sha256": "84ad3860dcdec58a3190648b65e1c67edd6fed47b0cadb2fa66fa81856f0e9b1",
+        "tag": "map-data-region-bedfordshire-r40041727434-a1"
+      },
+      "map": {
+        "bytes": 10270265,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "f522a10f67dc6b61ec085f881d4389142a970561261f30ca325fa43173ef2ace",
+        "tag": "map-data-region-bedfordshire-r40041727434-a1"
+      },
+      "name": "Bedfordshire",
+      "observed_source_md5": "dbde15971f99d195534add844e210930",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:03:16.800527+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/bedfordshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "berkshire": {
+      "bounds": [
+        -1.589073,
+        51.32802,
+        -0.489118,
+        51.57873
+      ],
+      "content_sha256": "d974a67e9ddd93bab347894086e2c2ebb0ec774ad2f6caf708aa9b09925326ce",
+      "id": "berkshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 50050,
+        "sha256": "7e450a6f0fd97e01cd2e94a6a6f8bd3b40bcfb90c750ae4c40f8797e8ed95bb2",
+        "tag": "map-data-region-berkshire-r40046308581-a1"
+      },
+      "map": {
+        "bytes": 15200755,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "37e5192a948493ef7b2bae4a3b6c49d5c8385d41fcf7d9c4028f875cbc1e47b8",
+        "tag": "map-data-region-berkshire-r40046308581-a1"
+      },
+      "name": "Berkshire",
+      "observed_source_md5": "7cd7e640039b427fbb54585cc6568e2e",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:53:26.889858+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/berkshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "bristol": {
+      "bounds": [
+        -2.734665,
+        51.39611,
+        -2.509528,
+        51.54562
+      ],
+      "content_sha256": "fdcf6efe03711c5b3873a414b5ee495ba6513b4bce17617c592892d90fd7f315",
+      "id": "bristol",
+      "inland": false,
+      "manifest": {
+        "bytes": 41843,
+        "sha256": "dfbc34f25094243aba576ae91df92dfc6a60df21a31e7ddf8266e958ec42daea",
+        "tag": "map-data-region-bristol-r40045126743-a1"
+      },
+      "map": {
+        "bytes": 8540105,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "5fa8e1d6e4dae515aa64ad1d2a2205a9c58401d300ea5ccc23b2cc6342517900",
+        "tag": "map-data-region-bristol-r40045126743-a1"
+      },
+      "name": "Bristol",
+      "observed_source_md5": "d3d59121883a457dc3c7dbe18aae1dea",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:32:48.637348+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/bristol-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "buckinghamshire": {
+      "bounds": [
+        -1.140791,
+        51.48571,
+        -0.482713,
+        52.19561
+      ],
+      "content_sha256": "4cb326d8589cb0956058736e4cd46c3cc198bd00115a6fe571eca9ac24709fe8",
+      "id": "buckinghamshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 51745,
+        "sha256": "783589634772048f2e5a979d58ecd8f200ec4cd9844717a9ebe08e71be00d0ce",
+        "tag": "map-data-region-buckinghamshire-r40043020144-a1"
+      },
+      "map": {
+        "bytes": 14948895,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "4c48bbe99a84f70e997d8e786f0d419de672a71d2ec03eff028e0c7293ec4419",
+        "tag": "map-data-region-buckinghamshire-r40043020144-a1"
+      },
+      "name": "Buckinghamshire",
+      "observed_source_md5": "186cf6ff425a1b306c907de181b2fe8d",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:09:47.468191+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/buckinghamshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "cambridgeshire": {
+      "bounds": [
+        -0.502126,
+        52.00517,
+        0.516191,
+        52.74155
+      ],
+      "content_sha256": "7e1960c57eeea345d54fe3684aeedc7284ffb676566ed1e97b12bcb51163afa1",
+      "id": "cambridgeshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 56401,
+        "sha256": "0d843c9815b402a9e060818a8fed9f782d7a5a50b0c581167cdd3ec480cc7a79",
+        "tag": "map-data-region-cambridgeshire-r40040285373-a1"
+      },
+      "map": {
+        "bytes": 22301651,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "26205d7633fc60243e4599f8fd1b7818bed4fd4958234d1b8cf085a65939dcd8",
+        "tag": "map-data-region-cambridgeshire-r40040285373-a1"
+      },
+      "name": "Cambridgeshire",
+      "observed_source_md5": "89a68dce218f8b61590c0c622bd510b5",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:41:37.961326+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/cambridgeshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "cheshire": {
+      "bounds": [
+        -3.129775,
+        52.94553,
+        -1.973135,
+        53.48263
+      ],
+      "content_sha256": "9facf4e4da0efc158a2161277d2215bc95a1cad7737562e5496087b86617586e",
+      "id": "cheshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 60000,
+        "sha256": "21f0b6b4af9952437a0e2cae50121978fb24b80619fd179d2db936f4e6f551f2",
+        "tag": "map-data-region-cheshire-r40015297873-a1"
+      },
+      "map": {
+        "bytes": 27514184,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "d951bafcd07eeaa2d5e3b9b67f7b14e2a3ea0ee40352de6fd1f4307a43c3e7e7",
+        "tag": "map-data-region-cheshire-r40015297873-a1"
+      },
+      "name": "Cheshire",
+      "observed_source_md5": "71e1dcacde0aa43ab96294238c341eef",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:03:27.887075+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/cheshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "cumbria": {
+      "bounds": [
+        -3.907471,
+        53.90063,
+        -2.159588,
+        55.18863
+      ],
+      "content_sha256": "e5b764ccf4f49020d7f2431c19abcbec4a86914661cea23231eb8b0f9438627e",
+      "id": "cumbria",
+      "inland": false,
+      "manifest": {
+        "bytes": 70427,
+        "sha256": "195762299ec7a4560d12998331dafc8eca7e781c753a0cde543998d256f748cc",
+        "tag": "map-data-region-cumbria-r40033064004-a1"
+      },
+      "map": {
+        "bytes": 23980267,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "8a94f363a5bd43faed1fa6baf3b4c3ce70cabf9cc69edc5b4de63f90b45f94d6",
+        "tag": "map-data-region-cumbria-r40033064004-a1"
+      },
+      "name": "Cumbria",
+      "observed_source_md5": "770131435282518a21cee43def8f89bd",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T22:32:52.468913+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/cumbria-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "derbyshire": {
+      "bounds": [
+        -2.035756,
+        52.6955,
+        -1.164792,
+        53.54172
+      ],
+      "content_sha256": "c8eacd54b4a15eeb4a1602b3f21b884012cfa98d9ce61465ffc6e5d26b5b7cce",
+      "id": "derbyshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 54255,
+        "sha256": "fa90a039f17e89b5141178775dced851268a8d5f13b7ba4b8a776d510a078a31",
+        "tag": "map-data-region-derbyshire-r40016249881-a1"
+      },
+      "map": {
+        "bytes": 25120296,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "957f98f3bb88bb12e3a5776beea086992f411a748cdaa69882bed0e074a1560b",
+        "tag": "map-data-region-derbyshire-r40016249881-a1"
+      },
+      "name": "Derbyshire",
+      "observed_source_md5": "93335f9fb03f2e1e8adde55aede39d8c",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:13:38.959647+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/derbyshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "dorset": {
+      "bounds": [
+        -2.962969,
+        50.49829,
+        -1.680036,
+        51.0827
+      ],
+      "content_sha256": "b25b6368e4265e6d22a1effbf13a4921227fcd06ddc42ee226885740ba2ba4f4",
+      "id": "dorset",
+      "inland": false,
+      "manifest": {
+        "bytes": 75345,
+        "sha256": "ab5b0ca753220ed7430e5fb64ff50d6684250de95f9a939a8ecb80c269ec3345",
+        "tag": "map-data-region-dorset-r40054639880-a1"
+      },
+      "map": {
+        "bytes": 20830156,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "00524b719b4718bc56ad9374efd46110af607dde49aa783abc3d493d9922b6f0",
+        "tag": "map-data-region-dorset-r40054639880-a1"
+      },
+      "name": "Dorset",
+      "observed_source_md5": "76a93b95c1803dfff3b3923b22fce2a4",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T02:40:20.431770+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/dorset-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "durham": {
+      "bounds": [
+        -2.356677,
+        54.4502,
+        -1.101584,
+        54.91986
+      ],
+      "content_sha256": "55dcf5f06da901b1a95214c01fef13d4f9f9b425faebd6d0a2c9495db300a16a",
+      "id": "durham",
+      "inland": false,
+      "manifest": {
+        "bytes": 81789,
+        "sha256": "38ced3c46e3804416e4c75ecfa0d2c1e42ed493fe2ff5c49a52d0fd29ec806fc",
+        "tag": "map-data-region-durham-r40034320773-a1"
+      },
+      "map": {
+        "bytes": 15445677,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "10ecbef87fec8cc03e8808625b62b1d1d48980214d1d83199fcf609154682f7f",
+        "tag": "map-data-region-durham-r40034320773-a1"
+      },
+      "name": "Durham",
+      "observed_source_md5": "506a9a9c2388a3a10696f104cd1ad606",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:03:31.264618+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/durham-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "east-yorkshire-with-hull": {
+      "bounds": [
+        -1.105174,
+        53.55447,
+        0.48944,
+        54.21045
+      ],
+      "content_sha256": "b9e98ce85e10b1a6c1e7dad7f38a9e7696ab533fc2b2b6369471ce599630a8da",
+      "id": "east-yorkshire-with-hull",
+      "inland": false,
+      "manifest": {
+        "bytes": 126458,
+        "sha256": "b7902c553a1292ba06ae799b88a00701ee5f8dbbdb728357c769031412d3aaaa",
+        "tag": "map-data-region-east-yorkshire-with-hull-r40032173090-a1"
+      },
+      "map": {
+        "bytes": 15806192,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "83d574eb8413b7676a45086be42f44ffc40c0ef27097de9cb2ae9689847da7c1",
+        "tag": "map-data-region-east-yorkshire-with-hull-r40032173090-a1"
+      },
+      "name": "East Yorkshire with Hull",
+      "observed_source_md5": "22464b99d7e7c0a4e2cf03bcd7af5532",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T22:21:19.306722+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/east-yorkshire-with-hull-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "essex": {
+      "bounds": [
+        -0.019651,
+        51.45008,
+        1.307251,
+        52.09464
+      ],
+      "content_sha256": "297d6c7cd1e87a8b89c9adc5fa566b12ffcd5243084f26f3a11ceccd9fe4f2ee",
+      "id": "essex",
+      "inland": false,
+      "manifest": {
+        "bytes": 54966,
+        "sha256": "daef75cda36d6c3e38a5cc56975e489e7f5ddec324f48d80308fa82148e99a2a",
+        "tag": "map-data-region-essex-r40052560329-a1"
+      },
+      "map": {
+        "bytes": 32966163,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "9c165420ed7e3d1a2bd97b69698c119adf82ecb47c7cf327c3cfe3b20a51cd58",
+        "tag": "map-data-region-essex-r40052560329-a1"
+      },
+      "name": "Essex",
+      "observed_source_md5": "c8ad66075645c356bdef17dccdcb03c1",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T02:12:13.575406+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/essex-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "gloucestershire": {
+      "bounds": [
+        -2.711909,
+        51.41465,
+        -1.612605,
+        52.11556
+      ],
+      "content_sha256": "071aa0acf5c01676b38e8e8fa3eaeda4bf9edc0177fe62178b33ff2282c42800",
+      "id": "gloucestershire",
+      "inland": false,
+      "manifest": {
+        "bytes": 60685,
+        "sha256": "2f4c382dc7d6fbd43505a454ab688c23b4b1f15557f4a5460e71dcc89f2420ae",
+        "tag": "map-data-region-gloucestershire-r40039283170-a1"
+      },
+      "map": {
+        "bytes": 27812916,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "6f8674a3c531a103447842a7f108b886c433ef0316fe761d0f684b5fc24a9947",
+        "tag": "map-data-region-gloucestershire-r40039283170-a1"
+      },
+      "name": "Gloucestershire",
+      "observed_source_md5": "c1085ed3257da144e9395c9793868822",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:32:45.691153+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/gloucestershire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "greater-london": {
+      "bounds": [
+        -0.511482,
+        51.28554,
+        0.335437,
+        51.69344
+      ],
+      "content_sha256": "6f1e37998e0e539d3c96959f2a6b17b572929c8cbb51c4128e8c4f9a02e58bfd",
+      "id": "greater-london",
+      "inland": false,
+      "manifest": {
+        "bytes": 51160,
+        "sha256": "4964369a2d4b46d9c9ad3f370f2a5571930fbe2dd631904a8e3276d66046198e",
+        "tag": "map-data-region-greater-london-r40048566639-a1"
+      },
+      "map": {
+        "bytes": 67202497,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "4e2d7c25033770722bf1eb4cad9b3c6cfea38ecbb0c9608c9fa86682d580a09a",
+        "tag": "map-data-region-greater-london-r40048566639-a1"
+      },
+      "name": "Greater London",
+      "observed_source_md5": "58defdbb8b9524d2d7d49296a206f6f7",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T01:27:40.612605+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/greater-london-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "greater-manchester": {
+      "bounds": [
+        -2.732097,
+        53.32613,
+        -1.90804,
+        53.68742
+      ],
+      "content_sha256": "c6d1fc9f04aafbebbcb92916cf1a717a0e993ca90acbf98294db213ab8a66a1c",
+      "id": "greater-manchester",
+      "inland": true,
+      "manifest": {
+        "bytes": 51577,
+        "sha256": "ab8e0aeb1b6a1b09ba5a56194472fd61dab13e006965d367d0aef1f21b18ee47",
+        "tag": "map-data-region-greater-manchester-r39962804772-a1"
+      },
+      "map": {
+        "bytes": 35857143,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "9219337fa3d940302c2e19f12eef19fa1658b5adcfb3d8f20630878833d8a656",
+        "tag": "map-data-region-greater-manchester-r39962804772-a1"
+      },
+      "name": "Greater Manchester",
+      "observed_source_md5": "ade28d3c073ead02ed238f3d2cd347c0",
+      "pipeline_sha256": "08e3398629db32da1d23ebf7bdd2cb14c0ee11de40072a793d8c3b1e02d1ae72",
+      "published_utc": "2026-10-23T13:48:31.401642+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/greater-manchester-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "hampshire": {
+      "bounds": [
+        -1.959101,
+        50.69041,
+        -0.726306,
+        51.38712
+      ],
+      "content_sha256": "689ab9cf41dcde9624a68d78a92b1f040b592477ed725135ce79374fe697d74b",
+      "id": "hampshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 81963,
+        "sha256": "14920ab04f656097feb2db04b6ed26ebbe9a7193e85cd4d991f39bdde906e7cf",
+        "tag": "map-data-region-hampshire-r40053774448-a1"
+      },
+      "map": {
+        "bytes": 44643441,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "3a2397c5eb9419e522edcf03a6a2e4af543d13cdb2b099fda9875e55f62e4691",
+        "tag": "map-data-region-hampshire-r40053774448-a1"
+      },
+      "name": "Hampshire",
+      "observed_source_md5": "d187c99aa5ecc52ffa84281370d8be67",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T02:33:04.734679+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/hampshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "herefordshire": {
+      "bounds": [
+        -3.142889,
+        51.82618,
+        -2.338434,
+        52.39531
+      ],
+      "content_sha256": "a2084b42d931df52175aea4a739bbb8551eef3be050e33e5844a1c90498059ae",
+      "id": "herefordshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 40083,
+        "sha256": "dd1a6e23b107c2bec5d139cb049fb5e56240a8217e598391ed8bab5293298ec8",
+        "tag": "map-data-region-herefordshire-r40037439233-a1"
+      },
+      "map": {
+        "bytes": 7975382,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "43b8248369cf7a0d1af6dece2c476d8455cbe72db7a758f32fb118644a06c250",
+        "tag": "map-data-region-herefordshire-r40037439233-a1"
+      },
+      "name": "Herefordshire",
+      "observed_source_md5": "f76274247f03a7955c172dab7ebc205b",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:07:31.685760+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/herefordshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "hertfordshire": {
+      "bounds": [
+        -0.746833,
+        51.59798,
+        0.197098,
+        52.08224
+      ],
+      "content_sha256": "471ef851e6aecd6ff5117c0ce6d6e548ffd0435749dba58895ee7bd522c50444",
+      "id": "hertfordshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 49990,
+        "sha256": "f227b152c6592be2ec856f7ad8f415777eae585b35c4a72ed65ba55debe42a28",
+        "tag": "map-data-region-hertfordshire-r40044415946-a1"
+      },
+      "map": {
+        "bytes": 26831573,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "381be82afd0ab455e627702effa2101961c2aa9b24b272bd6158d6e4a597eac9",
+        "tag": "map-data-region-hertfordshire-r40044415946-a1"
+      },
+      "name": "Hertfordshire",
+      "observed_source_md5": "c0821d43b731336fbbcdc04a0f4d878d",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:28:10.347672+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/hertfordshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "lancashire": {
+      "bounds": [
+        -3.092156,
+        53.47507,
+        -2.0395,
+        54.24645
+      ],
+      "content_sha256": "0c88443d7823dc80f323ab1b8c2645332e02c0cff9f922c3e79b574c2dad970e",
+      "id": "lancashire",
+      "inland": false,
+      "manifest": {
+        "bytes": 65928,
+        "sha256": "ff3ca93ec30e7948e240324b29f8462ad3dbb458c897b94e95f3ebde296b9320",
+        "tag": "map-data-region-lancashire-r40020622158-a1"
+      },
+      "map": {
+        "bytes": 29904510,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "2f648a9b4d73c30df8b2c615e90e0e33f44c0d22284629789e156a5a468729e7",
+        "tag": "map-data-region-lancashire-r40020622158-a1"
+      },
+      "name": "Lancashire",
+      "observed_source_md5": "b7951276367c1d766aaca2d5696d16b4",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:46:46.123135+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/lancashire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "leicestershire": {
+      "bounds": [
+        -1.596388,
+        52.3936,
+        -0.663929,
+        52.9776
+      ],
+      "content_sha256": "9ea6d294558ec5e1a8717abb16bf4deaedcef5864602f850b29fb787ab2f11e3",
+      "id": "leicestershire",
+      "inland": false,
+      "manifest": {
+        "bytes": 55378,
+        "sha256": "8884a2ece4ceebb4b09b38195b28002358a294d99ce690e5a2da92888ff58f0e",
+        "tag": "map-data-region-leicestershire-r40028287333-a1"
+      },
+      "map": {
+        "bytes": 14690280,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "a2d716a06a350c22e1ad6335ea9668ed297340907fcfbcb8f02c4c90d3f8ca84",
+        "tag": "map-data-region-leicestershire-r40028287333-a1"
+      },
+      "name": "Leicestershire",
+      "observed_source_md5": "726670806de2e00b894bacc0381a335b",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:45:19.507315+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/leicestershire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "lincolnshire": {
+      "bounds": [
+        -0.950922,
+        52.63954,
+        0.494382,
+        53.73003
+      ],
+      "content_sha256": "314bd50a13952a665b454041ccf07a9b14a44bff12d8eaea75c74e3b04745670",
+      "id": "lincolnshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 126568,
+        "sha256": "553c0b78a33032ef929c9dc20d1afb5f26a0a95f08f80a15fe885321805a30ee",
+        "tag": "map-data-region-lincolnshire-r40029799389-a1"
+      },
+      "map": {
+        "bytes": 30730626,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "11ab364486ec22f742327296a982c4ac79b08252421ed7e8b587ff1b41da6be8",
+        "tag": "map-data-region-lincolnshire-r40029799389-a1"
+      },
+      "name": "Lincolnshire",
+      "observed_source_md5": "6e854d1700ecba19c110c53d5a77e696",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T22:04:06.062675+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/lincolnshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "manchester": {
+      "bounds": [
+        -2.35,
+        53.36,
+        -2.12,
+        53.56
+      ],
+      "content_sha256": "a62d350ced9f23f39588fb69d119321741c3c24b9e08dfaa0da2efa2a29ad939",
+      "id": "manchester",
+      "inland": true,
+      "manifest": {
+        "bytes": 44562,
+        "sha256": "f9dc098cfd901f958ab493591e50304c33c3f9efe6492412a706edbdd1059375",
+        "tag": "map-data-region-manchester-r39962111450-a1"
+      },
+      "map": {
+        "bytes": 13384869,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "5b2faa4c91805420608467342245129115d94410448e38241700ba5f33e05c26",
+        "tag": "map-data-region-manchester-r39960642215-a1"
+      },
+      "name": "Manchester area",
+      "observed_source_md5": "ade28d3c073ead02ed238f3d2cd347c0",
+      "pipeline_sha256": "08e3398629db32da1d23ebf7bdd2cb14c0ee11de40072a793d8c3b1e02d1ae72",
+      "published_utc": "2026-10-23T13:37:44.953436+00:00",
+      "sample": [
+        -2.2309,
+        53.4774
+      ],
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/greater-manchester-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "merseyside": {
+      "bounds": [
+        -3.342781,
+        53.2854,
+        -2.575686,
+        53.70528
+      ],
+      "content_sha256": "65960f581f892c8898669768402f294408847cc6955ba33b5cec45564948f4e0",
+      "id": "merseyside",
+      "inland": false,
+      "manifest": {
+        "bytes": 85057,
+        "sha256": "6d0ce387913a8f2b09d913ebb2c27cd98bf9526ad50f637b2b0a1c74b69e513f",
+        "tag": "map-data-region-merseyside-r40019854256-a1"
+      },
+      "map": {
+        "bytes": 20037661,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "7294f39c9bfcf881075cdd9a51faafdc42ba4a9df31c8acac0019399c9e34961",
+        "tag": "map-data-region-merseyside-r40019854256-a1"
+      },
+      "name": "Merseyside",
+      "observed_source_md5": "7726b01e126aa14107975ddcd15c23a5",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:37:07.957250+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/merseyside-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "norfolk": {
+      "bounds": [
+        0.15447,
+        52.35478,
+        1.992789,
+        53.35573
+      ],
+      "content_sha256": "c4ae88fa065e27f3278c24d0eb762000dcb94eef77e95086d91cead3e702fde9",
+      "id": "norfolk",
+      "inland": false,
+      "manifest": {
+        "bytes": 63290,
+        "sha256": "e1b37db4aab95eb55c9860ead03b94d68446a655b61f2910c2234eafa1e60b6c",
+        "tag": "map-data-region-norfolk-r40045515531-a1"
+      },
+      "map": {
+        "bytes": 33276450,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "528204cdc64476a9f3f7ac7cdc79aec2a5e76c0da90924242a69d1569946925c",
+        "tag": "map-data-region-norfolk-r40045515531-a1"
+      },
+      "name": "Norfolk",
+      "observed_source_md5": "75e69e6aa00249b71759512c3bc84833",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:42:32.510663+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/norfolk-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "north-yorkshire": {
+      "bounds": [
+        -2.567177,
+        53.61999,
+        -0.040615,
+        54.70222
+      ],
+      "content_sha256": "077195764d61b54a6d1e2dfb6d10d8565864cc932b616aeb3490e09a5633b97f",
+      "id": "north-yorkshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 100549,
+        "sha256": "19029ea8126dbf66c32ded4c4677abc5e08b4bb96cf6c626f136c859ba0a3b7f",
+        "tag": "map-data-region-north-yorkshire-r40025215906-a1"
+      },
+      "map": {
+        "bytes": 37619498,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "f83a233088482736e45d60f3b990d3e33d06a5825a30786e74024578c75ebb2b",
+        "tag": "map-data-region-north-yorkshire-r40025215906-a1"
+      },
+      "name": "North Yorkshire",
+      "observed_source_md5": "884160effac96f84dcbbeb0ac57d0455",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:27:57.392456+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/north-yorkshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "northamptonshire": {
+      "bounds": [
+        -1.334028,
+        51.9765,
+        -0.34068,
+        52.64459
+      ],
+      "content_sha256": "18a316737ec7cf68a89beb63d8f9c3b59bd0b4d566c0bd33ae42acc12fff7475",
+      "id": "northamptonshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 52410,
+        "sha256": "48b1bbd6d243232c88a28aaa6bec56ae82f9c0731d678b7d2de5a72bc9eae1c8",
+        "tag": "map-data-region-northamptonshire-r40037845724-a1"
+      },
+      "map": {
+        "bytes": 15570859,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "9b9fa4a50d46f52338d90ae5b77be8c90acbda9ab11c48b8a865fad2b6138c65",
+        "tag": "map-data-region-northamptonshire-r40037845724-a1"
+      },
+      "name": "Northamptonshire",
+      "observed_source_md5": "5a54add535357f59e462a1a6d8b26cf7",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:14:46.296783+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/northamptonshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "northern-ireland-area": {
+      "bounds": [
+        -8.2,
+        54.0,
+        -5.3,
+        55.5
+      ],
+      "content_sha256": "fc25a1c9373cc216712fcca6086b7e079fd63ec59593c4c642efc9d23145e99e",
+      "id": "northern-ireland-area",
+      "inland": false,
+      "manifest": {
+        "bytes": 122340,
+        "sha256": "4971e80291eebb939e889433d60698640224ea08230da665057136006157e366",
+        "tag": "map-data-region-northern-ireland-area-r40013355477-a1"
+      },
+      "map": {
+        "bytes": 95978559,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "5714945b081987f9114889357f00f884abe9b46eb8412657d0d327ef6b877483",
+        "tag": "map-data-region-northern-ireland-area-r40013355477-a1"
+      },
+      "name": "Northern Ireland and border area",
+      "observed_source_md5": "c6f0ca4b564fd55b780eb360e702c876",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T19:56:04.896979+00:00",
+      "source_url": "https://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "northumberland": {
+      "bounds": [
+        -2.690724,
+        54.78162,
+        -1.223287,
+        55.84866
+      ],
+      "content_sha256": "ba6747a6744509ab00eec506ee3201e96aba465af8b376d1dbca2ba90d5b7392",
+      "id": "northumberland",
+      "inland": false,
+      "manifest": {
+        "bytes": 71321,
+        "sha256": "f409cdd1f411b9ee365dd9181ed57881ceb5d797fce7a4f31e68a7b7fc4b5034",
+        "tag": "map-data-region-northumberland-r40043585226-a1"
+      },
+      "map": {
+        "bytes": 22659809,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "93883ce78d85421923e98473f1a27ef70b1a93a040c860f7cd58f7d7ffbe00de",
+        "tag": "map-data-region-northumberland-r40043585226-a1"
+      },
+      "name": "Northumberland",
+      "observed_source_md5": "cba7d63974e2b2b8f20112df9b939d9d",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T00:19:34.219856+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/northumberland-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "nottinghamshire": {
+      "bounds": [
+        -1.344477,
+        52.78153,
+        -0.666651,
+        53.50315
+      ],
+      "content_sha256": "6a19c5a753ebeed642d18c18ec16cd93a128857d31e2019e65c4104fd23727e7",
+      "id": "nottinghamshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 50159,
+        "sha256": "3a253c7fa73676e9476f2c4c7fbce9f01fcf99bdbf56b841b59a8b3b222ddb58",
+        "tag": "map-data-region-nottinghamshire-r40023055810-a1"
+      },
+      "map": {
+        "bytes": 24962654,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "fb500e6f5b1457934231b542052bca6f62cf8d8a17e37b451b7c2938243f7f9e",
+        "tag": "map-data-region-nottinghamshire-r40023055810-a1"
+      },
+      "name": "Nottinghamshire",
+      "observed_source_md5": "a3dda0ac9f46ba0fc6385a6147caee73",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:04:36.887283+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/nottinghamshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "oxfordshire": {
+      "bounds": [
+        -1.719533,
+        51.46057,
+        -0.86985,
+        52.16807
+      ],
+      "content_sha256": "4cd2bcb5f02103a9ed11d06920a457146e399967a757cc376582397d782517a0",
+      "id": "oxfordshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 50789,
+        "sha256": "367582e275621f36f88c68dbcc098c0de6e55d0c931c6b84413e86728d21da99",
+        "tag": "map-data-region-oxfordshire-r40041091076-a1"
+      },
+      "map": {
+        "bytes": 18760556,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "f3aeb56abe53b9ffecc188ae750cb3d67f57712cabc2981b0f0c6e82d3453bc5",
+        "tag": "map-data-region-oxfordshire-r40041091076-a1"
+      },
+      "name": "Oxfordshire",
+      "observed_source_md5": "6211c8f0fe2683e22aa5b2c8472de647",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:48:42.303041+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/oxfordshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "rutland": {
+      "bounds": [
+        -0.822934,
+        52.52355,
+        -0.427654,
+        52.76109
+      ],
+      "content_sha256": "70bf13f0a2a5cf98e00ef7b7e78b70cc7264341c0943b6eb65dee96a2a682054",
+      "id": "rutland",
+      "inland": false,
+      "manifest": {
+        "bytes": 25022,
+        "sha256": "b2d7a65a7f03b73ddeb43672025389d8043a1b7bc4b8add840d6dfde39e6a138",
+        "tag": "map-data-region-rutland-r40031169283-a1"
+      },
+      "map": {
+        "bytes": 1358969,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "d61824d24284646704e4a61a44054b19f889dbf31329d80b6d362064c0866bcc",
+        "tag": "map-data-region-rutland-r40031169283-a1"
+      },
+      "name": "Rutland",
+      "observed_source_md5": "30ca830cf6e7371596be85895187f301",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T22:06:47.442340+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/rutland-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "scotland": {
+      "bounds": [
+        -14.86155,
+        54.54001,
+        0.216055,
+        61.13564
+      ],
+      "content_sha256": "3d7e1e8d116d8fd4c66784ed507af57c3c70661c912d38f141f603a4711db9f7",
+      "id": "scotland",
+      "inland": false,
+      "manifest": {
+        "bytes": 340523,
+        "sha256": "b4b6e3a945b115b3d240e999cdfff2eb81d02c61b22a6ee1540631a15fee9a84",
+        "tag": "map-data-region-scotland-r40007153210-a1"
+      },
+      "map": {
+        "bytes": 263273738,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "e84af6320e7d83c95af108b1ff02aa0a3c82f4f920c8c0b79fb1b55eeecaa423",
+        "tag": "map-data-region-scotland-r40007153210-a1"
+      },
+      "name": "Scotland",
+      "observed_source_md5": "ff2aa34ae416c5ebb55d5101f13199a6",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T19:41:07.621848+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/scotland-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "shropshire": {
+      "bounds": [
+        -3.235577,
+        52.30616,
+        -2.23354,
+        52.99693
+      ],
+      "content_sha256": "9b98c674285b1feba7904fad3b904570bd38fe201dfe3600c29751b1ad286b38",
+      "id": "shropshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 52298,
+        "sha256": "3e4a1fb09ce9ebeee01f1a8bb4b933d1bfc18b0c0fa44dc78a68109ec6d3aa43",
+        "tag": "map-data-region-shropshire-r40024077136-a1"
+      },
+      "map": {
+        "bytes": 19504831,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "150ea5c82e39eb8a51b4a10fae52c24ed54cf6835b8358378a4be16dc03ad651",
+        "tag": "map-data-region-shropshire-r40024077136-a1"
+      },
+      "name": "Shropshire",
+      "observed_source_md5": "0515e6a0384c9295a322f0f8016319cc",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:13:44.519329+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/shropshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "somerset": {
+      "bounds": [
+        -3.84094,
+        50.81995,
+        -2.243303,
+        51.50392
+      ],
+      "content_sha256": "8b3643addb756cd28dab63ebc733d053253f78f3cce01eb6943aede6e0269974",
+      "id": "somerset",
+      "inland": false,
+      "manifest": {
+        "bytes": 99376,
+        "sha256": "772733d05a570241d9f89b09fc273174bac53bcbf771576635264be9d26c5d9c",
+        "tag": "map-data-region-somerset-r40049890757-a1"
+      },
+      "map": {
+        "bytes": 33551341,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "e0b4e5e47fb15e141041f58cf63520c51c9765c5380d95ae26f00ae38d25b461",
+        "tag": "map-data-region-somerset-r40049890757-a1"
+      },
+      "name": "Somerset",
+      "observed_source_md5": "b51f859c78cad7a4cf6d89ab59abbcae",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T02:03:24.775846+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/somerset-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "south-yorkshire": {
+      "bounds": [
+        -1.825872,
+        53.29889,
+        -0.852889,
+        53.66326
+      ],
+      "content_sha256": "36d192f57e08665344f543ffda5c9bfdee3e23c5b7bf3ee46b53fb3d13548ae6",
+      "id": "south-yorkshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 49974,
+        "sha256": "3d48123ee66fa877c37f55505cbe2f4d63d3a54511d6011826e95166cae69107",
+        "tag": "map-data-region-south-yorkshire-r40018938670-a1"
+      },
+      "map": {
+        "bytes": 20774119,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "74b19bd2e178d75d19b54314a656a18e2a62e55f28e057a763aaa7603cf12765",
+        "tag": "map-data-region-south-yorkshire-r40018938670-a1"
+      },
+      "name": "South Yorkshire",
+      "observed_source_md5": "755ab975e55d154848c50603c129f3cf",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:31:11.580073+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/south-yorkshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "staffordshire": {
+      "bounds": [
+        -2.47182,
+        52.42202,
+        -1.58449,
+        53.22743
+      ],
+      "content_sha256": "bcac71bf5461a9e6ec30f5668deef5ec7d3455be8ece76747540ed2b13708296",
+      "id": "staffordshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 56003,
+        "sha256": "8500601771ad8f340eb1959eef91fd33814831812a62c3d509d1277b4acc9948",
+        "tag": "map-data-region-staffordshire-r40021847121-a1"
+      },
+      "map": {
+        "bytes": 22063137,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "9c073668a3e5a703d4cb30f367a8b99455966865c7defb400f9b806d89820afd",
+        "tag": "map-data-region-staffordshire-r40021847121-a1"
+      },
+      "name": "Staffordshire",
+      "observed_source_md5": "234b049db9b140daa3ab649931db8715",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:56:21.044213+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/staffordshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "stockport": {
+      "bounds": [
+        -2.29,
+        53.3,
+        -1.98,
+        53.47
+      ],
+      "content_sha256": "4fe96ddee02b0a5939dbaac4c5e10209f63afdcfaedfba92aa8f1b5b4820e77f",
+      "id": "stockport",
+      "inland": true,
+      "manifest": {
+        "bytes": 40559,
+        "sha256": "df9551344166fb09f97e1efb312150da801c8e6f4150339e104e80cd0e42aab8",
+        "tag": "map-data-region-stockport-r39961502504-a1"
+      },
+      "map": {
+        "bytes": 8025117,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "a767ede7e950251a23cf52ce99686893c504b61d98a8bbc5542ae07ec69146ae",
+        "tag": "map-data-region-stockport-r39960071728-a1"
+      },
+      "name": "Stockport area",
+      "observed_source_md5": "ade28d3c073ead02ed238f3d2cd347c0",
+      "pipeline_sha256": "08e3398629db32da1d23ebf7bdd2cb14c0ee11de40072a793d8c3b1e02d1ae72",
+      "published_utc": "2026-10-23T13:32:46.099770+00:00",
+      "sample": [
+        -2.1575,
+        53.4052
+      ],
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/greater-manchester-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "suffolk": {
+      "bounds": [
+        0.339563,
+        51.93285,
+        1.763681,
+        52.55013
+      ],
+      "content_sha256": "5d5aacb029a683519a69aa1699bff7c0b9174d65c6c22293d6e0dbaad07845cc",
+      "id": "suffolk",
+      "inland": false,
+      "manifest": {
+        "bytes": 63132,
+        "sha256": "86f3b949ecb21f58dfd25357bf8704a08b16bc639f02a92f320c73d6d6e2e55e",
+        "tag": "map-data-region-suffolk-r40047875192-a1"
+      },
+      "map": {
+        "bytes": 24422835,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "d261606737ccf202c8e8f229b404cb7f198c3ac8ae0cc65f91b09789a4c26495",
+        "tag": "map-data-region-suffolk-r40047875192-a1"
+      },
+      "name": "Suffolk",
+      "observed_source_md5": "36e7889f98086a462eb38e145b9501fc",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T01:10:18.910790+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/suffolk-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "surrey": {
+      "bounds": [
+        -0.850593,
+        51.0715,
+        0.059897,
+        51.47288
+      ],
+      "content_sha256": "87ec4db9539d5df6782dbe8b5edc0aff1b4286c1c06bd405bd08c660ccedec9c",
+      "id": "surrey",
+      "inland": false,
+      "manifest": {
+        "bytes": 45837,
+        "sha256": "b8f6f27d5f572bc7170bff184f56740c6e8dfbdee74d7af83dc865bf8d25b8e3",
+        "tag": "map-data-region-surrey-r40053189471-a1"
+      },
+      "map": {
+        "bytes": 27377386,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "7b212f4f8b53373e453ff07ef9a24c6528bd136a12f42c772b2ef277cb7470e2",
+        "tag": "map-data-region-surrey-r40053189471-a1"
+      },
+      "name": "Surrey",
+      "observed_source_md5": "bd3b33cfe285b68df45085b32e1e995a",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T02:20:32.741198+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/surrey-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "tyne-and-wear": {
+      "bounds": [
+        -1.853879,
+        54.79775,
+        -1.262592,
+        55.10949
+      ],
+      "content_sha256": "c44a76e14b01f3cb36e15f589235cd47ae7fae29ef96d6a945bdb93ac4613302",
+      "id": "tyne-and-wear",
+      "inland": false,
+      "manifest": {
+        "bytes": 93332,
+        "sha256": "4665a2bbf0d937b6f571bcec04269d7ae7ea13ba9bf36e4e936e304170ca6d91",
+        "tag": "map-data-region-tyne-and-wear-r40038560054-a1"
+      },
+      "map": {
+        "bytes": 15142516,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "ecc65e843f89fc3437a41993775afc5fd55ee30b6f457d2b782ed83b44389b6d",
+        "tag": "map-data-region-tyne-and-wear-r40038560054-a1"
+      },
+      "name": "Tyne and Wear",
+      "observed_source_md5": "77d561a9230357597cd11e46db296262",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T23:22:11.305858+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/tyne-and-wear-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "wales": {
+      "bounds": [
+        -6.183241,
+        51.03997,
+        -2.648042,
+        53.76632
+      ],
+      "content_sha256": "c9b3d60b5c3c4912713ed4873c503c23ffa33acea128ea65caf1789f060a55e7",
+      "id": "wales",
+      "inland": false,
+      "manifest": {
+        "bytes": 134620,
+        "sha256": "f9dcc47585635ba4974e54a8206430087f6153a0b421b2a287d9ac318e2b8b3d",
+        "tag": "map-data-region-wales-r39993646085-a1"
+      },
+      "map": {
+        "bytes": 110253059,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "4389fa22e61d3479cdd6b0fc38f0e7d2ddbf1fd23432fb75d1de599a4f7885c5",
+        "tag": "map-data-region-wales-r39993646085-a1"
+      },
+      "name": "Wales",
+      "observed_source_md5": "9c180ec90673c544c735f25abdd4a7d3",
+      "pipeline_sha256": "e4994d209f3d6a93f13050c20ff137f073feff09cca8f278de9901ff267ca4e3",
+      "published_utc": "2026-10-23T17:39:59.274472+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/wales-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "warwickshire": {
+      "bounds": [
+        -1.963,
+        51.95471,
+        -1.17115,
+        52.68823
+      ],
+      "content_sha256": "d956296423a5f57ec16ddb5c99437b5b4f0e21a676076a889b2866f2b94885aa",
+      "id": "warwickshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 56403,
+        "sha256": "8c30168db31688991999e717fb16c8eb747ba90ae6981d3dc76665e9497974fc",
+        "tag": "map-data-region-warwickshire-r40029053448-a1"
+      },
+      "map": {
+        "bytes": 17382299,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "f2db6493f254423dd15b76426ae174080b930b109dadc6cf3d0b5c82ca7391b9",
+        "tag": "map-data-region-warwickshire-r40029053448-a1"
+      },
+      "name": "Warwickshire",
+      "observed_source_md5": "3f189fa87018cbeeef5ec3f099c639f9",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:51:52.964986+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/warwickshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "west-midlands": {
+      "bounds": [
+        -2.208211,
+        52.3457,
+        -1.422524,
+        52.6643
+      ],
+      "content_sha256": "87c2caaad7955937b8aa33d31722e434af48a2803665d8317bee04b306043698",
+      "id": "west-midlands",
+      "inland": false,
+      "manifest": {
+        "bytes": 48928,
+        "sha256": "5e14ade77cee49c14da1a97f9d4913481a21efc7750d5892b6c984278c8c89e5",
+        "tag": "map-data-region-west-midlands-r40026966060-a1"
+      },
+      "map": {
+        "bytes": 39010262,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "51bcd952550bb0964c06fd081fc6a6e252ba2537296a0b0ef9bab522532c77b3",
+        "tag": "map-data-region-west-midlands-r40026966060-a1"
+      },
+      "name": "West Midlands",
+      "observed_source_md5": "8e5f73e4e552054400ca1a088342b959",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T21:38:49.769253+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/west-midlands-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "west-yorkshire": {
+      "bounds": [
+        -2.175545,
+        53.51822,
+        -1.196,
+        53.96491
+      ],
+      "content_sha256": "71296c325e54c4200a6658075be29c1f7077deb15a2e07b45941bf0c17186ede",
+      "id": "west-yorkshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 50140,
+        "sha256": "3e28b2897d19d9b284ec5fecae699a1e580ad087e572cceb44ea0b0e9c1d2f59",
+        "tag": "map-data-region-west-yorkshire-r40017576849-a1"
+      },
+      "map": {
+        "bytes": 38029031,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "e72df88824173a0f71f0cd4b5afe93ae4e58631e6d762c4a090528f4aaed16db",
+        "tag": "map-data-region-west-yorkshire-r40017576849-a1"
+      },
+      "name": "West Yorkshire",
+      "observed_source_md5": "7dcb0dfe14d9933bbfc72fb5f8435a20",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T20:24:09.827349+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/west-yorkshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "wiltshire": {
+      "bounds": [
+        -2.363253,
+        50.9465,
+        -1.488811,
+        51.70637
+      ],
+      "content_sha256": "a432fe8a72cb875c002100361002fbac641c802f09024d05e061aab1ad9ff453",
+      "id": "wiltshire",
+      "inland": false,
+      "manifest": {
+        "bytes": 53659,
+        "sha256": "21e0d989ea0424540d87ee882d174286d3aa40a0f721bb9ced8ac8f8ff83f844",
+        "tag": "map-data-region-wiltshire-r40047201542-a1"
+      },
+      "map": {
+        "bytes": 26230819,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "9367c04d243a1f754ac6e5d59f1177df4b9a69ba7801dc323d2f880f047aba4e",
+        "tag": "map-data-region-wiltshire-r40047201542-a1"
+      },
+      "name": "Wiltshire",
+      "observed_source_md5": "1d4f382a79312adc916691712a043163",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-24T01:01:42.349330+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/wiltshire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    },
+    "worcestershire": {
+      "bounds": [
+        -2.66399,
+        51.9654,
+        -1.756496,
+        52.4565
+      ],
+      "content_sha256": "0955caba160a5ba521a4be642d52016ced3a4db919e767328009a51228be6df5",
+      "id": "worcestershire",
+      "inland": false,
+      "manifest": {
+        "bytes": 52796,
+        "sha256": "431a4fb3dee091c4dbc0702185f51a134b98a2b6b5f37700edfc5f3ea765c713",
+        "tag": "map-data-region-worcestershire-r40031472915-a1"
+      },
+      "map": {
+        "bytes": 14891360,
+        "layout": "drivemate-v1",
+        "name": "drivemate-v1.pmtiles",
+        "sha256": "b576b440d84d1c7119e38c864cbb866e63cb7a57ba7a88829e86d6130ce2ec5b",
+        "tag": "map-data-region-worcestershire-r40031472915-a1"
+      },
+      "name": "Worcestershire",
+      "observed_source_md5": "d9aff7c1a6f46fd1b4c27922f86af844",
+      "pipeline_sha256": "97f5363ee7bb84d2fa5a7795b34ff2569d8a89d5b57ec4951c11ed40d97ef17f",
+      "published_utc": "2026-10-23T22:13:08.166059+00:00",
+      "source_url": "https://download.geofabrik.de/europe/united-kingdom/england/worcestershire-latest.osm.pbf",
+      "supplement_version": "{\"os-open-names\": [{\"fileName\": \"opname_csv_gb.zip\", \"md5\": \"bba5aa44ba375d39de60584099e335cd\", \"size\": 103312081}], \"overture\": \"2026-10-21.0\"}"
+    }
+  },
+  "schema": 1
+}
