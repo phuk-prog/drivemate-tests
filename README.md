@@ -1,6 +1,6 @@
 # drivemate-tests
 
-The testing for DriveMate.
+The testing for DriveMate. Every test runs here, in this public repository.
 
 Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
 
@@ -10,16 +10,33 @@ Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
   (GOV.UK, TSRGD, National Highways) only, never the register's decisions.
 - `categories/NN-name/decisions/`: decision checks. They check the app does what is decided
   in that category's file in drivemate-app's `register/`. Each test names its question (e.g. `q1_6`).
-- `ci/add_unit_results.py`: adds these results to the app run's `summary.json` and picture page.
+- `app-unit/`: the app's own unit tests (moved here from drivemate-app).
+- `ci/`: turns the results into `summary.json` and the picture page (`run-report.html`).
+- `.github/workflows/test-app.yml`: the test run.
 
 ## How they run
 
-drivemate-app's "Full-app gates" workflow checks out the newest `main` of this repository, copies
-`categories/*/{law,decisions}/*.kt` into the app's unit tests (package `com.drivemate.tests.*`),
-runs them with Gradle, and adds the results next to the emulator tests. Fast tests only for now;
-the emulator tests still come from drivemate-test-map-display until they move here.
+"Test the app" runs on every pull request here, on merges to main, and by hand (Actions → Test the
+app → Run workflow, optionally naming a drivemate-app branch or commit). It fetches drivemate-app
+(the branch with the same name as this one if there is one, else main), puts these tests in place of
+the app's unit tests, runs them, and publishes one artifact, `drivemate-tests-<app commit>`, with
+`summary.json` and `run-report.html`. App code is only built on the runner; it is never published.
 
-## Not covered by a fast test yet
+drivemate-app's APK build only goes ahead when that artifact shows every test passed for the exact
+app commit being built.
 
-- 1.1 card layout and 1.11 "Then" chip timing: need the emulator (screen checks).
+## Setup (once)
+
+drivemate-app is private, so this repository needs a read-only token for it:
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
+   Repository access: only `phuk-prog/drivemate-app`. Permissions: Contents → Read-only.
+2. In this repository: Settings → Secrets and variables → Actions → New repository secret,
+   name `DRIVEMATE_APP_TOKEN`, value the token.
+
+## Not covered yet
+
+- Emulator (screen) tests: the old ones lived in drivemate-test-map-display and
+  drivemate-test-gps-navigation, which can no longer be reached. 1.1 card layout and 1.11 "Then"
+  timing need them.
 - 1.9 mini-roundabouts: not built; the app has no mini-roundabout map data yet (1.16 fallback is checked).

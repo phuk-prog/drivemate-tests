@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Adds drivemate-tests' fast tests (JUnit XML) to a run's full-app.json, so they appear in the
-same summary.json and picture page as the emulator tests. One checklist item per category and kind:
-"1 Turn-by-turn guidance: law" and "1 Turn-by-turn guidance: decisions".
+"""Turns the run's JUnit results into full-app.json, the file the summary (run_summary.py) and the
+picture page (run_report.py) are built from. One checklist item per category and kind
+("1 Turn-by-turn guidance: law", "1 Turn-by-turn guidance: decisions"), plus "App unit tests".
 
-Usage: add_unit_results.py JUNIT_XML_DIR FULL_APP_JSON RUN_URL APP_COMMIT TESTS_SHA
+Usage: collect_results.py JUNIT_XML_DIR FULL_APP_JSON RUN_URL APP_COMMIT TESTS_SHA
 """
 import json
 from pathlib import Path
@@ -16,19 +16,22 @@ CATEGORIES = {"cat01": "1 Turn-by-turn guidance"}
 
 def item_for(classname):
     m = re.match(r"com\.drivemate\.tests\.(cat\d+)\.\w+?(Law|Decisions)Test$", classname)
-    if not m:
-        return None
-    return f'{CATEGORIES.get(m.group(1), m.group(1))}: {"law" if m.group(2) == "Law" else "decisions"}'
+    if m:
+        return f'{CATEGORIES.get(m.group(1), m.group(1))}: {"law" if m.group(2) == "Law" else "decisions"}'
+    if classname.startswith("com.drivemate.app."):
+        return "App unit tests"
+    return None
 
 
 def results(xml_dir):
-    for f in sorted(Path(xml_dir).glob("TEST-com.drivemate.tests.*.xml")):
+    for f in sorted(Path(xml_dir).glob("TEST-*.xml")):
         for case in ET.parse(f).getroot().iter("testcase"):
-            item = item_for(case.get("classname", ""))
+            classname = case.get("classname", "")
+            item = item_for(classname)
             if item is None:
                 continue
             bad = case.find("failure") if case.find("failure") is not None else case.find("error")
-            test = {"name": case.get("name"), "status": "failed" if bad is not None else "passed"}
+            test = {"class": classname, "name": case.get("name"), "status": "failed" if bad is not None else "passed"}
             if case.find("skipped") is not None:
                 test["status"] = "skipped"
             if bad is not None:
@@ -40,11 +43,11 @@ def main():
     xml_dir, doc_path, run_url, app_commit, tests_sha = sys.argv[1:6]
     doc_path = Path(doc_path)
     doc = json.loads(doc_path.read_text()) if doc_path.is_file() else {
-        "run_url": run_url, "app_commit": app_commit, "public_tests_sha": "", "checklist": {}}
-    doc["drivemate_tests_sha"] = tests_sha
+        "run_url": run_url, "app_commit": app_commit, "checklist": {}}
+    doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
     found = list(results(xml_dir))
     if not found:
-        doc["checklist"]["drivemate-tests"] = {"tests": [{"name": "fast tests ran", "status": "failed",
+        doc["checklist"]["drivemate-tests"] = {"tests": [{"class": "drivemate-tests", "name": "tests ran", "status": "failed",
                                                           "failure": "no results: the tests did not compile or run"}]}
     for item, test in found:
         doc["checklist"].setdefault(item, {"tests": []})["tests"].append(test)

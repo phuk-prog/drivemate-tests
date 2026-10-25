@@ -1,0 +1,117 @@
+name: Test the app
+# Every DriveMate test runs here, in this public repository (REGISTER.md). The app's code is
+# fetched from the private drivemate-app with a read-only token and only built on the runner:
+# just the summary and the picture page are published, never app code or an APK.
+on:
+  # One run per change: on its pull request, and again once merged to main.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      app_ref:
+        description: drivemate-app branch, tag or commit to test (empty = same-named branch, else main)
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: test-app-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check the app token is set
+        env:
+          TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Secret DRIVEMATE_APP_TOKEN is missing: add a read-only token for phuk-prog/drivemate-app (see README)."
+            exit 1
+          fi
+      - name: Pick the app version to test
+        id: appref
+        env:
+          TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          INPUT_REF: ${{ inputs.app_ref }}
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if [ -n "$INPUT_REF" ]; then
+            ref="$INPUT_REF"
+          elif git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/phuk-prog/drivemate-app" "$branch" >/dev/null 2>&1; then
+            ref="$branch"
+          else
+            ref=main
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "Testing drivemate-app at $ref" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate-app
+          ref: ${{ steps.appref.outputs.ref }}
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          path: app-src
+          persist-credentials: false
+      - name: Install the tests into the app's unit tests
+        id: install
+        run: |
+          echo "app_sha=$(git -C app-src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          rm -rf app-src/app/src/test
+          mkdir -p app-src/app/src/test/java/com/drivemate/tests app-src/app/src/test/resources
+          cp -r app-unit/java/. app-src/app/src/test/java/
+          cp -r app-unit/resources/. app-src/app/src/test/resources/
+          for f in categories/*/law/*.kt categories/*/decisions/*.kt; do
+            [ -f "$f" ] && cp "$f" app-src/app/src/test/java/com/drivemate/tests/
+          done
+          find app-src/app/src/test -type f | sed 's|app-src/app/src/test/||'
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d
+      - name: Run the tests
+        working-directory: app-src
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --continue --max-workers=4 || echo "tests failed; the summary decides"
+      - name: Summary and picture page
+        if: always()
+        run: |
+          mkdir -p results media
+          python3 -m pip install -q Pillow==11.0.0 || true
+          python3 ci/collect_results.py app-src/app/build/test-results/testDebugUnitTest results/full-app.json \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "${{ steps.install.outputs.app_sha }}" "$GITHUB_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 ci/run_summary.py results/full-app.json results/summary.json
+          python3 ci/run_report.py results/full-app.json media results/run-report.html || echo "picture page not built"
+      - name: Publish the summary and picture page only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          # drivemate-app's APK build looks for this name: results for that exact app commit.
+          name: drivemate-tests-${{ steps.install.outputs.app_sha }}
+          path: |
+            results/full-app.json
+            results/summary.json
+            results/run-report.html
+          if-no-files-found: error
+          retention-days: 90
+      - name: Every test passed
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          s = json.load(open("results/summary.json"))
+          print(f"{s['passed']}/{s['total']} passed")
+          sys.exit(0 if s["total"] and s["passed"] == s["total"] else 1)
+          PY
