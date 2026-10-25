@@ -141,10 +141,10 @@ class TurnByTurnDecisionsTest {
         assertEquals(listOf(LandmarkKind.MINI_ROUNDABOUT), found.map { it.kind })
     }
 
-    /** 1.10: on the roundabout, the exit number until the last 60 m, then "Take the exit". */
+    /** 1.10: on the roundabout, the exit number until the last 60 m, then "Take the next exit" (changed by 2.7). */
     @Test fun q1_10_onTheRoundabout() {
         assertEquals("Take the 2nd exit onto Station Road", roundaboutCirculationInstruction(2, 100.0, "Station Road"))
-        assertEquals("Take the exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
+        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
         assertEquals("unknown exit: never an ordinal", "Take the exit", roundaboutCirculationInstruction(0, 200.0, ""))
     }
 

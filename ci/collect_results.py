@@ -12,7 +12,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-CATEGORIES = {"cat01": "1 Turn-by-turn guidance"}
+CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound"}
 
 
 def item_for(classname):

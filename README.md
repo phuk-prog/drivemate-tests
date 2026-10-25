@@ -51,3 +51,8 @@ drivemate-app is private, so this repository needs a read-only token for it:
 
 - Physical tests (in a real car) are not run here.
 - 1.9 and 1.18 mini-roundabouts: checked from the route and road data; the road data itself comes from drivemate-map's weekly build.
+- Category 2 sound itself is not heard by any test: the tests check what the app decides to say or play,
+  and when. Physical tests, in a real car: Car-call mode over Bluetooth, directions spoken over a real
+  phone call (2.10, 2.19), the guidance volume levels (2.17), the speeding chime and camera beeps (2.11),
+  and "Hey DriveMate" heard over road noise and music (2.15, 2.20). "Hey DriveMate" needs Android 12+
+  with on-device speech recognition, and listens only while DriveMate is on screen.
