@@ -48,8 +48,14 @@ jobs:
           if [ -z "$sha" ]; then echo "::error::No drivemate-app commit for \"$APP_REF\"."; exit 1; fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           # A finished test run for this commit, or start one and wait for it (up to 40 minutes).
-          result() { gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
-            --jq '[.artifacts[].workflow_run.id] | max // empty'; }
+          # Newest finished, not cancelled, test run that saved results for this commit.
+          result() {
+            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
+                --jq '[.artifacts[].workflow_run.id] | unique | reverse | .[]'); do
+              c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq '.status + "/" + (.conclusion // "")')
+              case "$c" in completed/cancelled) ;; completed/*) echo "$id"; return ;; esac
+            done
+          }
           running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status \
             --jq '[.[] | select(.status != "completed")] | length'; }
           run=$(result)
@@ -59,7 +65,7 @@ jobs:
           fi
           for i in $(seq 1 80); do
             run=$(result)
-            if [ -n "$run" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .status)" = completed ]; then break; fi
+            if [ -n "$run" ]; then break; fi
             # No result and nothing running (e.g. the test run failed to start): stop.
             if [ -z "$run" ] && [ "$(running)" = 0 ] && [ "$i" -gt 2 ]; then
               echo "::error::The test run for ${sha:0:7} ended without results."; exit 1
