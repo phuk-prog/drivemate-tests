@@ -85,7 +85,8 @@ jobs:
         working-directory: app-src
         run: ./gradlew :app:testDebugUnitTest --no-daemon --continue --max-workers=4 || echo "tests failed; the summary decides"
       - name: Summary and picture page
-        if: always()
+        # Only once the app was fetched: no results to report otherwise.
+        if: always() && steps.install.outcome == 'success'
         run: |
           mkdir -p results media
           python3 -m pip install -q Pillow==11.0.0 || true
@@ -95,7 +96,8 @@ jobs:
           python3 ci/run_summary.py results/full-app.json results/summary.json
           python3 ci/run_report.py results/full-app.json media results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
-        if: always()
+        # Only once the app was fetched: no results to report otherwise.
+        if: always() && steps.install.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           # drivemate-app's APK build looks for this name: results for that exact app commit.
@@ -107,7 +109,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
-        if: always()
+        # Only once the app was fetched: no results to report otherwise.
+        if: always() && steps.install.outcome == 'success'
         run: |
           python3 - <<'PY'
           import json, sys
