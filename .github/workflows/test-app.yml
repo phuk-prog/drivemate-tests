@@ -16,8 +16,10 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: test-app-${{ github.ref }}
-  cancel-in-progress: true
+  # One run per change; a newer push or pull request update replaces an older one. Runs started by
+  # hand or by the signed build (each for its own app commit) are never cancelled.
+  group: test-app-${{ github.ref }}-${{ inputs.app_ref || github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 defaults:
   run:
     shell: bash
@@ -124,8 +126,8 @@ jobs:
           working-directory: app-src
           script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests || echo "screen tests failed; the summary decides"
       - name: Summary and picture page
-        # Only once the app was fetched: no results to report otherwise.
-        if: always() && steps.install.outcome == 'success'
+        # Only once the app was fetched, and never for a cancelled run.
+        if: (success() || failure()) && steps.install.outcome == 'success'
         run: |
           mkdir -p results
           python3 -m pip install -q Pillow==11.0.0 || true
@@ -138,8 +140,8 @@ jobs:
           python3 ci/run_summary.py results/full-app.json results/summary.json
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
-        # Only once the app was fetched: no results to report otherwise.
-        if: always() && steps.install.outcome == 'success'
+        # Only once the app was fetched, and never for a cancelled run.
+        if: (success() || failure()) && steps.install.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           # drivemate-app's APK build looks for this name: results for that exact app commit.
@@ -151,8 +153,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
-        # Only once the app was fetched: no results to report otherwise.
-        if: always() && steps.install.outcome == 'success'
+        # Only once the app was fetched, and never for a cancelled run.
+        if: (success() || failure()) && steps.install.outcome == 'success'
         run: |
           python3 - <<'PY'
           import json, sys
