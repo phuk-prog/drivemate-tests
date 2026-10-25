@@ -1,10 +1,13 @@
 package com.drivemate.tests.cat01
 
 import com.drivemate.app.data.Place
+import com.drivemate.app.data.Route
+import com.drivemate.app.data.RouteStep
 import com.drivemate.app.nav.BackgroundGuidance
 import com.drivemate.app.nav.Format
 import com.drivemate.app.nav.LaneTiming
 import com.drivemate.app.nav.LatLon
+import com.drivemate.app.nav.NavigationEngine
 import com.drivemate.app.nav.TurnInstructions
 import com.drivemate.app.nav.arrivalApproachInstruction
 import com.drivemate.app.nav.roundaboutCirculationInstruction
@@ -80,6 +83,41 @@ class TurnByTurnDecisionsTest {
         assertEquals("Take the 2nd exit onto Station Road", roundaboutCirculationInstruction(2, 100.0, "Station Road"))
         assertEquals("Take the exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
         assertEquals("unknown exit: never an ordinal", "Take the exit", roundaboutCirculationInstruction(0, 200.0, ""))
+    }
+
+    /**
+     * 1.11: the "Then" chip shows the move after next when it comes within about 30 seconds at your
+     * speed (never closer than ~150 m or further than ~900 m). An L-shaped test route: 1 km north,
+     * right, [gap] m east, left, 500 m north; the car is 200 m before the first turn.
+     */
+    private fun thenShown(gap: Double, speed: Double): Boolean {
+        val start = LatLon(53.40, -2.20)
+        val north = 1.0 / 111_195.0
+        val east = 1.0 / (111_195.0 * Math.cos(Math.toRadians(53.40)))
+        fun at(n: Double, e: Double) = LatLon(start.lat + n * north, start.lon + e * east)
+        val points = (0..100).map { at(it * 10.0, 0.0) } +
+            (1..(gap / 10).toInt()).map { at(1_000.0, it * 10.0) } +
+            (1..50).map { at(1_000.0 + it * 10.0, gap) }
+        val steps = listOf(
+            RouteStep("Head out", "depart", "", "Mill Lane", 1_000.0, at(0.0, 0.0)),
+            RouteStep("Turn right onto Station Road", "turn", "right", "Station Road", gap, at(1_000.0, 0.0)),
+            RouteStep("Turn left onto High Street", "turn", "left", "High Street", 500.0, at(1_000.0, gap)),
+            RouteStep("You have arrived", "arrive", "", "", 0.0, at(1_500.0, gap)),
+        )
+        val engine = NavigationEngine(Route(points, 1_500.0 + gap, (1_500.0 + gap) / speed, steps, "test"))
+        var progress = engine.update(at(780.0, 0.0), 0.0, speed)
+        progress = engine.update(at(790.0, 0.0), 0.0, speed)
+        progress = engine.update(at(800.0, 0.0), 0.0, speed)
+        assertEquals("the next move is the first turn", 1, progress.nextStep)
+        return progress.thenStep == 2
+    }
+
+    @Test fun q1_11_thenChipAbout30Seconds() {
+        assertTrue("13 m/s (about 30 mph), turns 300 m apart", thenShown(300.0, 13.0))
+        assertFalse("13 m/s, turns 500 m apart", thenShown(500.0, 13.0))
+        assertTrue("30 m/s (about 67 mph), turns 800 m apart", thenShown(800.0, 30.0))
+        assertFalse("30 m/s, turns 950 m apart: never beyond ~900 m", thenShown(950.0, 30.0))
+        assertTrue("walking pace: the window never drops below 30 s at 8 m/s (240 m)", thenShown(200.0, 1.0))
     }
 
     /** 1.12: side of the road when known, "ahead" when not. */

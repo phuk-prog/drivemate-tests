@@ -10,6 +10,8 @@ Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
   (GOV.UK, TSRGD, National Highways) only, never the register's decisions.
 - `categories/NN-name/decisions/`: decision checks. They check the app does what is decided
   in that category's file in drivemate-app's `register/`. Each test names its question (e.g. `q1_6`).
+- `categories/NN-name/screen/`: screen checks, run on an Android emulator: the app draws its own
+  screens and the test checks what is on them, with a screenshot for the picture page.
 - `app-unit/`: the app's own unit tests (moved here from drivemate-app).
 - `ci/`: turns the results into `summary.json` and the picture page (`run-report.html`).
 - `.github/workflows/test-app.yml`: the test run.
@@ -36,7 +38,5 @@ drivemate-app is private, so this repository needs a read-only token for it:
 
 ## Not covered yet
 
-- Emulator (screen) tests: the old ones lived in drivemate-test-map-display and
-  drivemate-test-gps-navigation, which can no longer be reached. 1.1 card layout and 1.11 "Then"
-  timing need them.
-- 1.9 mini-roundabouts: not built; the app has no mini-roundabout map data yet (1.16 fallback is checked).
+- Physical tests (in a real car) are not run here.
+- 1.9 mini-roundabouts: not built yet; the app has no mini-roundabout map data (1.16 fallback is checked).
