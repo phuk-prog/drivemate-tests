@@ -7,8 +7,8 @@ Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
 ## Layout
 
 - `categories/NN-name/law/`: law tests. They check the app against the law and official sources
-  (GOV.UK, TSRGD, National Highways) only, never the owner's choices.
-- `categories/NN-name/decisions/`: decision checks. They check the app does what the owner decided
+  (GOV.UK, TSRGD, National Highways) only, never the register's decisions.
+- `categories/NN-name/decisions/`: decision checks. They check the app does what is decided
   in that category's file in drivemate-app's `register/`. Each test names its question (e.g. `q1_6`).
 - `ci/add_unit_results.py`: adds these results to the app run's `summary.json` and picture page.
 

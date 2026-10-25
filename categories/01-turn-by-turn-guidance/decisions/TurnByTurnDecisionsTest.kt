@@ -18,7 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Category 1, decision checks: the app does what the owner decided (25 Oct 2026) in
+ * Category 1, decision checks: the app does what is decided in
  * drivemate-app/register/01-turn-by-turn-guidance.md. Each test names its question.
  */
 class TurnByTurnDecisionsTest {

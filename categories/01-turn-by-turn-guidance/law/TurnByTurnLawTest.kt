@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Category 1, law tests: the app against the law and official sources only, never the owner's
+ * Category 1, law tests: the app against the law and official sources only, never the register's
  * choices. References are in drivemate-app/register/01-turn-by-turn-guidance.md.
  */
 class TurnByTurnLawTest {
