@@ -30,7 +30,8 @@ app commit being built.
 ## Signed APK (for now)
 
 "Build signed APK" (Actions → Build signed APK → Run workflow) builds the signed release APK of a
-drivemate-app commit (main by default), only if "Test the app" passed on that exact commit. It then
+drivemate-app commit (main by default), only if "Test the app" passed on that exact commit (it starts
+that test run itself and waits for it when there is none yet). It then
 waits for the owner's approval: the signing key is only in the `release` environment, which needs
 the owner as reviewer and only serves main. The APK is saved only inside an AES-256 password-
 protected zip (password: `APK_ZIP_PASSWORD` in the same environment), kept 7 days. Open it with
