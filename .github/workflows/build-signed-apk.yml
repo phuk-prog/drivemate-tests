@@ -12,7 +12,7 @@ on:
         default: main
 permissions:
   contents: read
-  actions: read
+  actions: write
 concurrency:
   group: build-signed-apk
   cancel-in-progress: false
@@ -23,7 +23,7 @@ jobs:
   tested:
     name: 1. Every test passed on this exact app commit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 45
     outputs:
       sha: ${{ steps.check.outputs.sha }}
     steps:
@@ -47,14 +47,29 @@ jobs:
           fi
           if [ -z "$sha" ]; then echo "::error::No drivemate-app commit for \"$APP_REF\"."; exit 1; fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
-            --jq '[.artifacts[].workflow_run.id] | max // empty')
-          if [ -z "$run" ]; then
-            echo "::error::No test run for app commit $sha. Run \"Test the app\" for it first."; exit 1
+          # A finished test run for this commit, or start one and wait for it (up to 40 minutes).
+          result() { gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
+            --jq '[.artifacts[].workflow_run.id] | max // empty'; }
+          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status \
+            --jq '[.[] | select(.status != "completed")] | length'; }
+          run=$(result)
+          if [ -z "$run" ] && [ "$(running)" = 0 ]; then
+            echo "No test run for ${sha:0:7} yet: starting one." | tee -a "$GITHUB_STEP_SUMMARY"
+            gh workflow run test-app.yml -R "$GITHUB_REPOSITORY" --ref main -f app_ref="$sha"
           fi
+          for i in $(seq 1 80); do
+            run=$(result)
+            if [ -n "$run" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .status)" = completed ]; then break; fi
+            # No result and nothing running (e.g. the test run failed to start): stop.
+            if [ -z "$run" ] && [ "$(running)" = 0 ] && [ "$i" -gt 2 ]; then
+              echo "::error::The test run for ${sha:0:7} ended without results."; exit 1
+            fi
+            sleep 30
+          done
+          if [ -z "$run" ]; then echo "::error::No test result for ${sha:0:7} after 40 minutes."; exit 1; fi
           conclusion=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)
-          echo "Newest test run for ${sha:0:7}: $conclusion ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run)" | tee -a "$GITHUB_STEP_SUMMARY"
-          test "$conclusion" = success
+          echo "Test run for ${sha:0:7}: $conclusion ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run)" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$conclusion" != success ]; then echo "::error::Not every test passed on ${sha:0:7}: no APK."; exit 1; fi
   build:
     name: 2. Signed APK (waits for the owner's approval)
     needs: tested
