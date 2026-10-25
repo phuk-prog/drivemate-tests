@@ -27,15 +27,6 @@ the app's unit tests, runs them, and publishes one artifact, `drivemate-tests-<a
 drivemate-app's APK build only goes ahead when that artifact shows every test passed for the exact
 app commit being built.
 
-## Debug APK (for now)
-
-"Build debug APK" (Actions → Build debug APK → Run workflow) builds a debug APK of a drivemate-app
-commit, only if "Test the app" passed on that exact commit. It is signed with a throwaway debug
-key (no signing keys are kept here), so it can't update an APK signed with the release key, and
-anyone with a GitHub account can download it. For OpenStreetMap note sign-in in it, add the public
-OAuth client ID as an Actions variable `OSM_OAUTH_CLIENT_ID` (Settings → Secrets and variables →
-Actions → Variables).
-
 ## Setup (once)
 
 drivemate-app is private, so this repository needs a read-only token for it:
