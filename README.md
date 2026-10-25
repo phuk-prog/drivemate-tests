@@ -39,4 +39,4 @@ drivemate-app is private, so this repository needs a read-only token for it:
 ## Not covered yet
 
 - Physical tests (in a real car) are not run here.
-- 1.9 mini-roundabouts: not built yet; the app has no mini-roundabout map data (1.16 fallback is checked).
+- 1.9 and 1.18 mini-roundabouts: checked from the route and road data; the road data itself comes from drivemate-map's weekly build.
