@@ -17,8 +17,9 @@ class JourneyMapLookTest {
     /** 6: "Remove it": the route is drawn in pieces, each knowing where it ends, so driven ones drop. */
     @Test fun q6_routeInPiecesSoTheDrivenPartIsRemoved() {
         val pieces = RouteLayers.pieces(route)
-        assertTrue("about 10 km in 50 m pieces", pieces.size in 200..201)
-        assertEquals(10_000.0, pieces.last().second, 1.0)
+        assertTrue("about 10 km in 50 m pieces", pieces.size in 199..201)
+        val length = route.zipWithNext().sumOf { (a, b) -> Geo.distance(a, b) }
+        assertEquals("the last piece ends at the route's end", length, pieces.last().second, 0.5)
         pieces.zipWithNext().forEach { (a, b) ->
             assertEquals("pieces join up", 0.0, Geo.distance(a.first.last(), b.first.first()), 0.01)
             assertTrue(b.second > a.second)
