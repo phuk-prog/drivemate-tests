@@ -61,4 +61,19 @@ class UkJoinTest {
         assertEquals(1L, UkJoin.pick("lanes-106_-5.json", uk, null)!!.bytes)
         assertNull(UkJoin.pick("lanes-1_1.json", uk, regional))
     }
+
+    private fun mapPointer(tag: String = "map-data-ukmap-r9-a1", name: String = "drivemate-v1.pmtiles", layout: String = "drivemate-v1") =
+        """{"schema":1,"regions":{},"map":{"tag":"$tag","name":"$name","layout":"$layout","sha256":"$sha","bytes":900000000}}"""
+
+    /** The one UK map: only a uk-map release in the regional layout. */
+    @Test fun ukMapPointerIsStrict() {
+        val map = UkJoin.map(mapPointer())
+        assertEquals("map-data-ukmap-r9-a1", map.tag)
+        assertEquals(900_000_000L, map.bytes)
+        assertTrue(UkJoin.isUkMap("map-data-ukmap-r9-a1"))
+        assertFalse(UkJoin.isUkMap("map-data-region-cheshire-r1-a1"))
+        for (bad in listOf(mapPointer(tag = "map-data-region-x-r1-a1"), mapPointer(name = "drivemate.pmtiles"),
+                mapPointer(layout = "legacy"), mapPointer(tag = "map-data-ukmap-r9-a1-part002")))
+            assertTrue(bad, runCatching { UkJoin.map(bad) }.isFailure)
+    }
 }
