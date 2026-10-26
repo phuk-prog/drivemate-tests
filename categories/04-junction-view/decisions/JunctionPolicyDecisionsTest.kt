@@ -5,6 +5,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class JunctionPolicyDecisionsTest {
+    @Test fun q4_3_raisedCameraAppliesFromEveryOrdinaryMapMode() {
+        for (view in com.drivemate.app.data.MapView.entries) {
+            val target = com.drivemate.app.map.DrivingCamera.target(view, 17.0, 55.0, 40.0, null, true, 1.0, 16.8)
+            assertEquals(60.0, target.tilt, 0.001)
+            assertEquals(40.0, target.bearing, 0.001)
+            assertEquals(16.8, target.zoom, 0.001)
+        }
+    }
+    @Test fun q4_1_complexMotorwayCanBeModelledWithoutLaneCounts() {
+        assertNotNull(JunctionPlan.build("turn", "left", true, emptyList(), null, null, null,
+            "", "M60", "", onMotorway = true, complexMotorway = true))
+    }
     @Test fun q4_1_17_motorwaysNeedExitSplitOrVerifiedComplexity() {
         assertTrue(JunctionViewPolicy.eligible("off ramp", true, null))
         assertTrue(JunctionViewPolicy.eligible("fork", true, null))
