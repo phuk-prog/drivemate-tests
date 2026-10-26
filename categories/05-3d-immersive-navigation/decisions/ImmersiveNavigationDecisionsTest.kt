@@ -27,6 +27,13 @@ class ImmersiveNavigationDecisionsTest {
         assertEquals(1.0, b.update(false, 4000), 0.0)
         assertEquals(0.75, b.update(false, 5000), 0.0)
     }
+    @Test fun q5_9_noNativeFeatureQueryBeforeFirstFrameOrAfterDetach() {
+        assertFalse(BuildingLayers.canQuery(false, true, 1080, 2100))
+        assertFalse(BuildingLayers.canQuery(true, false, 1080, 2100))
+        assertFalse(BuildingLayers.canQuery(true, true, 0, 2100))
+        assertFalse(BuildingLayers.canQuery(true, true, 1080, 0))
+        assertTrue(BuildingLayers.canQuery(true, true, 1080, 2100))
+    }
     @Test fun q5_14_sustainedNativeCostDropsDecorationBeforePerspective() {
         val budget = ImmersiveRenderBudget()
         repeat(29) { budget.sample(0.08, 0.01) }

@@ -28,6 +28,7 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(AndroidJUnit4::class)
 class ImmersiveBuildingsScreenTest {
@@ -45,12 +46,17 @@ class ImmersiveBuildingsScreenTest {
         val paint = (0 until assetLayers.length()).map { assetLayers.getJSONObject(it) }
             .first { it.getString("id") == "building-3d" }.getJSONObject("paint")
         val ref = AtomicReference<MapLibreMap?>(); val view = AtomicReference<MapView?>()
+        val firstFrame = AtomicBoolean(false)
         val building = """{"type":"FeatureCollection","features":[{"type":"Feature","id":"building-a","properties":{"height":20,"height_known":true},"geometry":{"type":"Polygon","coordinates":[[[-2.0002,52.9998],[-1.9998,52.9998],[-1.9998,53.0002],[-2.0002,53.0002],[-2.0002,52.9998]]]}}]}"""
         compose.setContent {
             AndroidView(modifier = Modifier.fillMaxSize().testTag("immersive-buildings"), factory = { context ->
                 MapLibre.getInstance(context)
                 MapView(context).also { v ->
-                    view.set(v); v.onCreate(Bundle()); v.onStart(); v.onResume()
+                    view.set(v)
+                    v.addOnDidFinishRenderingFrameListener(MapView.OnDidFinishRenderingFrameWithStatsListener { complete, _ ->
+                        if (complete && ref.get() != null) firstFrame.set(true)
+                    })
+                    v.onCreate(Bundle()); v.onStart(); v.onResume()
                     v.getMapAsync { map ->
                         map.setStyle(Style.Builder().fromJson("""{"version":8,"sources":{},"layers":[{"id":"land","type":"background","paint":{"background-color":"#e8ebe6"}}]}""")) { style ->
                             style.addSource(GeoJsonSource("buildings", building))
@@ -98,6 +104,9 @@ class ImmersiveBuildingsScreenTest {
         }
         // Real native renderer: a 20m building must change appearance when provenance is removed.
         note("footprint readiness")
+        compose.waitUntil(30000) {
+            view.get()?.let { BuildingLayers.canQuery(firstFrame.get(), it.isAttachedToWindow, it.width, it.height) } == true
+        }
         var mappedFootprintRendered = false
         compose.waitUntil(10000) {
             compose.runOnIdle {
