@@ -66,7 +66,10 @@ class ImmersiveBuildingsScreenTest {
                 }
             })
         }
+        var stage = "style readiness"
+        try {
         compose.waitUntil(30000) { ref.get() != null }
+        stage = "building presentation"
         compose.runOnIdle {
             val map = ref.get()!!; val style = map.style!!
             val layer = style.getLayerAs<FillExtrusionLayer>("building-3d")!!
@@ -86,9 +89,13 @@ class ImmersiveBuildingsScreenTest {
             val bitmap = AtomicReference<Bitmap?>()
             compose.runOnIdle { ref.get()!!.snapshot { bitmap.set(it) } }
             compose.waitUntil(10000) { bitmap.get() != null }
-            return bitmap.get()!!
+            val full = bitmap.get()!!
+            val small = Bitmap.createScaledBitmap(full, 120, 180, false)
+            if (small !== full) full.recycle()
+            return small
         }
         // Real native renderer: a 20m building must change appearance when provenance is removed.
+        stage = "footprint readiness"
         var mappedFootprintRendered = false
         compose.waitUntil(10000) {
             compose.runOnIdle {
@@ -98,20 +105,32 @@ class ImmersiveBuildingsScreenTest {
             }
             mappedFootprintRendered
         }
+        stage = "known-height snapshot"
         val known = snapshot()
         compose.runOnIdle {
             ref.get()!!.style!!.getSourceAs<GeoJsonSource>("buildings")!!
                 .setGeoJson(building.replace(",\"height_known\":true", ""))
         }
+        stage = "unknown-height snapshot"
         var unknown = snapshot()
         var attempts = 0
-        while (known.sameAs(unknown) && attempts++ < 20) unknown = snapshot()
+        while (known.sameAs(unknown) && attempts++ < 20) {
+            unknown.recycle()
+            unknown = snapshot()
+        }
         assertFalse("Unproven height must not render as the known 20m building", known.sameAs(unknown))
+        known.recycle(); unknown.recycle()
+        stage = "artifact snapshot"
         val shot = AtomicReference<Bitmap?>()
         compose.runOnIdle { ref.get()!!.snapshot { shot.set(it) } }
         compose.waitUntil(30000) { shot.get() != null }
         val dir = File(ctx.externalMediaDirs.first(), "additional_test_output"); dir.mkdirs()
         File(dir,"q5_7_8_9_10_13_18_buildingsFootprintsOcclusionAndStyleReload.png").outputStream().use { shot.get()!!.compress(Bitmap.CompressFormat.PNG,100,it) }
-        compose.runOnIdle { view.get()!!.onPause(); view.get()!!.onStop(); view.get()!!.onDestroy() }
+        shot.get()!!.recycle()
+        } catch (error: Throwable) {
+            throw AssertionError("Native building stage=$stage: ${error.javaClass.simpleName}: ${error.message}", error)
+        } finally {
+            compose.runOnIdle { view.get()?.let { it.onPause(); it.onStop(); it.onDestroy() } }
+        }
     }
 }

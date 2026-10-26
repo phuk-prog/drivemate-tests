@@ -158,7 +158,9 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: app-src
-          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
+          script: |
+            ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
+            adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -208,6 +210,13 @@ jobs:
               diagnostics.extend({"stage": stage, "message": message} for message in messages)
               if not messages:
                   diagnostics.append({"stage": stage, "message": "Gradle exited unsuccessfully; see failed or missing tests in this summary"})
+          native = Path(os.environ["RUNNER_TEMP"]) / "drivemate-native.log"
+          if native.is_file():
+              native_text = native.read_text(errors="replace")
+              if "OutOfMemoryError" in native_text:
+                  diagnostics.append({"stage": "screen", "message": "Android runtime reported OutOfMemoryError during emulator checks"})
+              if "Fatal signal" in native_text:
+                  diagnostics.append({"stage": "screen", "message": "Native renderer process terminated with a fatal signal during emulator checks"})
           summary["diagnostics"] = diagnostics
           target.write_text(json.dumps(summary, indent=1) + "\n")
           PY_DIAGNOSTICS
