@@ -7,7 +7,7 @@ import com.drivemate.app.nav.LatLon
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Highway Code 133/134, 140–143, 184–186, 258/269 and National Highways Red X.
+/** Highway Code 124, 133/134, 140–143, 184–186, 258/269 and National Highways Red X.
  * Tests of safety properties; no owner timing or styling choices are legal thresholds.
  * Synthetic OSM-shaped data, not a private journey or a claim to validate real map data.
  */
@@ -32,6 +32,14 @@ class LaneGuidanceLawTest {
         val lanes = db(directions = "\"oneway\":\"yes\",\"junction\":\"roundabout\",\"turn:lanes\":\"left|through\"")
             .lanesAt(LatLon(0.0005, 0.0), 0.0, "straight")!!
         assertEquals(listOf(1), LanePolicy.usable(lanes))
+    }
+    /** Highway Code rule 124 national speed limits for cars, used only to time lane guidance. */
+    @Test fun nationalLimitsFollowRoadType() {
+        val mph = 1.609344
+        assertEquals(70 * mph, com.drivemate.app.nav.LaneTiming.nationalLimit(mapOf("highway" to "motorway"))!!, 0.01)
+        assertEquals(70 * mph, com.drivemate.app.nav.LaneTiming.nationalLimit(mapOf("highway" to "trunk", "oneway" to "yes", "lit" to "no"))!!, 0.01)
+        assertEquals(60 * mph, com.drivemate.app.nav.LaneTiming.nationalLimit(mapOf("highway" to "primary", "lit" to "no"))!!, 0.01)
+        assertEquals(30 * mph, com.drivemate.app.nav.LaneTiming.nationalLimit(mapOf("highway" to "residential", "lit" to "yes"))!!, 0.01)
     }
     @Test fun laneCountAloneDoesNotInventArrows() {
         assertNull(db(directions = "\"oneway\":\"yes\",\"lanes\":\"2\"").lanesAt(LatLon(0.0005, 0.0), 0.0, "left"))
