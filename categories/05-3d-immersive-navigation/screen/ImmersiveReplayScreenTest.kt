@@ -33,7 +33,7 @@ class ImmersiveReplayScreenTest {
         compose.onNodeWithText("Pause").performScrollTo().performClick()
         compose.onNodeWithText("Restart").performScrollTo().performClick()
         compose.onNodeWithTag("replay-stage").assertTextContains("1 of 6", substring = true)
-        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        val bitmap = compose.onNodeWithTag("replay-scene").performScrollTo().captureToImage().asAndroidBitmap()
         val dir = File(InstrumentationRegistry.getInstrumentation().targetContext.externalMediaDirs.first(), "additional_test_output"); dir.mkdirs()
         File(dir,"q5_16_17_manualPlayPauseRestartAndMotionLock.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
         safe.set(false)

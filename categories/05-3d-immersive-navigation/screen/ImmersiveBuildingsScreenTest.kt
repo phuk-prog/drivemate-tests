@@ -82,6 +82,31 @@ class ImmersiveBuildingsScreenTest {
             BuildingLayers.apply(style, true, false)
             assertFalse(layer.filter.toString().contains("building-a"))
         }
+        fun snapshot(): Bitmap {
+            val bitmap = AtomicReference<Bitmap?>()
+            compose.runOnIdle { ref.get()!!.snapshot { bitmap.set(it) } }
+            compose.waitUntil(10000) { bitmap.get() != null }
+            return bitmap.get()!!
+        }
+        // Real native renderer: a 20m building must change appearance when provenance is removed.
+        var mappedFootprintRendered = false
+        compose.waitUntil(10000) {
+            compose.runOnIdle {
+                val v = view.get()!!
+                mappedFootprintRendered = ref.get()!!.queryRenderedFeatures(
+                    android.graphics.RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), "building").isNotEmpty()
+            }
+            mappedFootprintRendered
+        }
+        val known = snapshot()
+        compose.runOnIdle {
+            ref.get()!!.style!!.getSourceAs<GeoJsonSource>("buildings")!!
+                .setGeoJson(building.replace(",\"height_known\":true", ""))
+        }
+        var unknown = snapshot()
+        var attempts = 0
+        while (known.sameAs(unknown) && attempts++ < 20) unknown = snapshot()
+        assertFalse("Unproven height must not render as the known 20m building", known.sameAs(unknown))
         val shot = AtomicReference<Bitmap?>()
         compose.runOnIdle { ref.get()!!.snapshot { shot.set(it) } }
         compose.waitUntil(30000) { shot.get() != null }
