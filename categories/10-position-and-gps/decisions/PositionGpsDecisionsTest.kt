@@ -1,4 +1,6 @@
-package com.drivemate.app.nav
+package com.drivemate.tests.cat10
+
+import com.drivemate.app.nav.*
 
 import org.junit.Assert.*
 import org.junit.Test
