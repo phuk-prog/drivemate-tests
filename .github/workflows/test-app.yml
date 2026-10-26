@@ -95,24 +95,41 @@ jobs:
           }
           KTS
           find app-src/app/src/test app-src/app/src/androidTest -type f | sed 's|app-src/app/src/||'
-      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+      - id: java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Verify test collection fails closed for missing suites
+        id: collection
+        run: python3 -m unittest discover -s ci -p 'test_*.py'
+      - id: android
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
           log-accepted-android-sdk-licenses: false
-      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
-      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d
+      - id: sdk
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - id: gradle
+        uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d
       - name: Run the tests
+        id: unit
         working-directory: app-src
-        run: ./gradlew :app:testDebugUnitTest --no-daemon --continue --max-workers=4 || echo "tests failed; the summary decides"
+        # Build output stays ephemeral. Only bounded error messages enter summary.json.
+        run: |
+          if ./gradlew :app:testDebugUnitTest --no-daemon --continue --max-workers=4 > "$RUNNER_TEMP/drivemate-unit.log" 2>&1; then
+            echo 0 > "$RUNNER_TEMP/drivemate-unit.exit"
+          else
+            echo "$?" > "$RUNNER_TEMP/drivemate-unit.exit"
+            echo 'Unit checks failed; summary.json records the reason.'
+          fi
       - name: Enable KVM for the emulator
+        id: kvm
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Run the screen tests on the emulator
+        id: screen
         # The debug build is only installed on the emulator; it is never uploaded.
         uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2.33.0
         with:
@@ -124,10 +141,12 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: app-src
-          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests || echo "screen tests failed; the summary decides"
+          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
+        env:
+          DIAGNOSTIC_STEPS: ${{ toJSON(steps) }}
         run: |
           mkdir -p results
           python3 -m pip install -q Pillow==11.0.0 || true
@@ -138,6 +157,43 @@ jobs:
             app-src/app/build/test-results/testDebugUnitTest app-src/app/build/outputs/androidTest-results \
             | tee -a "$GITHUB_STEP_SUMMARY"
           python3 ci/run_summary.py results/full-app.json results/summary.json
+          python3 - <<'PY_DIAGNOSTICS'
+          import json, os, re
+          from pathlib import Path
+          target = Path("results/summary.json")
+          summary = json.loads(target.read_text())
+          diagnostics = []
+          steps = json.loads(os.environ.get("DIAGNOSTIC_STEPS", "{}"))
+          for name in ("java", "collection", "android", "sdk", "gradle", "kvm", "unit", "screen"):
+              if steps.get(name, {}).get("outcome") == "failure":
+                  diagnostics.append({"stage": name, "message": "Setup or execution step failed before completion"})
+          for stage in ("unit", "screen"):
+              root = Path(os.environ["RUNNER_TEMP"])
+              status = root / f"drivemate-{stage}.exit"
+              if not status.is_file() or status.read_text().strip() == "0":
+                  continue
+              messages = []
+              log = root / f"drivemate-{stage}.log"
+              for line in log.read_text(errors="replace").splitlines() if log.is_file() else []:
+                  line = re.sub(r"\x1b\[[0-9;]*m", "", line).strip()
+                  if not (line.startswith("e: ") or line.startswith("Execution failed for task ") or
+                          line.startswith("> Could not ") or line.startswith("> A failure occurred ")):
+                      continue
+                  # Compiler messages only: never source snippets, stack traces or full paths.
+                  line = re.sub(r"(?:file://)?/[^\s]*?/([^/\s]+\.kt)(?=[:(])", r"\1", line)
+                  line = re.sub(r"https?://\S+", "<url>", line)
+                  line = re.sub(r"(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)", "<redacted>", line)
+                  line = line[:300]
+                  if line not in messages:
+                      messages.append(line)
+                  if len(messages) == 6:
+                      break
+              diagnostics.extend({"stage": stage, "message": message} for message in messages)
+              if not messages:
+                  diagnostics.append({"stage": stage, "message": "Gradle exited unsuccessfully; see failed or missing tests in this summary"})
+          summary["diagnostics"] = diagnostics
+          target.write_text(json.dumps(summary, indent=1) + "\n")
+          PY_DIAGNOSTICS
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
         # Only once the app was fetched, and never for a cancelled run.
@@ -160,5 +216,5 @@ jobs:
           import json, sys
           s = json.load(open("results/summary.json"))
           print(f"{s['passed']}/{s['total']} passed")
-          sys.exit(0 if s["total"] and s["passed"] == s["total"] else 1)
+          sys.exit(0 if s["total"] and s["passed"] == s["total"] and not s.get("diagnostics") else 1)
           PY
