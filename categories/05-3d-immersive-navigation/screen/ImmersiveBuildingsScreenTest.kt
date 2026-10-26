@@ -67,9 +67,11 @@ class ImmersiveBuildingsScreenTest {
             })
         }
         var stage = "style readiness"
+        fun note(value: String) { stage = value; android.util.Log.i("DM_CAT5_STAGE", value) }
+        note(stage)
         try {
         compose.waitUntil(30000) { ref.get() != null }
-        stage = "building presentation"
+        note("building presentation")
         compose.runOnIdle {
             val map = ref.get()!!; val style = map.style!!
             val layer = style.getLayerAs<FillExtrusionLayer>("building-3d")!!
@@ -95,7 +97,7 @@ class ImmersiveBuildingsScreenTest {
             return small
         }
         // Real native renderer: a 20m building must change appearance when provenance is removed.
-        stage = "footprint readiness"
+        note("footprint readiness")
         var mappedFootprintRendered = false
         compose.waitUntil(10000) {
             compose.runOnIdle {
@@ -105,13 +107,13 @@ class ImmersiveBuildingsScreenTest {
             }
             mappedFootprintRendered
         }
-        stage = "known-height snapshot"
+        note("known-height snapshot")
         val known = snapshot()
         compose.runOnIdle {
             ref.get()!!.style!!.getSourceAs<GeoJsonSource>("buildings")!!
                 .setGeoJson(building.replace(",\"height_known\":true", ""))
         }
-        stage = "unknown-height snapshot"
+        note("unknown-height snapshot")
         var unknown = snapshot()
         var attempts = 0
         while (known.sameAs(unknown) && attempts++ < 20) {
@@ -120,7 +122,7 @@ class ImmersiveBuildingsScreenTest {
         }
         assertFalse("Unproven height must not render as the known 20m building", known.sameAs(unknown))
         known.recycle(); unknown.recycle()
-        stage = "artifact snapshot"
+        note("artifact snapshot")
         val shot = AtomicReference<Bitmap?>()
         compose.runOnIdle { ref.get()!!.snapshot { shot.set(it) } }
         compose.waitUntil(30000) { shot.get() != null }

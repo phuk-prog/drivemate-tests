@@ -160,7 +160,7 @@ jobs:
           working-directory: app-src
           script: |
             ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
-            adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
+            adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F DM_CAT5_STAGE:I > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -217,6 +217,15 @@ jobs:
                   diagnostics.append({"stage": "screen", "message": "Android runtime reported OutOfMemoryError during emulator checks"})
               if "Fatal signal" in native_text:
                   diagnostics.append({"stage": "screen", "message": "Native renderer process terminated with a fatal signal during emulator checks"})
+                  markers = [line.split("DM_CAT5_STAGE:", 1)[-1].strip() for line in native_text.splitlines() if "DM_CAT5_STAGE:" in line]
+                  if markers:
+                      diagnostics.append({"stage": "screen", "message": "Last native building stage: " + markers[-1][:100]})
+                  frames = [line.strip() for line in native_text.splitlines() if re.search(r"#\d+ pc ", line)]
+                  for frame in frames[:5]:
+                      # Bounded symbols only: redact native addresses and directory paths.
+                      frame = re.sub(r"(?:/[^ /]+)+/([^ /]+\.so)", r"\1", frame)
+                      frame = re.sub(r"\b[0-9a-f]{8,}\b", "<address>", frame)
+                      diagnostics.append({"stage": "screen", "message": frame[:300]})
           summary["diagnostics"] = diagnostics
           target.write_text(json.dumps(summary, indent=1) + "\n")
           PY_DIAGNOSTICS
