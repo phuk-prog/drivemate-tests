@@ -8,25 +8,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LaneTimingTest {
-    @Test fun lanesComeOnWithTheJunctionViewArrowAlways() {
-        assertTrue(LaneTiming.lanesDue(990.0, fastRoad = true, spoken = false, onRoundabout = false))
-        assertFalse(LaneTiming.lanesDue(1_010.0, fastRoad = true, spoken = false, onRoundabout = false))
-        assertTrue(LaneTiming.lanesDue(290.0, fastRoad = false, spoken = false, onRoundabout = false))
-        assertFalse(LaneTiming.lanesDue(310.0, fastRoad = false, spoken = false, onRoundabout = false))
-        assertTrue("named by the voice: shown", LaneTiming.lanesDue(1_400.0, true, spoken = true, onRoundabout = false))
+    @Test fun approvedBandsControlLaneOnsetArrowStillAlwaysShown() {
+        assertEquals(178.816, LaneTiming.showFromLimit(20 * 1.609344)!!, 0.001)
+        assertEquals(2_816.352, LaneTiming.showFromLimit(70 * 1.609344)!!, 0.001)
+        val display = LaneDisplay()
+        assertFalse(display.due("route", "junction", 180.0, 20 * 1.609344))
+        assertTrue(display.due("route", "junction", 178.0, 20 * 1.609344))
         assertTrue("arrow always shown (1.5)", LaneTiming.arrowShown(false, "turn", 4_000.0, false, true))
         assertFalse(LaneTiming.arrowShown(true, "turn", 4_000.0, false, true))
         assertTrue(LaneTiming.arrowShown(false, "off ramp", 900.0, false, true))
         assertTrue(LaneTiming.arrowShown(false, "roundabout", 900.0, true, false))
     }
-
-    @Test fun laneDiagramFullFirstThenNarrow() {
-        assertEquals(1f, LaneTiming.laneDetail(900.0, true))
-        assertEquals(0f, LaneTiming.laneDetail(200.0, true))
-        assertEquals(1f, LaneTiming.laneDetail(250.0, false))
-        assertEquals(0f, LaneTiming.laneDetail(80.0, false))
-    }
-
 
     @Test fun laneWordsSayWhichLanesToUseNeverAvoid() {
         val threeOfFour = listOf(Lane(listOf("left"), valid = false)) + List(3) { Lane(listOf("straight"), valid = true) }

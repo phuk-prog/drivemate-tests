@@ -12,7 +12,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound"}
+CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound", "cat03": "3 Lane guidance"}
 
 
 def item_for(classname):
@@ -48,6 +48,24 @@ def main():
         "run_url": run_url, "app_commit": app_commit, "checklist": {}}
     doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
     found = [r for d in xml_dirs if Path(d).is_dir() for r in results(d)]
+    # A compilation/emulator failure must not look green just because another suite ran.
+    expected = []
+    sources = list(Path("app-unit/java").rglob("*.kt")) + list(Path("categories").rglob("*.kt"))
+    for source in sources:
+        text = source.read_text()
+        package = re.search(r"^package\s+([\w.]+)", text, re.M)
+        cls = re.search(r"class\s+(\w+Test)\b", text)
+        if not package or not cls:
+            continue
+        classname = package.group(1) + "." + cls.group(1)
+        item = item_for(classname)
+        if item:
+            expected += [(item, classname, name) for name in re.findall(r"@Test(?:\([^)]*\))?\s+fun\s+(\w+)", text)]
+    executed = {(t["class"], t["name"]) for _, t in found}
+    for item, classname, name in expected:
+        if (classname, name) not in executed:
+            found.append((item, {"class": classname, "name": name, "status": "failed",
+                "failure": "Expected test did not run; compilation or emulator setup may have failed"}))
     for _, test in found:
         test["media"] = [n for n in shots if n.startswith(test["name"])]
     if not found:
