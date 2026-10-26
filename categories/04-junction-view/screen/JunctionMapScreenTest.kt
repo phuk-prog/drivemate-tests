@@ -48,7 +48,8 @@ class JunctionMapScreenTest {
         val ready = AtomicReference<MapLibreMap?>()
         val view = AtomicReference<MapView?>()
         val path = listOf(Geo.offset(centre, 180.0, 400.0), centre, Geo.offset(centre, 45.0, 100.0))
-        val roads = ImmersiveLayers.roads(listOf(path to null))
+        val ring = (0..360 step 10).map { Geo.offset(centre, it.toDouble(), 40.0) }
+        val roads = ImmersiveLayers.roads(listOf(path to null, ring to null))
         compose.setContent {
             AndroidView(modifier = Modifier.fillMaxSize().testTag("junction-map"), factory = { ctx ->
                 MapLibre.getInstance(ctx)
@@ -84,10 +85,26 @@ class JunctionMapScreenTest {
                     latitude = car.lat; longitude = car.lon; accuracy = 3f; bearing = 0f; speed = 10f
                     elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(); time = System.currentTimeMillis()
                 })
+                assertEquals(car.lat, map.locationComponent.lastKnownLocation!!.latitude, 1e-8)
                 positions += map.projection.toScreenLocation(LatLng(car.lat, car.lon)).y
             }
         }
         assertTrue("The measured pointer changes screen position, rather than being fixed at the bottom", kotlin.math.abs(positions[0] - positions[1]) > 4f)
+        val ringPositions = mutableListOf<Float>()
+        for (angle in listOf(270.0, 0.0, 90.0)) compose.runOnIdle {
+            val map = ready.get()!!
+            val car = Geo.offset(centre, angle, 40.0)
+            val focus = JunctionViewPolicy.cameraCentre(car, centre, 1.0)
+            map.moveCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
+                .target(LatLng(focus.lat, focus.lon)).zoom(17.0).tilt(60.0).bearing(0.0).build()))
+            map.locationComponent.forceLocationUpdate(Location("gps").apply {
+                latitude = car.lat; longitude = car.lon; accuracy = 3f; bearing = ((angle + 90.0) % 360).toFloat()
+                elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(); time = System.currentTimeMillis()
+            })
+            assertEquals(car.lon, map.locationComponent.lastKnownLocation!!.longitude, 1e-8)
+            ringPositions += map.projection.toScreenLocation(LatLng(car.lat, car.lon)).x
+        }
+        assertTrue("Measured pointer travels around the ring", ringPositions.max() - ringPositions.min() > 4f)
         compose.onAllNodesWithTag("junction-map").assertCountEquals(1)
         val snapshot = AtomicReference<Bitmap?>()
         compose.runOnIdle { ready.get()!!.snapshot { snapshot.set(it) } }

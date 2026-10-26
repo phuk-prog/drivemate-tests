@@ -81,6 +81,17 @@ class JunctionViewScreenTest {
         compose.onNodeWithText("Then roundabout, 3rd exit", useUnmergedTree = true).assertIsDisplayed()
         shot("q4_16_nightAndLargeTextKeepEssentialHeaderVisible")
     }
+    @Test fun q4_6_10_chainedRoundaboutHeaderDropsPreviousExitSignsAndLanes() {
+        val step = com.drivemate.app.data.RouteStep("Roundabout", "roundabout", "", "A6", 100.0,
+            LatLon(53.0, -2.0), exit = 3, ref = "A6", towards = "Town")
+        val header = com.drivemate.app.ui.navigationJunctionHeaderPlan(step)
+        assertEquals(listOf("A6"), header.shields.map { it.ref })
+        assertEquals("Town", header.destination)
+        assertEquals("", header.exitNumber)
+        assertEquals(3, header.roundaboutExit)
+        assertTrue(header.highlighted.isEmpty())
+        assertEquals(RibbonSource.NONE, header.source)
+    }
     @Test fun q4_6_14_unknownRoundaboutDirectionUsesExitOnly() {
         assertEquals("Exit 3", navigationJunctionAction("At the roundabout, take the third exit", true, false, 3))
         assertEquals("Turn left", navigationJunctionAction("Turn left", false, false, 0))

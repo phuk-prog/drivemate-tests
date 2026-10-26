@@ -79,6 +79,15 @@ class JunctionSessionScreenTest {
                 session.updateSettings(session.settings.copy(junctionView = true))
                 update(reroute, plan(reroute))
                 assertNotNull(session.immersiveMap)
+                NavigationSession::class.java.getDeclaredField("progress").apply { isAccessible = true }
+                    .set(session, progress.copy(nextStep = 2))
+                assertTrue(session.dismissJunctionView())
+                val dismissal = NavigationSession::class.java.getDeclaredField("junctionDismissal").apply { isAccessible = true }
+                    .get(session) as JunctionDismissal
+                assertTrue("Dismiss the current chained step, not its previous exit", dismissal.hidden(reroute, 2))
+                assertFalse(dismissal.hidden(reroute, 1))
+                NavigationSession::class.java.getDeclaredField("progress").apply { isAccessible = true }.set(session, progress)
+                update(reroute, plan(reroute))
                 call(session, "setNav", com.drivemate.app.NavUi(step, "Arrived", 0.0, null, 0.0, 0.0, arrived = true))
                 update(reroute, plan(reroute))
                 assertNull(session.immersiveMap)
