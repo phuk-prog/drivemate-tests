@@ -12,12 +12,12 @@ CLASSNAME = "com.drivemate.tests.cat03.FixtureDecisionsTest"
 
 
 class CollectResultsTest(unittest.TestCase):
-    def collect(self, cases):
+    def collect(self, cases, classname=CLASSNAME, source_text=None, extra_xml=None):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "categories/03-lane-guidance/decisions/FixtureDecisionsTest.kt"
             source.parent.mkdir(parents=True)
-            source.write_text("""package com.drivemate.tests.cat03
+            source.write_text(source_text or """package com.drivemate.tests.cat03
 class FixtureDecisionsTest {
     @Test fun firstBehavior() {}
     @Test fun secondBehavior() {}
@@ -27,10 +27,12 @@ class FixtureDecisionsTest {
             xml.mkdir()
             if cases is not None:
                 body = "".join(
-                    f'<testcase classname="{CLASSNAME}" name="{name}">{status}</testcase>'
+                    f'<testcase classname="{classname}" name="{name}">{status}</testcase>'
                     for name, status in cases
                 )
                 (xml / "TEST-fixture.xml").write_text(f"<testsuite>{body}</testsuite>")
+            if extra_xml:
+                (xml / "TEST-extra.xml").write_text(extra_xml)
             output = root / "results/full-app.json"
             subprocess.run(
                 [sys.executable, str(COLLECTOR), str(output), "https://example.test/run", "app-commit", "tests-commit", "media", str(xml)],
@@ -63,6 +65,45 @@ class FixtureDecisionsTest {
         document = self.collect([("firstBehavior", ""), ("secondBehavior", "<skipped/>")])
         tests = document["checklist"]["3 Lane guidance: decisions"]["tests"]
         self.assertEqual({"firstBehavior": "passed", "secondBehavior": "skipped"}, {test["name"]: test["status"] for test in tests})
+
+    def all_tests(self, doc):
+        return [t for g in doc["checklist"].values() for t in g["tests"]]
+
+    def test_unknown_junit_class_is_a_failure(self):
+        doc = self.collect([("firstBehavior", ""), ("secondBehavior", "")],
+            extra_xml='<testsuite><testcase classname="other.UntrackedTest" name="lost"/></testsuite>')
+        self.assertTrue(any(t["name"] == "lost" and t["status"] == "failed" for t in self.all_tests(doc)))
+
+    def test_misnamed_test_source_cannot_disappear(self):
+        doc = self.collect([("firstBehavior", ""), ("secondBehavior", "")], source_text='''package wrong.package
+class Misnamed {
+    @Test fun silentlyLost() {}
+}
+''')
+        self.assertTrue(any(t["status"] == "failed" and "source" in t.get("failure", "").lower() for t in self.all_tests(doc)))
+
+    def test_duplicate_junit_identity_fails(self):
+        doc = self.collect([("firstBehavior", ""), ("secondBehavior", ""), ("firstBehavior", "")])
+        self.assertTrue(any(t["status"] == "failed" and "duplicate" in t.get("failure", "").lower() for t in self.all_tests(doc)))
+
+    def test_acceptance_class_uses_its_source_kind_and_cannot_disappear(self):
+        doc = self.collect([("firstBehavior", "")], classname="com.drivemate.tests.cat03.FixtureAcceptanceTest",
+            source_text='''package com.drivemate.tests.cat03
+class FixtureAcceptanceTest {
+    @Test fun firstBehavior() {}
+    @Test fun secondBehavior() {}
+}
+''')
+        tests = doc["checklist"]["3 Lane guidance: decisions"]["tests"]
+        self.assertEqual({"firstBehavior": "passed", "secondBehavior": "failed"}, {t["name"]: t["status"] for t in tests})
+
+    def test_annotated_test_method_is_still_required(self):
+        doc = self.collect([("firstBehavior", ""), ("secondBehavior", "")], source_text='''package com.drivemate.tests.cat03
+class FixtureDecisionsTest {
+    @Test @Deprecated("test") fun annotatedBehavior() {}
+}
+''')
+        self.assertTrue(any(t["status"] == "failed" for t in self.all_tests(doc)))
 
 
 if __name__ == "__main__":
