@@ -42,3 +42,8 @@ independently verified UK lane markings. A speed=0 GPS fix with a user
 confirmation is a product-level parked gate, not independent confirmation
 the vehicle is securely parked. No physical road or car tests are performed.
 Do not mark Category 3 complete from this check alone.
+
+## Frozen fix-candidate rerun — 27 October 2026
+- Original unfixed-app public [run #68](https://github.com/phuk-prog/drivemate-tests/actions/runs/40485703060): **265/268** passing. Both new report/approval screen checks failed, plus the separate settings-readiness lane journey test. Original app SHA `05ef576af5bab22add8323f07a86ae4a7ad08957`.
+- Proposed correction remains [app PR #40](https://github.com/phuk-prog/drivemate-app/pull/40). The independent DataStore startup fix was merged via app PR #42, public tests PR #20, [run #76](https://github.com/phuk-prog/drivemate-tests/actions/runs/40560370610): **268/268**, but did not include these earlier-split tests.
+- Rerun the **unchanged two earlier-split tests** against the matching app fix branch `test/cat3-earlier-split-parked-review-20261027`; the standard public PR runner selects that matching app branch automatically. Keep expected pre-fix failures as history. **Do not merge PR #40/#18** unless both new acceptance checks and the overall public regression gate pass. This edit only requests retest; it is not evidence of a result.
