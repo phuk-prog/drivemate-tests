@@ -23,6 +23,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cat3-public-manchester-lane-source
-          path: |\n            results/cat3-published-lanes-audit.json\n            results/cat3-published-manchester-samples.json
+          path: |
+            results/cat3-published-lanes-audit.json
+            results/cat3-published-manchester-samples.json
           if-no-files-found: error
           retention-days: 90
