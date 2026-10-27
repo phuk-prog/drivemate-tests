@@ -1,0 +1,46 @@
+name: Category 1 map provenance integrity
+# Fast Python-only public source-validator pretest. No emulator, map download or APK.
+on:
+  pull_request:
+    paths:
+      - 'ci/category1_provenance_integrity.py'
+      - '.github/workflows/category1-provenance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ci/category1_provenance_integrity.py'
+      - '.github/workflows/category1-provenance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rights-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Choose matching map fix branch only for pre-merge paired test
+        id: map
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads https://github.com/phuk-prog/drivemate-map.git "$BRANCH" >/dev/null 2>&1; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate-map
+          ref: ${{ steps.map.outputs.ref }}
+          path: map-src
+          persist-credentials: false
+      - name: Verify real publisher's provenance validator
+        run: python3 -m unittest -v ci.category1_provenance_integrity
+      - name: Record immutable checked-out map/test revisions
+        if: always()
+        run: |
+          echo "map_sha=$(git -C map-src rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "tests_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
