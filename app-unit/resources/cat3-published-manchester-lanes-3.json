@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "source": "actual published OSM-derived Manchester UK join; subset of source audit run 40570774089",
+  "source_sha256": "dcaff102f855531e6bce98b77d8a2068684296590f20c032240a4eb8521e5685",
+  "ways": [
+    {
+      "id": 930354,
+      "g": [
+        [
+          -2.2199713,
+          53.4782526
+        ],
+        [
+          -2.2198129,
+          53.4782723
+        ],
+        [
+          -2.2189535,
+          53.4781741
+        ],
+        [
+          -2.2189119,
+          53.4781683
+        ],
+        [
+          -2.2188472,
+          53.4781591
+        ]
+      ],
+      "t": {
+        "highway": "trunk",
+        "lanes": "2",
+        "lit": "yes",
+        "maxspeed": "30 mph",
+        "name": "Great Ancoats Street",
+        "oneway": "yes",
+        "ref": "A665",
+        "turn:lanes": "left;through|through"
+      }
+    },
+    {
+      "id": 4419709,
+      "g": [
+        [
+          -2.2838222,
+          53.4658835
+        ],
+        [
+          -2.2839346,
+          53.4649779
+        ]
+      ],
+      "t": {
+        "bridge": "yes",
+        "highway": "trunk",
+        "lanes": "4",
+        "layer": "1",
+        "lit": "yes",
+        "maxspeed": "30 mph",
+        "name": "Trafford Road",
+        "oneway": "yes",
+        "ref": "A5063",
+        "turn:lanes": "through|through|through;right|right"
+      }
+    },
+    {
+      "id": 4542409,
+      "g": [
+        [
+          -2.1447461,
+          53.4162271
+        ],
+        [
+          -2.1449716,
+          53.416183
+        ],
+        [
+          -2.1454996,
+          53.4161304
+        ],
+        [
+          -2.1455713,
+          53.4161229
+        ],
+        [
+          -2.1456349,
+          53.4161155
+        ],
+        [
+          -2.145798,
+          53.4160982
+        ]
+      ],
+      "t": {
+        "highway": "secondary",
+        "lanes": "3",
+        "lit": "yes",
+        "maxspeed": "30 mph",
+        "name": "Carrington Road",
+        "oneway": "yes",
+        "ref": "B6104",
+        "turn:lanes": "through|right"
+      }
+    }
+  ]
+}
