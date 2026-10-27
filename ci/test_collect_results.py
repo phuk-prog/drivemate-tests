@@ -12,7 +12,7 @@ CLASSNAME = "com.drivemate.tests.cat03.FixtureDecisionsTest"
 
 
 class CollectResultsTest(unittest.TestCase):
-    def collect(self, cases):
+    def collect(self, cases, classname=CLASSNAME):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "categories/03-lane-guidance/decisions/FixtureDecisionsTest.kt"
@@ -22,12 +22,12 @@ class FixtureDecisionsTest {
     @Test fun firstBehavior() {}
     @Test fun secondBehavior() {}
 }
-""")
+""".replace('FixtureDecisionsTest', classname.rsplit('.', 1)[-1]))
             xml = root / "junit"
             xml.mkdir()
             if cases is not None:
                 body = "".join(
-                    f'<testcase classname="{CLASSNAME}" name="{name}">{status}</testcase>'
+                    f'<testcase classname="{classname}" name="{name}">{status}</testcase>'
                     for name, status in cases
                 )
                 (xml / "TEST-fixture.xml").write_text(f"<testsuite>{body}</testsuite>")
@@ -64,6 +64,22 @@ class FixtureDecisionsTest {
         tests = document["checklist"]["3 Lane guidance: decisions"]["tests"]
         self.assertEqual({"firstBehavior": "passed", "secondBehavior": "skipped"}, {test["name"]: test["status"] for test in tests})
 
+    def test_acceptance_named_tests_are_collected_by_source_directory(self):
+        document = self.collect([('firstBehavior', ''), ('secondBehavior', '')],
+                                'com.drivemate.tests.cat03.LaneContinuityAcceptanceTest')
+        self.assertIn('3 Lane guidance: decisions', document['checklist'])
+        tests = document['checklist']['3 Lane guidance: decisions']['tests']
+        self.assertEqual(2, len(tests))
+        self.assertTrue(all(test['status'] == 'passed' for test in tests))
+
+    def test_missing_acceptance_named_tests_fail_individually(self):
+        document = self.collect(None, 'com.drivemate.tests.cat03.LaneContinuityAcceptanceTest')
+        self.assertIn('3 Lane guidance: decisions', document['checklist'])
+        tests = document['checklist']['3 Lane guidance: decisions']['tests']
+        self.assertEqual({'firstBehavior', 'secondBehavior'}, {test['name'] for test in tests})
+        self.assertTrue(all(test['status'] == 'failed' for test in tests))
+
 
 if __name__ == "__main__":
     unittest.main()
+

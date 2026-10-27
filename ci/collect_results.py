@@ -24,11 +24,11 @@ def item_for(classname):
     return None
 
 
-def results(xml_dir):
+def results(xml_dir, source_items=None):
     for f in sorted(Path(xml_dir).rglob("TEST-*.xml")):
         for case in ET.parse(f).getroot().iter("testcase"):
             classname = case.get("classname", "")
-            item = item_for(classname)
+            item = (source_items or {}).get(classname) or item_for(classname)
             if item is None:
                 continue
             bad = case.find("failure") if case.find("failure") is not None else case.find("error")
@@ -47,9 +47,9 @@ def main():
     doc = json.loads(doc_path.read_text()) if doc_path.is_file() else {
         "run_url": run_url, "app_commit": app_commit, "checklist": {}}
     doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
-    found = [r for d in xml_dirs if Path(d).is_dir() for r in results(d)]
     # A compilation/emulator failure must not look green just because another suite ran.
     expected = []
+    source_items = {}
     sources = list(Path("app-unit/java").rglob("*.kt")) + list(Path("categories").rglob("*.kt"))
     for source in sources:
         text = source.read_text()
@@ -58,9 +58,19 @@ def main():
         if not package or not cls:
             continue
         classname = package.group(1) + "." + cls.group(1)
-        item = item_for(classname)
+        if source.parts[0] == 'categories':
+            category = re.match(r'(\d+)-', source.parts[1])
+            kind = source.parts[2]
+            if not category or kind not in ('law', 'decisions', 'screen'):
+                raise ValueError('Test source has no recognized category/kind: ' + str(source))
+            category_id = 'cat' + category.group(1)
+            item = f'{CATEGORIES.get(category_id, category_id)}: {kind}'
+        else:
+            item = 'App unit tests'
         if item:
+            source_items[classname] = item
             expected += [(item, classname, name) for name in re.findall(r"@Test(?:\([^)]*\))?\s+fun\s+(\w+)", text)]
+    found = [r for d in xml_dirs if Path(d).is_dir() for r in results(d, source_items)]
     executed = {(t["class"], t["name"]) for _, t in found}
     for item, classname, name in expected:
         if (classname, name) not in executed:
@@ -80,3 +90,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
