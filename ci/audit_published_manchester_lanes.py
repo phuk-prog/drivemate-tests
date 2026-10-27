@@ -18,6 +18,7 @@ BASE = "https://github.com/phuk-prog/drivemate-map/releases/download"
 SQUARE = "lanes-106_-5.json"  # 53.0..53.5 N, -2.5..-2.0 E: Greater Manchester
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$")
 OUT = Path("results/cat3-published-lanes-audit.json")
+SAMPLE_OUT = Path("results/cat3-published-manchester-samples.json")
 # Actual Stockport/M60/Portwood geography; never claim this is the driver's route.
 BOX = (53.37, 53.48, -2.29, -2.06)
 
@@ -100,6 +101,14 @@ def audit():
     near = [w for w in ways if isinstance(w, dict) and touches_stockport(w.get("g"))]
     candidates = [w for w in near if lane_candidate(w.get("t"))]
     ids = [str(w.get("id", ""))[:60] for w in candidates[:12]]
+    # Freeze a *subset of the actual published geometry and original tags* for
+    # production LaneDb parser tests. No generated road, fabricated arrows or
+    # inferred manoeuvre is permitted. The source digest binds the sample.
+    samples = [
+        {"id": w["id"], "t": w["t"], "g": w["g"]}
+        for w in candidates if "id" in w and isinstance(w.get("g"), list)
+        and len(w["g"]) >= 2
+    ][:12]
     return {
         "status": "observed_source_data",
         "source": "OSM-derived published UK join, not independently verified road-law truth",
@@ -111,6 +120,7 @@ def audit():
         "stockport_area_source_ways": len(near),
         "stockport_area_multi_lane_arrow_candidates": len(candidates),
         "candidate_osm_ids_sample": ids,
+        "_sample_ways": samples,
         "legal_lane_truth": "unknown",
         "displayed_nav_ui_lanes": "not_tested",
         "immersive_junction_view": "not_tested",
@@ -129,6 +139,14 @@ def main():
         result = {"status": "blocked", "reason": "publication_integrity_or_format",
                   "detail": str(exc)[:100]}
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    sample = result.pop("_sample_ways", None)
+    if sample is not None:
+        SAMPLE_OUT.write_text(json.dumps({
+            "schema": 1,
+            "source": "actual published OSM-derived Manchester UK join",
+            "source_sha256": result["lane_square_sha256"],
+            "ways": sample,
+        }, sort_keys=True, separators=(",", ":")) + "\n")
     OUT.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print(json.dumps(result, sort_keys=True))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
