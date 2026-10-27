@@ -121,6 +121,10 @@ def main():
                                                           "failure": "no results: the tests did not compile or run"}]}
     for item, test in found:
         doc["checklist"].setdefault(item, {"tests": []})["tests"].append(test)
+    receipts=list(Path(media_dir).rglob('stockport-source-receipt.json'))
+    if len(receipts)==1 and receipts[0].stat().st_size<=2048:
+        receipt=json.loads(receipts[0].read_text())
+        doc['source_receipts']=[{k:receipt[k] for k in ('attempts','generation_changed','request_superseded','index_loaded','scope')}]
     doc_path.parent.mkdir(parents=True, exist_ok=True)
     doc_path.write_text(json.dumps(doc, indent=1) + "\n")
     print(f"drivemate-tests: {sum(t['status'] == 'passed' for _, t in found)}/{len(found)} passed")

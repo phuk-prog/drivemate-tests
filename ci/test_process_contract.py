@@ -82,6 +82,13 @@ class ProcessContractTest(unittest.TestCase):
     def test_passing_pipeline_can_be_recorded_without_legal_claim(self):
         self.assertEqual('pipeline_only', self.c.validate_acceptance(self.evidence())['scope'])
 
+    def test_controlled_cache_pipeline_is_distinct_from_offline_acceptance(self):
+        e=self.evidence(); e['mode']='controlled_cache'
+        self.assertEqual('pipeline_only',self.c.validate_acceptance(e)['scope'])
+        e.update(engine='DMN',correct=1,total=1,unknown=0)
+        with self.assertRaisesRegex(ValueError,'MODE_REQUIRED'):
+            self.c.validate_benchmark([e])
+
     def test_identical_retest_keeps_test_map_and_input_frozen(self):
         a=self.evidence(); b=copy.deepcopy(a); b['app_sha']='f'*40
         self.c.validate_retest(a,b)

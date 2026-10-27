@@ -72,7 +72,7 @@ def validate_acceptance(e):
     immutable(e)
     if e.get('country') not in {'GB','UK','GB-NIR'} or e.get('source_kind') != 'published_real_uk' or not e.get('case_id'):
         raise ValueError('REAL_UK_SOURCE_REQUIRED')
-    if e.get('mode') not in {'online','offline'}:
+    if e.get('mode') not in {'online','offline','controlled_cache'}:
         raise ValueError('MODE_REQUIRED')
     for stage in ('source','loader','session','screen'):
         row = e.get('stages',{}).get(stage,{})

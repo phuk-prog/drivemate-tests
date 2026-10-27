@@ -34,6 +34,7 @@ def build(doc, results_dir):
         "programme": programme_summary(doc),
         "acceptance_evidence": [t['acceptance_evidence'] for g in doc['checklist'].values()
                                 for t in g['tests'] if 'acceptance_evidence' in t],
+        "source_receipts": doc.get('source_receipts',[]),
         "not_responding": anr.is_file() and "== /data/anr/" in anr.read_text(errors="replace"),
         "crashed": crash.is_file() and "FATAL EXCEPTION" in crash.read_text(errors="replace"),
         "tests": sorted(tests, key=lambda t: (t["status"] == "passed", t["item"], t["name"])),

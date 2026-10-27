@@ -8,7 +8,7 @@ Scope: the 14 approved FW/EN improvements only. Driving-feature implementation a
 | FW-02 | Missing, misnamed, unmapped and duplicate tests cannot silently pass | `collect_results.py`, `test_collect_results.py` |
 | FW-03 | Frozen fixture changes trigger source comparison; live and frozen audits remain distinct | source audit workflow, `verify_frozen_lanes.py`, archived source digests |
 | FW-04 | All 23 current categories and related batches, preserving historical IDs | `programme.json`, `run_summary.py`, `run_report.py` |
-| FW-05 | Actual published fixture -> production loader/parser -> session -> visible lane strip; stage and screenshot fingerprints required | `PublishedLanePipelineScreenTest.kt`, collector sidecar gate |
+| FW-05 | Actual published fixture -> production loader/parser -> free-driving session -> visible lane strip; stage and screenshot fingerprints required | `PublishedLanePipelineScreenTest.kt`, collector sidecar gate |
 | EN-01 | Prerequisites backed by observed test imports and production source digests; unobserved/transitive relationships remain explicit | `dependency_graph.py` |
 | EN-02 | Separate law/decision/screen tests and stable failure/incomplete reason codes | collector and `process_contract.py` |
 | EN-03 | Six related batches; partial artifacts never authorize a full release | `test_selection.py`, workflow `batch` input |
@@ -23,7 +23,9 @@ Scope: the 14 approved FW/EN improvements only. Driving-feature implementation a
 
 Reproduce the specific fault with a public regression, freeze the test and data, change the smallest relevant code, run the identical retest, then run wider checks only where affected. Retain concise hashed RED/GREEN evidence. Reuse previously verified unaffected checks. Always inspect the exact commit's terminal CI result before integration.
 
-Source availability, component correctness, source-to-screen replay, independent legal truth and physical driving are different evidence levels. The new source pipeline replay uses genuine Great Ancoats Street geometry and tags, with no route-supplied arrows. It deliberately does not claim a real junction, online download acceptance, current legal markings or a complete drive. Archived samples are original source observations; the complete original square is not archived here.
+Source availability, component correctness, source-to-screen replay, independent legal truth and physical driving are different evidence levels. The new source pipeline replay uses genuine Great Ancoats Street geometry and tags, with no route-supplied arrows. It deliberately uses the production free-driving path rather than manufacturing a junction. It does not claim a real junction, online download acceptance, current legal markings or a complete drive. Archived samples are original source observations; the complete original square is not archived here.
+
+The pipeline verdict uses `controlled_cache`: original fixture bytes enter the production loader read boundary. Network is not isolated; this does not establish offline downloader availability or online/offline parity, and it cannot be ranked as an online/offline engine benchmark.
 
 Only complete comparable benchmark records may rank. Unknown/provisional/skipped coverage remains incomplete. The framework does not invent competitors' results, legal truth or absent acceptance records. The process report records absent truth/benchmark inputs as missing evidence. An import graph is not an exhaustive runtime architecture graph.
 
