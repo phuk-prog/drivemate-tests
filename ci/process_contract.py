@@ -96,7 +96,15 @@ def validate_benchmark(entries):
         raise ValueError('EMPTY_BENCHMARK')
     anchor = entries[0]
     results=[]
+    seen_engines=set()
     for e in entries:
+        engine=e.get('engine')
+        if not isinstance(engine,str) or not engine.strip():
+            raise ValueError('BENCHMARK_ENGINE_REQUIRED')
+        engine_key=engine.strip().casefold()
+        if engine_key in seen_engines:
+            raise ValueError('DUPLICATE_BENCHMARK_ENGINE')
+        seen_engines.add(engine_key)
         immutable(e)
         if not isinstance(e.get('case_id'),str) or not e['case_id'].strip():
             raise ValueError('CASE_ID_REQUIRED')
@@ -119,8 +127,10 @@ def validate_benchmark(entries):
                         'map_sha256':e['map_sha256'],
                         'score':round(10*correct/total,2) if complete else None,'rank':None})
     ranked=sorted((r for r in results if r['coverage']=='complete'),key=lambda r:-r['score'])
-    for i,r in enumerate(ranked):
-        r['rank']=1+sum(other['score']>r['score'] for other in ranked)
+    # Do not award a first-place rank without a second complete comparator.
+    if len(ranked)>=2:
+        for r in ranked:
+            r['rank']=1+sum(other['score']>r['score'] for other in ranked)
     return results
 
 
