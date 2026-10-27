@@ -55,7 +55,7 @@ class RealManchesterRoundaboutProgressTest {
      * the general M60/A560/A5145 area. Do not pretend they are necessarily the
      * driver's exact entry and exit: the screenshots do not contain a trace.
      */
-    private fun realPassages(p: DmnPack): List<ActualPassage> {
+    private fun realPassages(p: DmnPack, minRingMetres: Double = 35.0, focus: LatLon? = null, maxCases: Int = 4): List<ActualPassage> {
         val approachByEnd = HashMap<Int, MutableList<Int>>()
         val rings = ArrayList<Int>()
         for (e in 0 until p.edgeCount) {
@@ -69,7 +69,12 @@ class RealManchesterRoundaboutProgressTest {
         val result = ArrayList<ActualPassage>()
         val selected = ArrayList<LatLon>()
         val router = DmnRouter(p)
-        for (start in rings) {
+        // A longer same-graph approach at these source-mapped roundabouts is a separate
+        // exercise: the engine formerly limited its inferred exit search to 300 metres.
+        val starts = if (focus == null) rings else rings.filter { e ->
+            Geo.distance(point(p, p.from[e]), focus) <= 350.0
+        }.sortedBy { e -> Geo.distance(point(p, p.from[e]), focus) }
+        for (start in starts) {
             val startNode = p.from[start]
             val approach = approachByEnd[startNode]?.firstOrNull {
                 it != p.reverse[start] && !p.banned(it, start) &&
@@ -83,12 +88,12 @@ class RealManchesterRoundaboutProgressTest {
             var current = start
             var distance = 0.0
             var leaving = -1
-            while (visited.add(current) && travelled.size < 30 && distance < 450) {
+            while (visited.add(current) && travelled.size < 100 && distance < minRingMetres + 550.0) {
                 travelled += current
                 distance += p.metres[current]
                 val n = p.to[current]
                 val outs = outgoing(p, n)
-                if (travelled.size >= 3 && distance >= 35.0) {
+                if (travelled.size >= 3 && distance >= minRingMetres) {
                     leaving = outs.firstOrNull { e ->
                         !ring(p, e) && allowed(p, e) && !p.restricted[e] &&
                         p.to[e] != p.from[current] && !p.banned(current, e) &&
@@ -118,7 +123,7 @@ class RealManchesterRoundaboutProgressTest {
                 p.wayId[p.way[start]], p.nodeId?.get(startNode)
             )
             selected += origin
-            if (result.size == 4) break
+            if (result.size == maxCases) break
         }
         return result
     }
@@ -194,4 +199,43 @@ class RealManchesterRoundaboutProgressTest {
         assertTrue("No qualifying real ring-internal GPS samples: graph or replay is unavailable", insideChecked >= 5)
         println("J27_REAL_UK_RING_INSIDE_CORRECT=$insideChecked/$insideChecked; source=app DMN pack; legalTruth=provisional")
     }
+    @Test fun longMappedRingAtStockportInterchangeMustNotExpireAtArbitrary300MetreLimit() {
+        val p = pack
+        // These are published approximate historical interchange locators, not claims
+        // about the private user's exact entry or contemporary lane/legal layout.
+        val pyramidJ1 = LatLon(53.40913, -2.17411)
+        val portwoodJ27 = LatLon(53.41632, -2.14879)
+        val focusCases = listOf("Pyramid J1" to pyramidJ1, "Portwood J27" to portwoodJ27)
+        val found = focusCases.mapNotNull { (name, focus) ->
+            realPassages(p, minRingMetres = 315.0, focus = focus, maxCases = 1)
+                .firstOrNull()?.let { name to it }
+        }
+        assertTrue(
+            "BLOCKED/UNKNOWN: real Greater Manchester graph has no source-backed >=315 m ring passage " +
+                "near J1/J27; check actual tagging rather than inventing one", found.isNotEmpty()
+        )
+        for ((place, c) in found) {
+            val eng = NavigationEngine(c.route)
+            val index = eng.steps.indexOfFirst { it.isRoundabout }
+            assertTrue("Mapped ring not recognised at $place", index > 0)
+            val graphExit = eng.alongOf(point(p, p.from[c.leaving]), 15.0)
+            assertTrue("Real route exit not found: $place", graphExit != null)
+            val actual = eng.maneuverEnd(index)
+            assertTrue(
+                "$place premature next instruction before graph ring exit: OSM way=${c.sourceWay} " +
+                    "exit=$graphExit, complete=$actual, measured ring length=" +
+                    c.ringEdges.sumOf { p.metres[it].toDouble() },
+                actual >= graphExit!! - 10.0
+            )
+            val last = c.ringEdges.last()
+            val nearExitFix = Geo.interpolate(point(p, p.from[last]), point(p, p.to[last]), 0.5)
+            if (eng.alongOf(nearExitFix, 10.0)!! < graphExit - 9.0) {
+                val progress = eng.update(nearExitFix,
+                    Geo.bearing(point(p, p.from[last]), point(p, p.to[last])), 8.0, 5.0)
+                assertTrue("$place: still on actual ring but the next turn was promoted",
+                    progress.onRoundabout && progress.nextStep == index)
+            }
+        }
+    }
+
 }
