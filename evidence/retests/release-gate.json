@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "scope": "Testing-process regression; no map or driving inputs",
+  "command": "python3 -m unittest discover -s ci -p test_release_gate.py",
+  "before": {
+    "test_sha": "8ac69da687162ef34feaec2fba1d48d2162d4062",
+    "map_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "input_sha256": "49941e91bb0c99826ae23be2a23b19017f49715a184dd1c9009ad936fcd86f76",
+    "case_id": "process-release-gate-regression",
+    "mode": "framework",
+    "country": "not_applicable",
+    "app_sha": "3be6420f1f73cef5f216569408525c1e4cf9d827",
+    "outcome": "failed",
+    "log_file": "release-gate-before.txt",
+    "log_sha256": "51c77aad539e7d400838e632df8f0842e39ced426ed826dfde6f46a2472601b2",
+    "source_sha256": "ee68577b54184ee1afa03d66450e8cd2decc67f7d35695ca85d3e31bd9fd78fb"
+  },
+  "after": {
+    "test_sha": "8ac69da687162ef34feaec2fba1d48d2162d4062",
+    "map_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "input_sha256": "49941e91bb0c99826ae23be2a23b19017f49715a184dd1c9009ad936fcd86f76",
+    "case_id": "process-release-gate-regression",
+    "mode": "framework",
+    "country": "not_applicable",
+    "app_sha": "aab6b6c0d43fca89b43befd4665fce0580a0e010",
+    "outcome": "passed",
+    "log_file": "release-gate-after.txt",
+    "log_sha256": "4c36b42d0c0aac9cb059f13f02b307b6ea5e30373f1e16b77ebbe954a54cc573",
+    "source_sha256": "1b0e5fc8b54ae2274576de500096a90c95298916fac51c49830951e5d29057cb"
+  }
+}
