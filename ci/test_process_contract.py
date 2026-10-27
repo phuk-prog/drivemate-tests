@@ -97,7 +97,8 @@ class ProcessContractTest(unittest.TestCase):
             self.c.validate_retest(a,b)
 
     def test_benchmarks_refuse_different_routes_or_online_offline_modes(self):
-        a=self.evidence(); b=copy.deepcopy(a); b['mode']='online'
+        a=self.evidence(); a['engine']='DMN'
+        b=copy.deepcopy(a); b.update(engine='Reference',mode='online')
         with self.assertRaisesRegex(ValueError,'INCOMPARABLE_BENCHMARK'):
             self.c.validate_benchmark([a,b])
 
