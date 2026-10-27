@@ -5,6 +5,11 @@ on:
     paths:
       - 'ci/audit_published_manchester_lanes.py'
       - '.github/workflows/cat3-published-lanes.yml'
+      - 'ci/verify_frozen_lanes.py'
+      - 'ci/test_frozen_provenance.py'
+      - 'provenance/manchester-lanes/**'
+      - 'app-unit/resources/cat3-published-manchester-lanes-3.json'
+      - 'categories/03-lane-guidance/decisions/PublishedManchesterLaneDbDecisionsTest.kt'
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,6 +23,9 @@ jobs:
           persist-credentials: false
       - name: Audit immutable published UK lane square and report source unknowns
         run: python3 ci/audit_published_manchester_lanes.py
+      - name: Verify frozen Manchester fixture against archived source observations
+        if: success() || failure()
+        run: python3 ci/verify_frozen_lanes.py
       - name: Publish audit result only — no map pack, app code, APK or private route
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -26,5 +34,6 @@ jobs:
           path: |
             results/cat3-published-lanes-audit.json
             results/cat3-published-manchester-samples.json
+            results/frozen-source-provenance.json
           if-no-files-found: error
           retention-days: 90

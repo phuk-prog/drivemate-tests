@@ -13,12 +13,17 @@ on:
         description: drivemate-app branch, tag or commit to test (empty = same-named branch, else main)
         required: false
         default: ''
+      batch:
+        description: Related batch (partial runs cannot authorize a release)
+        type: choice
+        options: [all, A, B, C, D, E, F]
+        default: all
 permissions:
   contents: read
 concurrency:
   # One run per change; a newer push or pull request update replaces an older one. Runs started by
   # hand or by the signed build (each for its own app commit) are never cancelled.
-  group: test-app-${{ github.ref }}-${{ inputs.app_ref || github.event_name }}
+  group: test-app-${{ github.ref }}-${{ inputs.app_ref || github.event_name }}-${{ inputs.batch || 'all' }}
   cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 defaults:
   run:
@@ -27,6 +32,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    env:
+      DRIVEMATE_TEST_BATCH: ${{ inputs.batch || 'all' }}
     steps:
       - name: Free runner disk for the app build and emulator
         run: |
@@ -71,19 +78,7 @@ jobs:
         id: install
         run: |
           echo "app_sha=$(git -C app-src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          rm -rf app-src/app/src/test
-          mkdir -p app-src/app/src/test/java/com/drivemate/tests app-src/app/src/test/resources
-          cp -r app-unit/java/. app-src/app/src/test/java/
-          cp -r app-unit/resources/. app-src/app/src/test/resources/
-          for f in categories/*/law/*.kt categories/*/decisions/*.kt; do
-            [ -f "$f" ] && cp "$f" app-src/app/src/test/java/com/drivemate/tests/
-          done
-          # Screen tests run on the emulator, from the app's instrumentation tests.
-          rm -rf app-src/app/src/androidTest
-          mkdir -p app-src/app/src/androidTest/java/com/drivemate/tests
-          for f in categories/*/screen/*.kt; do
-            [ -f "$f" ] && cp "$f" app-src/app/src/androidTest/java/com/drivemate/tests/
-          done
+          python3 ci/test_selection.py app-src
           # What the screen tests need to draw the app's own composables. Added on the runner only,
           # so the app (and its APK) never carries test code.
           cat >> app-src/app/build.gradle.kts <<'KTS'
@@ -119,7 +114,9 @@ jobs:
           java-version: '17'
       - name: Verify test collection fails closed for missing suites
         id: collection
-        run: python3 -m unittest discover -s ci -p 'test_*.py'
+        run: |
+          python3 -m unittest discover -s ci -p 'test_*.py'
+          python3 ci/verify_frozen_lanes.py
       - id: android
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
@@ -141,12 +138,14 @@ jobs:
           fi
       - name: Enable KVM for the emulator
         id: kvm
+        if: steps.install.outputs.has_screen == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Run the screen tests on the emulator
         id: screen
+        if: steps.install.outputs.has_screen == 'true'
         # The debug build is only installed on the emulator; it is never uploaded.
         uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2.33.0
         with:
@@ -229,6 +228,7 @@ jobs:
           summary["diagnostics"] = diagnostics
           target.write_text(json.dumps(summary, indent=1) + "\n")
           PY_DIAGNOSTICS
+          python3 ci/process_preflight.py --app-root app-src --summary results/summary.json
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
         # Only once the app was fetched, and never for a cancelled run.
@@ -236,11 +236,14 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           # drivemate-app's APK build looks for this name: results for that exact app commit.
-          name: drivemate-tests-${{ steps.install.outputs.app_sha }}
+          name: ${{ (inputs.batch == '' || inputs.batch == 'all') && format('drivemate-tests-{0}', steps.install.outputs.app_sha) || format('drivemate-batch-{0}-{1}', inputs.batch, steps.install.outputs.app_sha) }}
           path: |
             results/full-app.json
             results/summary.json
             results/run-report.html
+            results/process-summary.json
+            results/test-dependencies.json
+            results/frozen-source-provenance.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed

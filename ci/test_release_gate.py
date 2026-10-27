@@ -1,5 +1,6 @@
 """Public regression tests for the private app's release gate (no Android build)."""
 import copy
+import base64
 import importlib.util
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ class ReleaseGateTest(unittest.TestCase):
     def setUp(self):
         self.app = 'a' * 40
         self.suite = 'b' * 40
+        self.findings = []
         self.artifact = {'expired': False, 'workflow_run': {'id': 7}}
         self.run = {'id': 7, 'created_at': '2026-10-27T20:00:00Z',
                     'head_sha': self.suite, 'head_branch': 'main',
@@ -30,6 +32,9 @@ class ReleaseGateTest(unittest.TestCase):
         def get(path):
             if path == 'git/ref/heads/main':
                 return {'object': {'sha': self.suite}}
+            if path == f'contents/ci/release-findings.json?ref={self.suite}':
+                import json
+                return {'encoding':'base64','content':base64.b64encode(json.dumps({'schema':1,'findings':self.findings}).encode()).decode()}
             if path.startswith('actions/artifacts?'):
                 return {'artifacts': copy.deepcopy(artifacts), 'total_count': len(artifacts)}
             if path == 'actions/runs/7':
@@ -95,11 +100,22 @@ class ReleaseGateTest(unittest.TestCase):
         def get(path):
             if path == 'git/ref/heads/main':
                 return {'object': {'sha': self.suite}}
+            if path.startswith('contents/ci/release-findings.json?ref='):
+                return {'encoding':'base64','content':base64.b64encode(b'{"schema":1,"findings":[]}').decode()}
             if path.startswith('actions/artifacts?'):
                 return {'artifacts': artifacts}
             return {'actions/runs/7': newer, 'actions/runs/6': older}[path]
         with patch.object(gate, 'get', side_effect=get):
             self.assertIsNone(gate.newest_run(self.app))
+
+    def test_open_safety_critical_issue_blocks_release_even_when_components_pass(self):
+        self.findings=[{'id':'J27-03','severity':'safety_critical','status':'unknown'}]
+        with self.assertRaisesRegex(ValueError,'SAFETY_RELEASE_BLOCKER'):
+            self.find()
+
+    def test_quality_findings_do_not_masquerade_as_safety_failures(self):
+        self.findings=[{'id':'camera','severity':'quality','status':'failed'}]
+        self.assertEqual(7,self.find()['id'])
 
 
 if __name__ == '__main__':

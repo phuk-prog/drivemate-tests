@@ -8,6 +8,7 @@ Usage: run_summary.py FULL_APP_JSON OUT_JSON
 import json
 from pathlib import Path
 import sys
+from process_contract import programme_summary
 
 WHY_CHARS = 300
 
@@ -26,6 +27,13 @@ def build(doc, results_dir):
         "drivemate_tests_sha": doc.get("drivemate_tests_sha", ""),
         "passed": sum(t["status"] == "passed" for t in tests),
         "total": len(tests),
+        "failed": sum(t['status'] == 'failed' for t in tests),
+        "unknown": sum(t['status'] == 'unknown' for t in tests),
+        "provisional": sum(t['status'] == 'provisional' for t in tests),
+        "skipped": sum(t['status'] == 'skipped' for t in tests),
+        "programme": programme_summary(doc),
+        "acceptance_evidence": [t['acceptance_evidence'] for g in doc['checklist'].values()
+                                for t in g['tests'] if 'acceptance_evidence' in t],
         "not_responding": anr.is_file() and "== /data/anr/" in anr.read_text(errors="replace"),
         "crashed": crash.is_file() and "FATAL EXCEPTION" in crash.read_text(errors="replace"),
         "tests": sorted(tests, key=lambda t: (t["status"] == "passed", t["item"], t["name"])),

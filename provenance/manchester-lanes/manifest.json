@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "run_url": "https://github.com/phuk-prog/drivemate-tests/actions/runs/40570774089",
+  "artifact_id": 12764842958,
+  "artifact_sha256": "fe0d17dc07e7fc2f49775a0685784bcf575874d67325344c93d1d3bbf1241819",
+  "collected_utc": "2026-10-27T19:37:30Z",
+  "files": {
+    "source-samples.json": {
+      "sha256": "0ab0238e89416df54c6a889d0d6a4fd74c3d1ac47e65f0f50a5d36fc2adcdc13",
+      "bytes": 3996
+    },
+    "source-audit.json": {
+      "sha256": "9615931dff6f6741f4570cf92f6cc4293cdd05dccb7f6929e450b5df06567147",
+      "bytes": 1026
+    }
+  },
+  "limits": [
+    "Frozen source observations, not independent legal lane truth",
+    "Original square digest is an audit attestation; full original square is not archived here",
+    "Neither fixture presence nor component tests prove a real drive or full-app acceptance"
+  ]
+}
