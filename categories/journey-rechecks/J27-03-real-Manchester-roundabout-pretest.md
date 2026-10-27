@@ -58,3 +58,11 @@ driver's private screenshots, device or journey.
   user's exact GPS position, 2026 turning permissions or lane markings.
 - No legal truth, full replay, corrected on-device APK, or lane-view success
   is asserted here.
+
+## Verified baseline failure — GitHub run #73 (27 October 2026)
+
+- [Run #73](https://github.com/phuk-prog/drivemate-tests/actions/runs/40546816901) checked app commit `f78630bd3b588e41ee720fd15c1335573858d916` and reported **268/270 passing**.
+- P0 **confirmed map-to-engine failure**: `longMappedRingAtStockportInterchangeMustNotExpireAtArbitrary300MetreLimit`, source OSM way `979559023` near **Pyramid M60 J1**, graph-derived ring exit **345.9639 m**, premature engine completion **130.3366 m**; ring path ~**335.6272 m**. This supports an incorrect engine boundary on a source-mapped route, not an independently confirmed exact driver journey.
+- Other failure was Category 3 screen test `q3_3_7_14_laneSpeechIsOncePerShownDecisionAndResetsOnlyForNewDecisionOrRoute`, Android Compose condition timed out after 30 seconds. Do not fold this into the Category 1 result.
+- App [draft PR #41](https://github.com/phuk-prog/drivemate-app/pull/41) stores the DMN graph-derived exit for each roundabout and uses it in navigation progress rather than inferring a premature exit from an internal curve. **No release/production merge**. The public test code and its expected exit remain unchanged for the fix retest.
+- Subsequent test run of the same public branch tests the **same-named app fix branch** through the workflow's existing branch selection. Keep Category 1 P0 open until this unchanged source-backed test passes, then verify actual journey and instruction UI separately. Categories 3, 4 and 5 remain reopened for the user's missing guidance/3D observations.
