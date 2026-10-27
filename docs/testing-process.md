@@ -30,3 +30,9 @@ The pipeline verdict uses `controlled_cache`: original fixture bytes enter the p
 Only complete comparable benchmark records may rank. Unknown/provisional/skipped coverage remains incomplete. The framework does not invent competitors' results, legal truth or absent acceptance records. The process report records absent truth/benchmark inputs as missing evidence. An import graph is not an exhaustive runtime architecture graph.
 
 An open safety issue blocks release without falsifying passing component tests. Signed builds remain manual and require the established signing approval. This change does not request a signed APK.
+
+## Follow-on: benchmark ranking integrity regression
+
+A benchmark observation may have a valid 0–10 score without qualifying as a **ranking**. Rank 1 is not awarded just because a single engine has a complete result: at least two **distinct, complete, comparable** engine records are required. Engine names must be nonblank and unique after trimming/case-folding (so `DMN` and ` dmn ` cannot masquerade as opponents). Incomplete engines remain unranked, with unknown/provisional/skipped kept visible. This guard does not constitute an engine performance comparison.
+
+Frozen public regressions: `ci/test_benchmark_ranking_integrity.py`, added before the production-validator change as commit `16ef28bf62577706e679366f5406b06d364a01bf`. The red baseline is [run 40595840271](https://github.com/phuk-prog/drivemate-tests/actions/runs/40595840271): 60 Python checks, 6 expected failed assertions (including three missing-name subcases). Corrections are in PR [#28](https://github.com/phuk-prog/drivemate-tests/pull/28). Green verification and full app/emulator results must be checked at the final PR SHA before merge or claiming completion. These synthetic *validator* fixtures are not simulated UK roads and provide no legal truth or route-quality scores.
