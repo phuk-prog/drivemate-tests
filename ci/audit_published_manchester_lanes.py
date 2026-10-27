@@ -146,7 +146,7 @@ def main():
             "source": "actual published OSM-derived Manchester UK join",
             "source_sha256": result["lane_square_sha256"],
             "ways": sample,
-        }, sort_keys=True, separators=(",", ":")) + "\\n")
+        }, sort_keys=True, separators=(",", ":")) + "\n")
     OUT.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print(json.dumps(result, sort_keys=True))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
