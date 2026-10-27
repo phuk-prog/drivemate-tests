@@ -1,0 +1,30 @@
+{
+  "candidate_osm_ids_sample": [
+    "930354",
+    "4189397",
+    "4368336",
+    "4375293",
+    "4415024",
+    "4415025",
+    "4419705",
+    "4419709",
+    "4448208",
+    "4448241",
+    "4448270",
+    "4542409"
+  ],
+  "displayed_nav_ui_lanes": "not_tested",
+  "driver_installed_apk": "unknown",
+  "immersive_junction_view": "not_tested",
+  "lane_square": "lanes-106_-5.json",
+  "lane_square_sha256": "dcaff102f855531e6bce98b77d8a2068684296590f20c032240a4eb8521e5685",
+  "legal_lane_truth": "unknown",
+  "manifest_sha256": "6ddb290e62921fdb2b58e6d900bb4a1805251a7f48fcf966cb5ee67112ba0322",
+  "next": "Select corroborated source lane layout; full emulator NavigationSession/NavUi replay",
+  "pointer_sha256": "317c12fc6848ef19d3b4d110c7432aeb90eb27aea771c519a7608b823e877195",
+  "source": "OSM-derived published UK join, not independently verified road-law truth",
+  "status": "observed_source_data",
+  "stockport_area_multi_lane_arrow_candidates": 223,
+  "stockport_area_source_ways": 3915,
+  "total_ways_in_square": 12831
+}

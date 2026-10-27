@@ -68,7 +68,7 @@ jobs:
               print(run["id"])
           PY_GATE
           }
-          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status \
+          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml --json status \
             --jq '[.[] | select(.status != "completed")] | length'; }
           run=$(result)
           if [ -z "$run" ] && [ "$(running)" = 0 ]; then

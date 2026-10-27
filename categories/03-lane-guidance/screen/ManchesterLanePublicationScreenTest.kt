@@ -11,6 +11,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.concurrent.atomic.AtomicLong
+import org.json.JSONObject
 
 /**
  * J27-01: tests the PUBLIC, actually published Stockport source file through
@@ -41,12 +44,38 @@ class ManchesterLanePublicationScreenTest {
                 "proof that 2026 lane markings are missing",
             square in names.orEmpty()
         )
-        val request = OwnMap.beginLaneRequest()
-        OwnMap.loadAlong(app, listOf(aroundPyramid), request)
-        val db = OwnMap.lanesIfLoaded()
+        val loader = OwnMap::class.java.getDeclaredField("laneLoader").apply { isAccessible=true }.get(OwnMap)
+        val requests = loader.javaClass.getDeclaredField("requests").apply { isAccessible=true }.get(loader) as AtomicLong
+        var db = OwnMap.lanesIfLoaded()
+        var attempts = 0
+        var receipt = ""
+        var generationChanged = false
+        var requestSuperseded = false
+        do {
+            val before = MapData.switchedAt()
+            val request = OwnMap.beginLaneRequest()
+            OwnMap.loadAlong(app, listOf(aroundPyramid), request)
+            db = OwnMap.lanesIfLoaded()
+            val after = MapData.switchedAt()
+            val superseded = requests.get() != request
+            generationChanged = generationChanged || before != after
+            requestSuperseded = requestSuperseded || superseded
+            attempts++
+            val file = File(app.filesDir, "lanes/106_-5.json")
+            receipt = "attempt=$attempts generation_changed=${before != after} request_superseded=$superseded cache_bytes=${if (file.isFile) file.length() else 0}"
+            println("STOCKPORT_SOURCE_RECEIPT $receipt")
+            // Match the production generation/request fence: discovery alone is not a stable
+            // snapshot. Retry only a proven replacement, never an unexplained download failure.
+            if (db != null || before == after && !superseded) break
+        } while (attempts < 3 && SystemClock.elapsedRealtime() < until)
+        val output = File(app.externalMediaDirs.first(), "additional_test_output").apply { mkdirs() }
+        File(output, "stockport-source-receipt.json").writeText(JSONObject()
+            .put("attempts", attempts).put("generation_changed", generationChanged)
+            .put("request_superseded", requestSuperseded).put("index_loaded", db != null)
+            .put("scope", "Published source availability, not verified road-law truth").toString())
         assertNotNull(
             "PUBLISHED_LANE_SOURCE_NOT_LOADED: app found the published square but could " +
-                "not download/verify/index it; check CDN, snapshot, manifest and retries", db
+                "not download/verify/index it; $receipt", db
         )
         val nearby = db!!.nearbySegments(aroundPyramid)
         assertTrue(
