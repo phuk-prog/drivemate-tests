@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'ci/audit_published_manchester_lanes.py'
+      - 'ci/test_lane_source_audit.py'
+      - 'app-unit/resources/cat3-published-manchester-lanes-3.json'
+      - 'categories/03-lane-guidance/**'
       - '.github/workflows/cat3-published-lanes.yml'
   workflow_dispatch:
 permissions:
@@ -16,6 +19,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Verify source integrity and audit coverage regressions
+        run: python3 -m unittest discover -s ci -p 'test_lane_source_audit.py'
       - name: Audit immutable published UK lane square and report source unknowns
         run: python3 ci/audit_published_manchester_lanes.py
       - name: Publish audit result only — no map pack, app code, APK or private route

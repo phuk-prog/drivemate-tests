@@ -27,6 +27,9 @@ jobs:
     outputs:
       sha: ${{ steps.check.outputs.sha }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - name: Check the app token is set
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
@@ -48,20 +51,23 @@ jobs:
           if [ -z "$sha" ]; then echo "::error::No drivemate-app commit for \"$APP_REF\"."; exit 1; fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           # A finished test run for this commit, or start one and wait for it (up to 40 minutes).
-          # Newest finished, not cancelled, test run that saved results for this commit.
+          # Only this immutable approved public-suite revision may qualify.
           result() {
-            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
-                --jq '[.artifacts[].workflow_run.id] | unique | reverse | .[]'); do
-              c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq '.status + "/" + (.conclusion // "")')
+            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha&per_page=100" \
+                --jq '[.artifacts[] | select(.expired == false) | .workflow_run.id] | unique | reverse | .[]'); do
+              c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" | jq -r --arg suite "$GITHUB_SHA" \
+                'select(.head_sha == $suite and .path == ".github/workflows/test-app.yml" and
+                  (.event == "push" or .event == "workflow_dispatch")) |
+                  .status + "/" + (.conclusion // "")')
               case "$c" in completed/cancelled) ;; completed/*) echo "$id"; return ;; esac
             done
           }
-          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status \
-            --jq '[.[] | select(.status != "completed")] | length'; }
+          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml --json status,headSha \
+            | jq --arg suite "$GITHUB_SHA" '[.[] | select(.headSha == $suite and .status != "completed")] | length'; }
           run=$(result)
           if [ -z "$run" ] && [ "$(running)" = 0 ]; then
             echo "No test run for ${sha:0:7} yet: starting one." | tee -a "$GITHUB_STEP_SUMMARY"
-            gh workflow run test-app.yml -R "$GITHUB_REPOSITORY" --ref main -f app_ref="$sha"
+            gh workflow run test-app.yml -R "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f app_ref="$sha"
           fi
           for i in $(seq 1 80); do
             run=$(result)
@@ -76,6 +82,9 @@ jobs:
           conclusion=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)
           echo "Test run for ${sha:0:7}: $conclusion ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run)" | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$conclusion" != success ]; then echo "::error::Not every test passed on ${sha:0:7}: no APK."; exit 1; fi
+          evidence=$(mktemp -d "$RUNNER_TEMP/drivemate-evidence.XXXXXX")
+          gh run download "$run" -R "$GITHUB_REPOSITORY" -n "drivemate-tests-$sha" -D "$evidence"
+          python3 ci/release_evidence.py "$evidence/summary.json" "$sha" "$GITHUB_SHA"
   build:
     name: 2. Signed APK (waits for the owner's approval)
     needs: tested
