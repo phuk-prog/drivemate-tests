@@ -3,12 +3,12 @@ name: Category 1 map provenance integrity
 on:
   pull_request:
     paths:
-      - 'ci/test_category1_provenance_integrity.py'
+      - 'ci/category1_provenance_integrity.py'
       - '.github/workflows/category1-provenance.yml'
   push:
     branches: [main]
     paths:
-      - 'ci/test_category1_provenance_integrity.py'
+      - 'ci/category1_provenance_integrity.py'
       - '.github/workflows/category1-provenance.yml'
   workflow_dispatch:
 permissions:
@@ -38,7 +38,7 @@ jobs:
           path: map-src
           persist-credentials: false
       - name: Verify real publisher's provenance validator
-        run: python3 -m unittest -v ci.test_category1_provenance_integrity
+        run: python3 -m unittest -v ci.category1_provenance_integrity
       - name: Record immutable checked-out map/test revisions
         if: always()
         run: |
