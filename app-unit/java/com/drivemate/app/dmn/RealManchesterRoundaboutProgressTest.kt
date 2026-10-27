@@ -1,0 +1,197 @@
+package com.drivemate.app.dmn
+
+import com.drivemate.app.data.Route
+import com.drivemate.app.nav.Geo
+import com.drivemate.app.nav.LatLon
+import com.drivemate.app.nav.NavigationEngine
+import com.drivemate.app.nav.roundaboutCirculationInstruction
+import java.io.File
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * J27-03: REAL bundled UK graph pretest, NOT a diagram invented by this test.
+ *
+ * Selects legally traversable edges according to the bundled OSM-derived DMNPACK
+ * (not proof that the source matches 2026 road markings). The start, ring pieces,
+ * exit and GPS replay positions are all derived from actual source edges/nodes
+ * in the current Greater Manchester app asset. This is a map/engine consistency
+ * test; independently verified road law/ground truth still needs a separate check.
+ */
+class RealManchesterRoundaboutProgressTest {
+    private val pack: DmnPack by lazy {
+        // Gradle test working directory is normally the app module; accept root too.
+        val file = listOf(
+            File("src/main/assets/${Dmn.ASSET}"),
+            File("app/src/main/assets/${Dmn.ASSET}")
+        ).firstOrNull { it.isFile }
+        require(file != null) {
+            "BLOCKED: Greater Manchester DMN asset missing; cannot claim a real-UK-graph roundabout pretest"
+        }
+        file.inputStream().use(DmnPack::read)
+    }
+
+    private fun ring(p: DmnPack, e: Int) = p.wayRoundabout[p.way[e]]
+    private fun point(p: DmnPack, n: Int) = LatLon(p.lat[n], p.lon[n])
+    private fun allowed(p: DmnPack, e: Int) = p.access[e].toInt() == DmnRouter.ALLOWED
+    private fun outgoing(p: DmnPack, node: Int): List<Int> =
+        (p.outStart[node] until p.outStart[node + 1]).map { p.outEdges[it] }
+
+    private fun inStockport(p: DmnPack, n: Int) =
+        p.lat[n] in 53.37..53.47 && p.lon[n] in -2.27..-2.08
+
+    private data class ActualPassage(
+        val entry: Int,
+        val ringEdges: List<Int>,
+        val leaving: Int,
+        val route: Route,
+        val sourceWay: Long,
+        val sourceNode: Long?,
+    )
+
+    /**
+     * Find several distinct mapped ring passages near Stockport, including
+     * the general M60/A560/A5145 area. Do not pretend they are necessarily the
+     * driver's exact entry and exit: the screenshots do not contain a trace.
+     */
+    private fun realPassages(p: DmnPack): List<ActualPassage> {
+        val approachByEnd = HashMap<Int, MutableList<Int>>()
+        val rings = ArrayList<Int>()
+        for (e in 0 until p.edgeCount) {
+            val node = p.from[e]
+            if (!inStockport(p, node)) continue
+            if (ring(p, e) && allowed(p, e)) rings += e
+            if (!ring(p, e) && allowed(p, e) && !p.restricted[e]) {
+                approachByEnd.getOrPut(p.to[e]) { ArrayList() }.add(e)
+            }
+        }
+        val result = ArrayList<ActualPassage>()
+        val selected = ArrayList<LatLon>()
+        val router = DmnRouter(p)
+        for (start in rings) {
+            val startNode = p.from[start]
+            val approach = approachByEnd[startNode]?.firstOrNull {
+                it != p.reverse[start] && !p.banned(it, start) &&
+                p.from[it] != p.to[start]
+            } ?: continue
+            val origin = point(p, startNode)
+            if (selected.any { Geo.distance(it, origin) < 300 }) continue
+
+            val visited = HashSet<Int>()
+            val travelled = ArrayList<Int>()
+            var current = start
+            var distance = 0.0
+            var leaving = -1
+            while (visited.add(current) && travelled.size < 30 && distance < 450) {
+                travelled += current
+                distance += p.metres[current]
+                val n = p.to[current]
+                val outs = outgoing(p, n)
+                if (travelled.size >= 3 && distance >= 35.0) {
+                    leaving = outs.firstOrNull { e ->
+                        !ring(p, e) && allowed(p, e) && !p.restricted[e] &&
+                        p.to[e] != p.from[current] && !p.banned(current, e) &&
+                        p.wayHighway[p.way[e]] !in setOf("service", "footway", "path", "track")
+                    } ?: -1
+                }
+                if (leaving >= 0) break
+                val next = outs.filter { e ->
+                    ring(p, e) && allowed(p, e) &&
+                    p.to[e] != p.from[current] && !p.banned(current, e) &&
+                    e !in visited
+                }.minWithOrNull(compareBy<Int> { p.way[it] != p.way[current] }.thenBy { it })
+                if (next == null) break
+                current = next
+            }
+            if (leaving < 0) continue
+            val path = (travelled + leaving).toIntArray()
+            val metres = path.sumOf { p.metres[it].toDouble() }
+            val secs = path.sumOf { p.seconds(it).toDouble() }
+            val plan = DmnRouter.Plan(approach, leaving, path, metres, secs, false)
+            val from = point(p, p.from[approach])
+            val to = point(p, p.to[leaving])
+            val route = Dmn.build(router, listOf(Triple(from, to, plan)))
+            if (route.steps.none { it.isRoundabout }) continue
+            result += ActualPassage(
+                approach, travelled, leaving, route,
+                p.wayId[p.way[start]], p.nodeId?.get(startNode)
+            )
+            selected += origin
+            if (result.size == 4) break
+        }
+        return result
+    }
+
+    @Test fun actualTaggedRingExitIsNotDeclaredCompleteBeforeTheMappedExitNode() {
+        val p = pack
+        val cases = realPassages(p)
+        assertTrue(
+            "INSUFFICIENT REAL DATA: need >=2 distinct source-backed Stockport roundabout passages, got ${cases.size}",
+            cases.size >= 2
+        )
+        for (c in cases) {
+            val eng = NavigationEngine(c.route)
+            val i = eng.steps.indexOfFirst { it.isRoundabout }
+            assertTrue("Expected one actual mapped roundabout move: way=${c.sourceWay}", i > 0)
+            // Leaving edge starts at the true end node of the tagged ring chain.
+            // It is NOT inferred from a bend angle or the test's expected result.
+            val atExit = point(p, p.from[c.leaving])
+            val exitAlong = eng.alongOf(atExit, maxDistance = 15.0)
+            assertTrue("Ring exit must be on routed graph: way=${c.sourceWay}", exitAlong != null)
+            val claimed = eng.maneuverEnd(i)
+            assertTrue(
+                "PREMATURE ROUNDABOUT EXIT (real UK map): way=${c.sourceWay}, OSM node=${c.sourceNode}, " +
+                    "actual graph exit along=${exitAlong}, engine completion=${claimed}",
+                claimed >= exitAlong!! - 10.0
+            )
+            assertTrue(
+                "ROUNDABOUT STAYS ACTIVE TOO LONG: way=${c.sourceWay}, exit=${exitAlong}, engine=${claimed}",
+                claimed <= exitAlong + 25.0
+            )
+        }
+    }
+
+    @Test fun realRingGpsReplayKeepsRoundaboutInstructionUntilItTrulyLeaves() {
+        val p = pack
+        val cases = realPassages(p)
+        assertTrue("No real UK roundabout cases for GPS replay", cases.size >= 2)
+        var insideChecked = 0
+        for (c in cases) {
+            val eng = NavigationEngine(c.route)
+            val roundIndex = eng.steps.indexOfFirst { it.isRoundabout }
+            assertTrue(roundIndex > 0)
+            val exitAlong = eng.alongOf(point(p, p.from[c.leaving]), 15.0)!!
+            val entryLoc = point(p, p.from[c.entry])
+            eng.update(entryLoc, null, 5.0, 5.0)
+            for (e in c.ringEdges) {
+                val a = point(p, p.from[e])
+                val b = point(p, p.to[e])
+                val fix = Geo.interpolate(a, b, 0.5)
+                val along = eng.alongOf(fix, 10.0) ?: continue
+                if (along <= eng.stepStart(roundIndex) + 6.0 ||
+                    exitAlong - along <= 9.0) continue
+                val bearing = Geo.bearing(a, b)
+                val pr = eng.update(fix, bearing, 8.0, 5.0)
+                // Source-independent positioning assertion: the exact edge point
+                // must still map to that stretch, or it is an explicit test failure.
+                assertTrue(
+                    "GPS map matching diverged on actual roundabout way=${c.sourceWay} node=${c.sourceNode}",
+                    pr.offRoute < 12.0
+                )
+                assertTrue(
+                    "PREMATURE NEXT TURN: still on mapped ring, way=${c.sourceWay} node=${c.sourceNode}, " +
+                        "along=${pr.along} exit=${exitAlong}, step=${pr.nextStep}",
+                    pr.onRoundabout && pr.nextStep == roundIndex
+                )
+                val spoken = roundaboutCirculationInstruction(
+                    eng.steps[roundIndex].exit, pr.distanceToNext, eng.steps[roundIndex].name)
+                assertTrue("Must guide to exit, not a following right turn: $spoken",
+                    spoken.startsWith("Take the ") || spoken == "Take the exit")
+                insideChecked++
+            }
+        }
+        assertTrue("No qualifying real ring-internal GPS samples: graph or replay is unavailable", insideChecked >= 5)
+        println("J27_REAL_UK_RING_INSIDE_CORRECT=$insideChecked/$insideChecked; source=app DMN pack; legalTruth=provisional")
+    }
+}
