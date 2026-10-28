@@ -38,10 +38,19 @@ class ProcessContractTest(unittest.TestCase):
         self.assertEqual(0,r['unassigned']['total'])
 
     def test_unassigned_component_results_do_not_become_category_acceptance(self):
-        d=self.document(); d['checklist']={'App unit tests':{'tests':[{'class':'com.drivemate.app.data.UkJoinTest','name':'component','status':'passed'}]}}
+        d=self.document(); d['checklist']={'App unit tests':{'tests':[{'class':'com.drivemate.app.data.UnmappedUnitTest','name':'component','status':'passed'}]}}
         r=self.c.programme_summary(d)
         self.assertEqual(1,r['unassigned']['correct'])
         self.assertTrue(all(c['status']=='not_tested' for c in r['categories']))
+
+    def test_mapped_category_one_components_do_not_establish_full_category_acceptance(self):
+        d=self.document()
+        d['checklist']={'App unit tests':{'tests':[{
+            'class':'com.drivemate.app.data.UkJoinTest', 'name':'component', 'status':'passed'}]}}
+        row=self.c.programme_summary(d)['categories'][0]
+        self.assertEqual((1,1), (row['correct'],row['total']))
+        self.assertEqual('open',row['acceptance'])
+        self.assertEqual('component_checks_only',row['evidence_scope'])
 
     def test_invalid_status_cannot_be_green(self):
         d=self.document(); d['checklist']['3 Lane guidance: decisions']['tests'][0]['status']='maybe'

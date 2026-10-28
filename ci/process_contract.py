@@ -16,6 +16,15 @@ def manifest():
     batch_ids = [i for b in d['batches'] for i in b['categories']]
     if d.get('schema') != 1 or ids != list(range(1,24)) or sorted(batch_ids) != ids:
         raise ValueError('INVALID_PROGRAMME_MANIFEST')
+    # Reviewed production component tests are evidence for a category, but
+    # cannot establish end-to-end, real-road or release acceptance.
+    components=d.get('component_category_map')
+    if not isinstance(components,dict) or any(
+            not isinstance(name,str)
+            or not re.fullmatch(r'com\.drivemate\.app\.[A-Za-z0-9_.]+Test',name)
+            or type(category) is not int or category not in ids
+            for name,category in components.items()):
+        raise ValueError('INVALID_COMPONENT_CATEGORY_MAP')
     return d
 
 
@@ -36,11 +45,23 @@ def programme_summary(doc):
     groups = {c['id']: [] for c in m['categories']}
     unassigned = []
     for item, group in doc['checklist'].items():
+        if item == 'App unit tests':
+            # Classify only explicitly reviewed existing components. This
+            # partitions the observed tests; it never duplicates a count.
+            for test in group['tests']:
+                current=m['component_category_map'].get(test.get('class'))
+                (groups[current] if current else unassigned).append(test)
+            continue
         old = re.match(r'^(?:cat)?(\d+)(?: |:)', item)
         current = m['legacy_category_map'].get(str(int(old.group(1)))) if old else None
         (groups[current] if current else unassigned).extend(group['tests'])
+    categories = [dict(c, **counts(groups[c['id']])) for c in m['categories']]
+    # Category 1 has only component evidence here; its overall acceptance
+    # remains open even when all mapped unit tests pass.
+    categories[0]['acceptance'] = 'open'
+    categories[0]['evidence_scope'] = 'component_checks_only'
     return {'schema': 1, 'app_sha': doc['app_commit'], 'test_sha': doc['public_tests_sha'],
-            'categories': [dict(c, **counts(groups[c['id']])) for c in m['categories']],
+            'categories': categories,
             'unassigned': counts(unassigned), 'batches': m['batches'],
             'scope': 'Automated checks only; a passing component is not source-to-screen or real-drive acceptance'}
 
