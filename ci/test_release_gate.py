@@ -128,7 +128,8 @@ class ReleaseGateTest(unittest.TestCase):
             Path(args[-1], 'summary.json').write_text(json.dumps(summary))
         for changes in ({}, {'public_tests_sha':'c'*40}, {'total':2},
                         {'diagnostics':['failure']}, {'crashed':True},
-                        {'tests':[{'status':'unknown'}]}, {'run_url':'https://github.com/other/repo/actions/runs/7'},
+                        {'tests':[{'status':'unknown'}]}, {'tests':[{'status':'passed'}]},
+                        {'tests':[{'class':'FixtureTest','name':'','status':'passed'}]}, {'run_url':'https://github.com/other/repo/actions/runs/7'},
                         {'run_attempt':2}, {'total':2, 'passed':2, 'tests':[{'class':'FixtureTest','name':'case','status':'passed'}]*2}):
             with self.subTest(changes=changes):
                 candidate = dict(summary, **changes)
