@@ -15,13 +15,14 @@ WHY_CHARS = 300
 
 def build(doc, results_dir):
     results_dir = Path(results_dir)
-    tests = [{"item": item, "name": t["name"], "status": t["status"],
+    tests = [{"item": item, "class": t.get("class", ""), "name": t["name"], "status": t["status"],
               **({"why": str(t["failure"])[:WHY_CHARS]} if t.get("failure") else {})}
              for item, group in doc["checklist"].items() for t in group["tests"]]
     anr = results_dir / "anr-traces.txt"
     crash = results_dir / "crash-log.txt"
     return {
         "run_url": doc["run_url"],
+        "run_attempt": doc.get("run_attempt"),
         "app_commit": doc["app_commit"],
         "public_tests_sha": doc["public_tests_sha"],
         "drivemate_tests_sha": doc.get("drivemate_tests_sha", ""),

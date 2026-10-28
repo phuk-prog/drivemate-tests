@@ -121,13 +121,15 @@ class ReleaseGateTest(unittest.TestCase):
     def test_successful_run_requires_valid_downloaded_summary(self):
         summary = {'app_commit':self.app, 'public_tests_sha':self.suite,
             'drivemate_tests_sha':self.suite, 'total':1, 'passed':1,
-            'tests':[{'status':'passed'}], 'diagnostics':[],
+            'tests':[{'class':'FixtureTest','name':'case','status':'passed'}], 'diagnostics':[],
+            'run_url':self.run['html_url'], 'run_attempt':1,
             'crashed':False, 'not_responding':False}
         def download(args, check):
             Path(args[-1], 'summary.json').write_text(json.dumps(summary))
         for changes in ({}, {'public_tests_sha':'c'*40}, {'total':2},
                         {'diagnostics':['failure']}, {'crashed':True},
-                        {'tests':[{'status':'unknown'}]}):
+                        {'tests':[{'status':'unknown'}]}, {'run_url':'https://github.com/other/repo/actions/runs/7'},
+                        {'run_attempt':2}, {'total':2, 'passed':2, 'tests':[{'class':'FixtureTest','name':'case','status':'passed'}]*2}):
             with self.subTest(changes=changes):
                 candidate = dict(summary, **changes)
                 def download(args, check):

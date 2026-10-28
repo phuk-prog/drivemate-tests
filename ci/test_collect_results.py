@@ -133,6 +133,16 @@ class FixtureDecisionsTest {
         rows = [t for g in doc['checklist'].values() for t in g['tests']]
         self.assertTrue(any('SOURCE' in t.get('failure','') for t in rows))
 
+    def test_nested_helper_class_does_not_hide_real_test_class(self):
+        doc = self.collect([], source_text="""package com.drivemate.tests.cat03
+class FixtureDecisionsTest {
+ class Helper
+ @Test fun required() {}
+}
+""")
+        rows = [t for g in doc['checklist'].values() for t in g['tests']]
+        self.assertTrue(any(t['name']=='required' and t['status']=='failed' for t in rows))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,7 @@ import hashlib
 from pathlib import Path
 import re
 import sys
+import os
 import xml.etree.ElementTree as ET
 from test_selection import selected
 from process_contract import validate_acceptance
@@ -114,7 +115,7 @@ def main():
     doc_path = Path(doc_path)
     shots = sorted(p.name for p in Path(media_dir).rglob("*.png")) if Path(media_dir).is_dir() else []
     doc = {
-        "run_url": run_url, "app_commit": app_commit, "checklist": {}}
+        "run_url": run_url, "run_attempt": int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")), "app_commit": app_commit, "checklist": {}}
     doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
     # A compilation/emulator failure must not look green just because another suite ran.
     expected = []
@@ -130,7 +131,7 @@ def main():
         if not annotations:
             continue
         package = re.search(r"^package\s+([\w.]+)", text, re.M)
-        classes = re.findall(r"\bclass\s+(\w+)\b", text)
+        classes = re.findall(r"^(?:(?:public|internal|open|abstract)\s+)*class\s+(\w+)\b", text, re.M)
         if not package or len(classes) != 1:
             source_failures.append(('Test collection integrity', {'class':str(source), 'name':'source discovery',
                 'status':'failed', 'failure':'UNRECOGNIZED_TEST_SOURCE_LAYOUT'}))
