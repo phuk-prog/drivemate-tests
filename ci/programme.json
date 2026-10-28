@@ -204,5 +204,9 @@
       ]
     }
   ],
-  "note": "Batching does not override register execution order or create acceptance coverage."
+  "note": "Batching does not override register execution order or create acceptance coverage.",
+  "component_category_map": {
+    "com.drivemate.app.data.UkJoinTest": 1,
+    "com.drivemate.app.data.PublishedRegionCatalogTest": 1
+  }
 }
