@@ -122,6 +122,27 @@ jobs:
               summary.write('Offline road-graph release target: **' + result['reason'] + '** (acceptance OPEN)\\n')
           assert result['offline_acceptance'] is False
           PY
+      - name: Audit production external links in their current test categories
+        # One source-only pass over exact app SHA; no network probing or APK assertions.
+        run: |
+          python3 ci/category_connections.py \
+            --app-root app-src --programme ci/programme.json \
+            --routing-alignment results/routing-release-alignment.json \
+            --batch "${DRIVEMATE_TEST_BATCH}" \
+            --output results/category-connection-audit.json
+          python3 - <<'PY'
+          import json, os
+          value=json.load(open('results/category-connection-audit.json'))
+          assert len(value['categories']) == 23
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('### External links by current test category (source-only)\\n')
+              for number, item in value['categories'].items():
+                  if item['status'] == 'not_selected':
+                      continue
+                  summary.write(f"- Category {number}: {item['status']} ({item['references']} references; "
+                                f"{','.join(item['finding_codes']) or 'no known blocker'})\\n")
+              summary.write('APK/network download acceptance: **NOT VERIFIED**\\n')
+          PY
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin
@@ -192,6 +213,14 @@ jobs:
             python3 ../ci/emulator_network_probe.py --output ../results/emulator-network-probe.json
             # Record actual device fixture bytes separately; no production app cache.
             python3 ../ci/emulator_fixture_readback.py --source ../app-unit/resources/cat3-published-manchester-lanes-3.json --out ../results/emulator-fixture-readback.json
+      - name: Inspect URL constants in the exact emulator-built debug APK
+        # Read APK bytes on-runner; upload only a bounded receipt, never the APK.
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        run: |
+          python3 ci/apk_connection_check.py \
+            --apk app-src/app/build/outputs/apk/debug/app-debug.apk \
+            --source-report results/category-connection-audit.json \
+            --output results/apk-connection-audit.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -261,6 +290,26 @@ jobs:
           target.write_text(json.dumps(summary, indent=1) + "\n")
           PY_DIAGNOSTICS
           python3 ci/process_preflight.py --app-root app-src --summary results/summary.json
+          python3 - <<'PY_CONNECTIONS'
+          import json
+          from pathlib import Path
+          p=Path('results/summary.json')
+          s=json.loads(p.read_text())
+          report=json.loads(Path('results/category-connection-audit.json').read_text())
+          apk=json.loads(Path('results/apk-connection-audit.json').read_text())
+          s['category_connections']={
+              'scope':report['scope'],
+              'category_status':{k:v['status'] for k,v in report['categories'].items()},
+              'blocked_categories':[int(k) for k,v in report['categories'].items()
+                                    if v['status']=='blocked_needs_investigation'],
+              'verified_live_downloads':0,
+              'apk_binary_inspected': apk['dex_count'] > 0,
+              'apk_status': apk['status'],
+              'apk_blocked_categories': apk['blocked_categories'],
+              'apk_sha256': apk['apk_sha256'],
+          }
+          p.write_text(json.dumps(s,indent=1)+'\n')
+          PY_CONNECTIONS
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
         # Only once the app was fetched, and never for a cancelled run.
@@ -278,6 +327,8 @@ jobs:
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
             results/routing-release-alignment.json
+            results/category-connection-audit.json
+            results/apk-connection-audit.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
