@@ -74,7 +74,7 @@ class UkScopeTest(TestCase):
             plan.write_text(json.dumps({"regions": {}, "changes_slot": "2026-10-28T00:00Z"}))
             args = SimpleNamespace(entries=root / "entries", plan=plan, work=root)
             live = catalog_with("kent", "isle-of-man")
-            with patch.object(regions, "load_catalog", return_value=live), \\
+            with patch.object(regions, "load_catalog", return_value=live), \
                  patch.object(regions, "publish_catalog") as publish:
                 built, failed = regions.cmd_promote(args, object())
             self.assertEqual((set(), []), (built, failed))
@@ -88,7 +88,7 @@ class UkScopeTest(TestCase):
             plan = root / "plan.json"
             plan.write_text(json.dumps({"regions": {}, "changes_slot": "2026-10-28T00:00Z"}))
             args = SimpleNamespace(entries=root / "entries", plan=plan, work=root)
-            with patch.object(regions, "load_catalog", return_value=catalog_with("kent")), \\
+            with patch.object(regions, "load_catalog", return_value=catalog_with("kent")), \
                  patch.object(regions, "publish_catalog") as publish:
                 regions.cmd_promote(args, object())
             publish.assert_not_called()
