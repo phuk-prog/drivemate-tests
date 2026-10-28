@@ -100,9 +100,9 @@ class UkScopeTest(TestCase):
         guard that skips the publisher entirely. This checks that wiring.
         """
         workflow = (MAP / '.github/workflows/regional-maps.yml').read_text()
-        plan = workflow.split('\\n  plan:', 1)[1].split('\\n  build:', 1)[0]
-        promote = workflow.split('\\n  promote:', 1)[1]
-        guard = promote.split('\\n    steps:', 1)[0]
+        plan = workflow.split('\n  plan:', 1)[1].split('\n  build:', 1)[0]
+        promote = workflow.split('\n  promote:', 1)[1]
+        guard = promote.split('\n    steps:', 1)[0]
         self.assertIn("due: ${{ steps.clock.outputs.due }}", plan)
         self.assertIn("if: always() && needs.plan.outputs.due == 'true'", guard)
         self.assertNotIn("needs.plan.outputs.matrix != '[]'", guard)
