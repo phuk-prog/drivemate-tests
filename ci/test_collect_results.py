@@ -13,12 +13,12 @@ CLASSNAME = "com.drivemate.tests.cat03.FixtureDecisionsTest"
 
 
 class CollectResultsTest(unittest.TestCase):
-    def collect(self, cases, classname=CLASSNAME, first_name='firstBehavior'):
+    def collect(self, cases, classname=CLASSNAME, first_name='firstBehavior', source_text=None, stale=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "categories/03-lane-guidance/decisions/FixtureDecisionsTest.kt"
             source.parent.mkdir(parents=True)
-            source.write_text("""package com.drivemate.tests.cat03
+            source.write_text(source_text or """package com.drivemate.tests.cat03
 class FixtureDecisionsTest {
     @Test fun firstBehavior() {}
     @Test fun secondBehavior() {}
@@ -33,6 +33,9 @@ class FixtureDecisionsTest {
                 )
                 (xml / "TEST-fixture.xml").write_text(f"<testsuite>{body}</testsuite>")
             output = root / "results/full-app.json"
+            if stale:
+                output.parent.mkdir(parents=True)
+                output.write_text(json.dumps({"app_commit":"old", "checklist":{"stale":{"tests":[{"name":"stale","status":"passed"}]}}}))
             subprocess.run(
                 [sys.executable, str(COLLECTOR), str(output), "https://example.test/run", "app-commit", "tests-commit", "media", str(xml)],
                 cwd=root, check=True, capture_output=True, text=True,
@@ -110,6 +113,35 @@ class FixtureDecisionsTest {
         doc=self.collect([('firstBehavior',''),('firstBehavior',''),('secondBehavior','')])
         rows=doc['checklist']['3 Lane guidance: decisions']['tests']
         self.assertTrue(any(t['status']=='failed' and 'DUPLICATE_TEST_RESULT' in t.get('failure','') for t in rows))
+
+    def test_recollection_cannot_retain_stale_passes(self):
+        doc = self.collect(None, stale=True)
+        self.assertNotIn('stale', doc['checklist'])
+        self.assertEqual('app-commit', doc['app_commit'])
+
+    def test_annotated_and_backtick_methods_cannot_disappear(self):
+        doc = self.collect([], source_text="""package com.drivemate.tests.cat03
+class FixtureDecisionsTest {
+ @org.junit.Test @Deprecated("old") fun `must still execute`() {}
+}
+""")
+        rows = [t for g in doc['checklist'].values() for t in g['tests']]
+        self.assertTrue(any(t['name']=='must still execute' and t['status']=='failed' for t in rows))
+
+    def test_annotated_source_without_class_fails_closed(self):
+        doc = self.collect([], source_text='package missing\n@Test fun lost() {}')
+        rows = [t for g in doc['checklist'].values() for t in g['tests']]
+        self.assertTrue(any('SOURCE' in t.get('failure','') for t in rows))
+
+    def test_nested_helper_class_does_not_hide_real_test_class(self):
+        doc = self.collect([], source_text="""package com.drivemate.tests.cat03
+class FixtureDecisionsTest {
+ class Helper
+ @Test fun required() {}
+}
+""")
+        rows = [t for g in doc['checklist'].values() for t in g['tests']]
+        self.assertTrue(any(t['name']=='required' and t['status']=='failed' for t in rows))
 
 
 if __name__ == "__main__":

@@ -37,10 +37,43 @@ SOURCE_CATEGORIES = {
     "controller/ShareText.kt": ([19], "attribution_or_reference"),
     "data/DataCredits.kt": ([20], "attribution_or_reference"),
     "ui/MainMenu.kt": ([20], "attribution_or_reference"),
+    "ui/ReviewLocationMap.kt": ([22], "attribution_or_reference"),
     "PrivacyNotice.kt": ([20], "attribution_or_reference"),
 }
 OLD_PROJECTS = frozenset({"phuk-prog/drivemate-data", "phuk-prog/DriveMate-Navigation",
                           "phuk-prog/DriveMate"})
+
+# Reviewed production consumer configuration, not independently authenticated
+# domain ownership or proof of a live service. Unknown destinations stay open.
+SOURCE_HOSTS = {
+    "app/build.gradle.kts": {"github.com"},
+    "data/RoadPack.kt": {"github.com"},
+    "data/RegionPacks.kt": {"github.com"},
+    "data/MapData.kt": {"github.com"},
+    "data/OwnMap.kt": {"openmaptiles.org", "www.openstreetmap.org"},
+    "data/TomTom.kt": {"api.tomtom.com", "api.tfl.gov.uk"},
+    "data/NationalHighways.kt": {"api.data.nationalhighways.co.uk"},
+    "data/UkRoadFeeds.kt": {"ukpowernetworks.opendatasoft.com"},
+    "data/RouteWeather.kt": {"api.open-meteo.com"},
+    "data/FuelPrices.kt": {
+        "api.sainsburys.co.uk", "applegreenstores.com", "fuel.motorfuelgroup.com",
+        "fuelprices.asconagroup.co.uk", "fuelprices.esso.co.uk", "jetlocal.co.uk",
+        "moto-way.com", "storelocator.asda.com", "www.bp.com", "www.morrisons.com",
+        "www.rontec-servicestations.co.uk", "www.sgnretail.uk", "www.tesco.com"},
+    "data/ReviewImagery.kt": {"api.panoramax.xyz", "panoramax.fr"},
+    "osm/OsmConnection.kt": {"api.openstreetmap.org", "www.openstreetmap.org",
+                             "master.apis.dev.openstreetmap.org"},
+    "account/DriveAppDataBackup.kt": {"www.googleapis.com"},
+    "controller/NavigationSession.kt": {"api.openstreetmap.org"},
+    "controller/ShareText.kt": {"www.openstreetmap.org"},
+    "data/DataCredits.kt": {"creativecommons.org", "github.com", "openfontlicense.org",
+                            "openmaptiles.org", "tfl.gov.uk", "www.nationalarchives.gov.uk",
+                            "www.openstreetmap.org"},
+    "ui/MainMenu.kt": {"www.openstreetmap.org"},
+    "ui/ReviewLocationMap.kt": {"panoramax.fr", "www.openstreetmap.org"},
+    "PrivacyNotice.kt": {"ico.org.uk", "open-meteo.com", "osmfoundation.org",
+                          "panoramax.fr", "policies.google.com"},
+}
 
 
 def source_role(path):
@@ -66,7 +99,8 @@ def classify_url(value):
     if not host or parsed.scheme not in {"https", "http"}:
         return {"status": "invalid_url", "host": host, "repository": None}
     found = GITHUB_RELEASE.match(raw)
-    repo = found.group("repo") if found else None
+    parts = parsed.path.strip("/").split("/")
+    repo = "/".join(parts[:2]) if host == "github.com" and len(parts) >= 2 else None
     if repo and repo.casefold() in {x.casefold() for x in OLD_PROJECTS}:
         status = "old_or_unreachable_project_target"
     elif parsed.scheme != "https":
@@ -88,7 +122,14 @@ def classify_source_text(path, content):
             continue
         for match in URL.finditer(line):
             inspected = classify_url(match.group(0))
+            source_key = path.removeprefix("app/src/main/java/com/drivemate/app/")
+            destination_known = inspected["host"] in SOURCE_HOSTS.get(source_key, set())
+            if inspected["host"] == "github.com" and role in {"network_download", "runtime_build_config"}:
+                destination_known = (inspected.get("repository") or "").casefold() == "phuk-prog/drivemate-map"
             inspected.update({
+                "destination_classification": ("source_configured_destination" if destination_known
+                                               else "destination_ownership_unverified"),
+                "external_ownership_verified": False,
                 "source_path": path, "line": number,
                 "categories": categories if categories else [2],
                 "source_role": role, "category_assignment": "assigned" if categories else "needs_review",
@@ -140,9 +181,13 @@ def audit(app_root, programme, alignment=None, batch="all"):
         subset = [x for x in records if cid in x["categories"]] if cid in chosen else []
         flags = sorted(set(
             x["status"] for x in subset if x["status"] in {
-                "old_or_unreachable_project_target", "invalid_url", "insecure_http_reference"
+                "old_or_unreachable_project_target", "invalid_url", "insecure_http_reference",
+                "test_service_reference_not_live"
             }
         ))
+        if any(x["destination_classification"] == "destination_ownership_unverified"
+               for x in subset):
+            flags.append("destination_ownership_unverified")
         if any(x["category_assignment"] == "needs_review" for x in subset):
             flags.append("unassigned_source_needs_review")
         if cid in (1, 4) and cid in chosen and alignment:
@@ -175,7 +220,9 @@ def audit(app_root, programme, alignment=None, batch="all"):
         "limitations": [
             "Static Kotlin/Java and Gradle URL literals only: no APK binary, runtime-composed URLs, redirects, HTTP handshakes, permissions, or installed app request trace",
             "Static URL/reference matches are not evidence of an operational service, downloaded assets, or route-to-screen navigation",
-            "Unknown ownership remains a review finding in Reliability category 2; unused and attribution URLs are not assumed live network requests",
+            "Unknown source ownership remains a Reliability category 2 finding; unknown destinations block their assigned categories",
+            "Configured destination means the host matches reviewed consumer source configuration, not external ownership, legal rights, destination path correctness or live network verification",
+            "Unused and attribution URLs are not assumed live network requests",
         ],
     }
 

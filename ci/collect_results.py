@@ -11,6 +11,7 @@ import hashlib
 from pathlib import Path
 import re
 import sys
+import os
 import xml.etree.ElementTree as ET
 from test_selection import selected
 from process_contract import validate_acceptance
@@ -113,22 +114,29 @@ def main():
     doc_path, run_url, app_commit, tests_sha, media_dir, *xml_dirs = sys.argv[1:]
     doc_path = Path(doc_path)
     shots = sorted(p.name for p in Path(media_dir).rglob("*.png")) if Path(media_dir).is_dir() else []
-    doc = json.loads(doc_path.read_text()) if doc_path.is_file() else {
-        "run_url": run_url, "app_commit": app_commit, "checklist": {}}
+    doc = {
+        "run_url": run_url, "run_attempt": int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")), "app_commit": app_commit, "checklist": {}}
     doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
     # A compilation/emulator failure must not look green just because another suite ran.
     expected = []
     source_items = {}
+    source_failures = []
+    source_ids = set()
     sources = list(Path("app-unit/java").rglob("*.kt")) + list(Path("categories").rglob("*.kt"))
     for source in sources:
         if not selected(source):
             continue
         text = source.read_text()
-        package = re.search(r"^package\s+([\w.]+)", text, re.M)
-        cls = re.search(r"class\s+(\w+)\b", text)
-        if not package or not cls:
+        annotations = list(re.finditer(r"@(?:org\.junit\.)?Test\b", text))
+        if not annotations:
             continue
-        classname = package.group(1) + "." + cls.group(1)
+        package = re.search(r"^package\s+([\w.]+)", text, re.M)
+        classes = re.findall(r"^(?:(?:public|internal|open|abstract)\s+)*class\s+(\w+)\b", text, re.M)
+        if not package or len(classes) != 1:
+            source_failures.append(('Test collection integrity', {'class':str(source), 'name':'source discovery',
+                'status':'failed', 'failure':'UNRECOGNIZED_TEST_SOURCE_LAYOUT'}))
+            continue
+        classname = package.group(1) + "." + classes[0]
         if source.parts[0] == 'categories':
             category = re.match(r'(\d+)-', source.parts[1])
             kind = source.parts[2]
@@ -142,8 +150,22 @@ def main():
             if classname in source_items:
                 raise ValueError('DUPLICATE_SOURCE_CLASS:'+classname)
             source_items[classname] = item
-            expected += [(item, classname, name) for name in re.findall(r"@Test(?:\([^)]*\))?\s+fun\s+(\w+)", text)]
-    found = [r for d in xml_dirs if Path(d).is_dir() for r in results(d, source_items)]
+            for index, annotation in enumerate(annotations):
+                end = annotations[index + 1].start() if index + 1 < len(annotations) else len(text)
+                method = re.search(r"\bfun\s+(?:`([^`]+)`|(\w+))\s*\(", text[annotation.end():end])
+                if not method:
+                    source_failures.append(('Test collection integrity', {'class':classname,
+                        'name':f'source annotation {index + 1}', 'status':'failed',
+                        'failure':'UNDISCOVERABLE_SOURCE_TEST_METHOD'}))
+                    continue
+                name = method.group(1) or method.group(2)
+                identity = (classname, name)
+                if identity in source_ids:
+                    source_failures.append(('Test collection integrity', {'class':classname,
+                        'name':name, 'status':'failed', 'failure':'DUPLICATE_SOURCE_TEST_METHOD'}))
+                source_ids.add(identity)
+                expected.append((item, classname, name))
+    found = source_failures + [r for d in xml_dirs if Path(d).is_dir() for r in results(d, source_items)]
     seen_results=set()
     for _, test in found:
         identity=(test['class'],test['name'])
@@ -156,7 +178,7 @@ def main():
             found.append((item, {"class": classname, "name": name, "status": "failed",
                 "failure": "Expected test did not run; compilation or emulator setup may have failed"}))
     for _, test in found:
-        test["media"] = [n for n in shots if n.startswith(test["name"])]
+        test["media"] = [n for n in shots if test["name"] and n.startswith(test["name"])]
         if test['name'] == 'publishedGreatAncoatsSourceReachesSessionAndVisibleLaneStrip' and test['status']=='passed':
             evidence_files = list(Path(media_dir).rglob(test['name']+'-verdict.json'))
             try:
