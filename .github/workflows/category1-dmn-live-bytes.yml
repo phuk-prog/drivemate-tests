@@ -1,0 +1,36 @@
+name: Category 1 four-nation actual DMN piece byte audit
+# Public diagnostic only: published compressed sample bytes, NOT on-device routing.
+on:
+  pull_request:
+    paths:
+      - 'ci/dmn_live_bytes.py'
+      - 'ci/test_dmn_live_bytes.py'
+      - '.github/workflows/category1-dmn-live-bytes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-bytes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Frozen format and four-nation byte integrity tests
+        run: python3 -m unittest discover -s ci -p 'test_dmn_live_bytes.py' -v
+      - name: Retrieve only four current released small DMN pieces and hash actual bytes
+        run: python3 ci/dmn_live_bytes.py --live --output results/dmn-four-nation-byte-checks.json
+      - name: Save exact public test commit
+        if: always()
+        run: echo "public_test_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve bounded evidence only, never the 17 MB raw data
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dmn-four-nation-real-byte-evidence
+          path: results/dmn-four-nation-byte-checks.json
+          retention-days: 90
+          if-no-files-found: warn

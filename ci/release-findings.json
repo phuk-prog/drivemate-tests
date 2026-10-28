@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "findings": [
+    {
+      "id": "J27-03",
+      "severity": "safety_critical",
+      "status": "unknown",
+      "reason_code": "OPEN_SAFETY_ACCEPTANCE",
+      "evidence": "https://github.com/phuk-prog/drivemate-app/blob/main/register/00-improvement-programme-and-dependencies.md",
+      "note": "The live approved programme records the P0 roundabout issue as open. This is a release blocker, not a fabricated automated test failure. Close only with explicit acceptance evidence."
+    }
+  ]
+}

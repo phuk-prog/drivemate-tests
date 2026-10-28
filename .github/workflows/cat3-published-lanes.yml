@@ -1,0 +1,41 @@
+name: Category 3 published Manchester lane-source audit
+# Source-data pretest only; not a driving-screen, legal lane truth or signed APK gate.
+on:
+  pull_request:
+    paths:
+      - 'ci/audit_published_manchester_lanes.py'
+      - '.github/workflows/cat3-published-lanes.yml'
+      - 'ci/verify_frozen_lanes.py'
+      - 'ci/test_frozen_provenance.py'
+      - 'provenance/manchester-lanes/**'
+      - 'app-unit/resources/cat3-published-manchester-lanes-3.json'
+      - 'categories/03-lane-guidance/decisions/PublishedManchesterLaneDbDecisionsTest.kt'
+      - 'categories/03-lane-guidance/screen/ManchesterLanePublicationScreenTest.kt'
+      - 'categories/03-lane-guidance/screen/PublishedLanePipelineScreenTest.kt'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-pretest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Audit immutable published UK lane square and report source unknowns
+        run: python3 ci/audit_published_manchester_lanes.py
+      - name: Verify frozen Manchester fixture against archived source observations
+        if: success() || failure()
+        run: python3 ci/verify_frozen_lanes.py
+      - name: Publish audit result only — no map pack, app code, APK or private route
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cat3-public-manchester-lane-source
+          path: |
+            results/cat3-published-lanes-audit.json
+            results/cat3-published-manchester-samples.json
+            results/frozen-source-provenance.json
+          if-no-files-found: error
+          retention-days: 90

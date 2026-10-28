@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "execution_order": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Map data and navigation processing"
+    },
+    {
+      "id": 2,
+      "name": "Reliability"
+    },
+    {
+      "id": 3,
+      "name": "Settings, account and backup"
+    },
+    {
+      "id": 4,
+      "name": "Map downloads and storage"
+    },
+    {
+      "id": 5,
+      "name": "Map display"
+    },
+    {
+      "id": 6,
+      "name": "Position and GPS"
+    },
+    {
+      "id": 7,
+      "name": "Turn-by-turn guidance"
+    },
+    {
+      "id": 8,
+      "name": "Lane guidance"
+    },
+    {
+      "id": 9,
+      "name": "Voice and sound"
+    },
+    {
+      "id": 10,
+      "name": "Rerouting"
+    },
+    {
+      "id": 11,
+      "name": "Driving camera and view"
+    },
+    {
+      "id": 12,
+      "name": "Junction view"
+    },
+    {
+      "id": 13,
+      "name": "3D immersive navigation"
+    },
+    {
+      "id": 14,
+      "name": "Speed limits"
+    },
+    {
+      "id": 15,
+      "name": "Road alerts"
+    },
+    {
+      "id": 16,
+      "name": "Traffic"
+    },
+    {
+      "id": 17,
+      "name": "Search and places"
+    },
+    {
+      "id": 18,
+      "name": "Route planning"
+    },
+    {
+      "id": 19,
+      "name": "Arrival and parking"
+    },
+    {
+      "id": 20,
+      "name": "App start and layout"
+    },
+    {
+      "id": 21,
+      "name": "Trip history and review"
+    },
+    {
+      "id": 22,
+      "name": "Map corrections and OpenStreetMap"
+    },
+    {
+      "id": 23,
+      "name": "Android Auto"
+    }
+  ],
+  "legacy_category_map": {
+    "1": 7,
+    "2": 9,
+    "3": 8,
+    "4": 12,
+    "5": 13,
+    "6": 14,
+    "7": 15,
+    "8": 10,
+    "9": 16,
+    "10": 6,
+    "11": 11,
+    "12": 5,
+    "13": 17,
+    "14": 18,
+    "15": 19,
+    "16": 21,
+    "17": 22,
+    "18": 4,
+    "19": 20,
+    "20": 3,
+    "21": 2,
+    "22": 23
+  },
+  "batches": [
+    {
+      "id": "A",
+      "name": "Map data and display",
+      "categories": [
+        1,
+        4,
+        5,
+        17
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Position and route decisions",
+      "categories": [
+        6,
+        7,
+        10,
+        18
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Lanes and junction views",
+      "categories": [
+        8,
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "id": "D",
+      "name": "Sound and road intelligence",
+      "categories": [
+        9,
+        14,
+        15,
+        16
+      ]
+    },
+    {
+      "id": "E",
+      "name": "Reliability and platform",
+      "categories": [
+        2,
+        3,
+        20,
+        23
+      ]
+    },
+    {
+      "id": "F",
+      "name": "Arrival and review",
+      "categories": [
+        19,
+        21,
+        22
+      ]
+    }
+  ],
+  "note": "Batching does not override register execution order or create acceptance coverage.",
+  "component_category_map": {
+    "com.drivemate.app.data.UkJoinTest": 1,
+    "com.drivemate.app.data.PublishedRegionCatalogTest": 1
+  }
+}

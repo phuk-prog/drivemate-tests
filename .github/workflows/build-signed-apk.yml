@@ -23,10 +23,17 @@ jobs:
   tested:
     name: 1. Every test passed on this exact app commit
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 65
     outputs:
       sha: ${{ steps.check.outputs.sha }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate-app
+          ref: main
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          path: release-gate-src
+          persist-credentials: false
       - name: Check the app token is set
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
@@ -47,16 +54,21 @@ jobs:
           fi
           if [ -z "$sha" ]; then echo "::error::No drivemate-app commit for \"$APP_REF\"."; exit 1; fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          # A finished test run for this commit, or start one and wait for it (up to 40 minutes).
-          # Newest finished, not cancelled, test run that saved results for this commit.
+          # Use the current app-main gate, even when building an older app commit.
+          # It requires this public suite's current main SHA and unexpired attempt evidence.
           result() {
-            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" \
-                --jq '[.artifacts[].workflow_run.id] | unique | reverse | .[]'); do
-              c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq '.status + "/" + (.conclusion // "")')
-              case "$c" in completed/cancelled) ;; completed/*) echo "$id"; return ;; esac
-            done
+            python3 - "$sha" <<'PY_GATE'
+          import importlib.util
+          import sys
+          spec = importlib.util.spec_from_file_location("gate", "release-gate-src/scripts/check_drivemate_tests.py")
+          gate = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(gate)
+          run = gate.newest_run(sys.argv[1])
+          if run and run["status"] == "completed":
+              print(run["id"])
+          PY_GATE
           }
-          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status \
+          running() { gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml --json status \
             --jq '[.[] | select(.status != "completed")] | length'; }
           run=$(result)
           if [ -z "$run" ] && [ "$(running)" = 0 ]; then
@@ -171,3 +183,4 @@ jobs:
       - name: Remove the signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/drivemate-release.jks"
+

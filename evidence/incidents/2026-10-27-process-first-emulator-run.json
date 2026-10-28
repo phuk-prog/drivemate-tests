@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "run_url": "https://github.com/phuk-prog/drivemate-tests/actions/runs/40590871637",
+  "app_sha": "aab6b6c0d43fca89b43befd4665fce0580a0e010",
+  "test_sha": "51e54a303121a129f495abbae78c546cac0d64cb",
+  "correct": 287,
+  "total": 289,
+  "issues": [
+    {"id":"PIPELINE-SETUP-001","kind":"test_harness","root_cause":"Test expected lane advice at a source-geometry continuation which NavigationEngine intentionally suppresses; no verified junction was supplied.","correction":"Use the production free-driving source path for visible-lane pipeline verification; retain continuation suppression as its own regression. No production navigation change.","status":"retest_pending"},
+    {"id":"SOURCE-RUNTIME-001","kind":"source_runtime","root_cause":"not_established","observed":"Published square discovered but index unavailable in the single load attempt.","correction":"Record generation/request replacement and bounded source receipts; retry only a proven generation/request fence replacement. Preserve all source assertions.","status":"diagnostics_and_retest_pending"}
+  ],
+  "scope":"Privacy-safe test/process incident; no private drive trace or invented legal-road result."
+}
