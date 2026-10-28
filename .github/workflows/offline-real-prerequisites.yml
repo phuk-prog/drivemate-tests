@@ -1,0 +1,44 @@
+name: Diagnose real offline UK navigation prerequisites
+# Diagnostic-only: a blocked real release cannot be counted as offline accepted.
+on:
+  pull_request:
+    paths:
+      - 'ci/real_offline_acceptance.py'
+      - 'ci/test_real_offline_acceptance.py'
+      - '.github/workflows/offline-real-prerequisites.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-published-road-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run ten frozen offline acceptance stage regressions
+        run: python3 -m unittest discover -s ci -p test_real_offline_acceptance.py -v
+      - name: Independently inspect publicly accessible UK routing graph release
+        run: |
+          python3 ci/real_offline_acceptance.py --output results/offline-real-prerequisites.json
+          python3 - <<'PY'
+          import json
+          with open('results/offline-real-prerequisites.json') as stream:
+              result=json.load(stream)
+          value=result['offline_acceptance']
+          assert value['status']=='blocked' or all(x is True for x in value['stages'].values())
+          assert value['accepted'] is False or value['status']=='passed'
+          print('Acceptance status:',value['status'])
+          print('Published UK graph release:',result['published_graph_release']['status'])
+          PY
+      - name: Preserve bounded diagnostic, never invent download acceptance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: actual-uk-offline-prerequisites
+          path: results/offline-real-prerequisites.json
+          if-no-files-found: warn
+          retention-days: 90
