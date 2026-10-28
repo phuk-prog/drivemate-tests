@@ -65,6 +65,8 @@ jobs:
           spec.loader.exec_module(gate)
           run = gate.newest_run(sys.argv[1])
           if run and run["status"] == "completed":
+              if run["conclusion"] == "success":
+                  gate.check_summary(run, sys.argv[1], run["public_tests_sha"])
               print(run["id"])
           PY_GATE
           }
