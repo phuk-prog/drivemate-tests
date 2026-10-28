@@ -89,6 +89,37 @@ def independent_truth(truth):
         raise ValueError('INDEPENDENT_TRUTH_REQUIRED:dated_evidence') from None
 
 
+def validate_offline_proof(e):
+    """Validate *claimed* offline delivery evidence, not independent CI attestation.
+
+    A valid ledger record remains insufficient to prove that an emulator
+    actually had its network isolated; CI must collect and cross-check the
+    referenced probe, published release and readback artifacts.
+    """
+    proof=e.get('offline_proof')
+    if not isinstance(proof,dict):
+        raise ValueError('OFFLINE_PROOF_REQUIRED')
+    network=proof.get('network')
+    if (not isinstance(network,dict)
+        or network.get('method') not in {'emulator_network_namespace','adb_with_reachability_probe'}
+        or network.get('blocked_before') is not True
+        or network.get('blocked_after') is not True
+        or not isinstance(network.get('probe_sha256'),str)
+        or not re.fullmatch(r'[0-9a-f]{64}',network['probe_sha256'])):
+        raise ValueError('OFFLINE_NETWORK_NOT_VERIFIED')
+    delivery=proof.get('delivery')
+    if (not isinstance(delivery,dict)
+        or delivery.get('source') != 'published_release'
+        or delivery.get('install_verified_before_isolation') is not True
+        or delivery.get('read_after_isolation') is not True
+        or any(not isinstance(delivery.get(key),str)
+               or not re.fullmatch(r'[0-9a-f]{64}',delivery[key])
+               for key in ('catalog_sha256','manifest_sha256','installed_sha256','read_sha256'))
+        or delivery.get('installed_sha256') != e['input_sha256']
+        or delivery.get('read_sha256') != e['input_sha256']):
+        raise ValueError('OFFLINE_ASSET_NOT_VERIFIED')
+
+
 def validate_acceptance(e):
     immutable(e)
     if e.get('country') not in {'GB','UK','GB-NIR'} or e.get('source_kind') != 'published_real_uk' or not e.get('case_id'):
@@ -99,10 +130,14 @@ def validate_acceptance(e):
         row = e.get('stages',{}).get(stage,{})
         if row.get('status') != 'passed' or not re.fullmatch('[0-9a-f]{64}',row.get('artifact_sha256','')):
             raise ValueError('MISSING_ACCEPTANCE_STAGE:' + stage)
+    scope='pipeline_only'
+    if e.get('mode') == 'offline':
+        validate_offline_proof(e)
+        scope='offline_evidence_record_valid'
     if e.get('claim') in {'legal_lane_advice','legal_manoeuvre','speed_limit_legality'}:
         independent_truth(e.get('legal_truth',{}))
         return {'scope':'dated_official_truth_attached','status':'evidence_record_valid'}
-    return {'scope':'pipeline_only','status':'evidence_record_valid'}
+    return {'scope':scope,'status':'evidence_record_valid'}
 
 
 def validate_retest(before,after):
