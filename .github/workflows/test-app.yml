@@ -165,6 +165,8 @@ jobs:
             # Inconclusive stays INCONCLUSIVE: this is transport evidence only,
             # not proof that a published map was installed and used offline.
             python3 ../ci/emulator_network_probe.py --output ../results/emulator-network-probe.json
+            # Record actual device fixture bytes separately; no production app cache.
+            python3 ../ci/emulator_fixture_readback.py --source ../app-unit/resources/cat3-published-manchester-lanes-3.json --out ../results/emulator-fixture-readback.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -249,6 +251,7 @@ jobs:
             results/process-summary.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
+            results/emulator-fixture-readback.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
