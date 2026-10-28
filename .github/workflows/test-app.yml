@@ -343,6 +343,7 @@ jobs:
             results/summary.json
             results/run-report.html
             results/process-summary.json
+            results/suite-inventory.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
