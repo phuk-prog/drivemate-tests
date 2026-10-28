@@ -71,6 +71,21 @@ class DebugApkConnectionContracts(unittest.TestCase):
         self.assertNotIn("token", str(result))
         self.assertEqual({"api.test.invalid": 1}, result["host_counts"])
 
+    def test_malformed_embedded_url_is_counted_without_crash_or_secret(self):
+        self.pack(b"https://[broken/?token=private\x00https://api.openstreetmap.org/api/0.6")
+        result = inspect(self.apk, self.source)
+        self.assertEqual(1, result["invalid_url_literal_count"])
+        self.assertEqual({"api.openstreetmap.org": 1}, result["host_counts"])
+        self.assertEqual(2, result["url_literal_count"])
+        self.assertNotIn("private", str(result))
+        self.assertFalse(result["runtime_network_verified"])
+
+    def test_invalid_embedded_port_is_counted_as_invalid(self):
+        self.pack(b"https://example.org:wrong/")
+        result = inspect(self.apk, self.source)
+        self.assertEqual(1, result["invalid_url_literal_count"])
+        self.assertEqual({}, result["host_counts"])
+
     def test_multiple_dex_files_are_counted(self):
         with ZipFile(self.apk, "w") as archive:
             archive.writestr("classes.dex", b"https://api.openstreetmap.org/api/0.6\x00")

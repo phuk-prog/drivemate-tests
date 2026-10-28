@@ -28,7 +28,7 @@ def inspect(apk_path, source_report=None):
         "installed_owner_apk_verified": False, "signed_production_apk_verified": False,
         "runtime_network_verified": False, "all_dynamic_connections_verified": False,
         "apk_sha256": None, "dex_count": 0, "url_literal_count": 0,
-        "host_counts": {}, "blocked_categories": [],
+        "host_counts": {}, "blocked_categories": [], "invalid_url_literal_count": 0,
         "findings": [],
     }
     if not p.exists():
@@ -53,6 +53,7 @@ def inspect(apk_path, source_report=None):
     hosts = {}
     problems = []
     count = 0
+    invalid = 0
     try:
         with ZipFile(p) as archive:
             dex = [x for x in archive.infolist() if DEX.fullmatch(x.filename)]
@@ -70,9 +71,15 @@ def inspect(apk_path, source_report=None):
                     if count > 10000:
                         raise ValueError("EXCESSIVE_APK_URL_LITERALS")
                     decoded = match.group().decode("ascii")
-                    parsed = urlsplit(decoded)
-                    host = (parsed.hostname or "").lower()
+                    try:
+                        parsed = urlsplit(decoded)
+                        host = (parsed.hostname or "").lower()
+                        parsed.port
+                    except ValueError:
+                        invalid += 1
+                        continue
                     if not host:
+                        invalid += 1
                         continue
                     hosts[host] = hosts.get(host, 0) + 1
                     if host == "github.com":
@@ -95,7 +102,7 @@ def inspect(apk_path, source_report=None):
     return dict(base,
                 status="blocked_obsolete_project" if findings else "apk_literals_observed_only",
                 apk_sha256=sha.hexdigest(), dex_count=len(dex),
-                url_literal_count=count, host_counts=dict(sorted(hosts.items())),
+                url_literal_count=count, invalid_url_literal_count=invalid, host_counts=dict(sorted(hosts.items())),
                 blocked_categories=blocked, findings=findings)
 
 

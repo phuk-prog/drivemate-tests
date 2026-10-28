@@ -122,6 +122,31 @@ class CategoryConnectionContracts(unittest.TestCase):
         self.assertEqual([17], source_role(
             "app/src/main/java/com/drivemate/app/data/FuelPrices.kt")[0])
 
+    def test_malformed_ipv6_is_invalid_without_disclosing_token(self):
+        for value in ("https://[broken", "https://[not-ip]/?token=private"):
+            with self.subTest(value=value):
+                item = classify_url(value)
+                self.assertEqual("invalid_url", item["status"])
+                self.assertEqual("", item["host"])
+                self.assertNotIn("private", json.dumps(item))
+
+    def test_valid_bare_ipv6_keeps_closing_bracket(self):
+        item = classify_url("https://[::1]")
+        self.assertEqual("::1", item["host"])
+        self.assertEqual("static_reference_only", item["status"])
+
+    def test_invalid_port_is_not_a_valid_static_reference(self):
+        for value in ("https://example.org:wrong/", "https://example.org:99999/"):
+            with self.subTest(value=value):
+                self.assertEqual("invalid_url", classify_url(value)["status"])
+
+    def test_invalid_literal_does_not_prevent_category_report(self):
+        self.road.write_text('val url = "https://[broken"\n')
+        result = self.run_audit()
+        self.assertIn("invalid_url", result["categories"]["1"]["finding_codes"])
+        self.assertEqual(23, len(result["categories"]))
+        self.assertFalse(result["runtime_network_verified"])
+
     def test_missing_main_source_is_not_a_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, "PRODUCTION_APP_SOURCES_MISSING"):

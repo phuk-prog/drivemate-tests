@@ -54,9 +54,15 @@ def source_role(path):
 
 
 def classify_url(value):
-    raw = value.rstrip(".,;)}]")
-    parsed = urlsplit(raw)
-    host = (parsed.hostname or "").lower()
+    # A closing bracket is part of a valid bare IPv6 authority.
+    raw = value.rstrip(".,;)}")
+    try:
+        parsed = urlsplit(raw)
+        host = (parsed.hostname or "").lower()
+        parsed.port  # Validate malformed/out-of-range ports too.
+    except ValueError:
+        # Do not publish the raw token or parser exception: it may contain keys.
+        return {"status": "invalid_url", "host": "", "repository": None}
     if not host or parsed.scheme not in {"https", "http"}:
         return {"status": "invalid_url", "host": host, "repository": None}
     found = GITHUB_RELEASE.match(raw)
