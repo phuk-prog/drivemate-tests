@@ -163,9 +163,7 @@ jobs:
             # Automatic emulator-origin evidence, after screen tests so airplane-mode
             # toggles cannot contaminate navigation regressions. Archived UK fixture
             # only: never claim an actual published-release offline navigation pass.
-            python3 ../ci/emulator_evidence.py \
-              --source ../app-unit/resources/cat3-published-manchester-lanes-3.json \
-              --out ../results/emulator-evidence-smoke.json
+            python3 ../ci/emulator_evidence.py --source ../app-unit/resources/cat3-published-manchester-lanes-3.json --out ../results/emulator-evidence-smoke.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
