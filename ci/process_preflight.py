@@ -89,6 +89,50 @@ def verify_offline_artifacts(e, results_dir):
     return {'status':'verified','artifact_count':len(expected),'case_id':e['case_id']}
 
 
+
+
+def observed_emulator_network_probe(results_dir):
+    """Summarize an actual runner-produced ADB transport probe, not an offline drive.
+
+    An inconclusive device observation must not turn the normal app/unit
+    checks red, but must never turn into Category 1 acceptance either.
+    """
+    path=Path(results_dir) / 'emulator-network-probe.json'
+    if not path.exists():
+        return {'status':'not_run','scope':'transport_probe_only',
+                'reason_code':'NO_EMULATOR_PROBE','offline_navigation_accepted':False}
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
+        raise ValueError('EMULATOR_PROBE_INVALID_FILE')
+    try:
+        raw=path.read_bytes()
+        p=json.loads(raw)
+    except (ValueError,UnicodeError,OSError) as e:
+        raise ValueError('EMULATOR_PROBE_INVALID_FILE') from e
+    if (not isinstance(p,dict) or p.get('schema')!=1 or
+        p.get('case_id')!='emulator-network-transport-only' or
+        p.get('scope')!='transport_probe_only' or
+        p.get('method')!='adb_with_reachability_probe' or
+        p.get('status') not in {'network_isolation_observed','inconclusive'} or
+        p.get('probe_count')!=4 or
+        p.get('asset_install_verified') is not False or
+        p.get('navigation_offline_accepted') is not False or
+        p.get('reason_code') not in {
+            'CONTROL_COMMAND_FAILED','NO_ONLINE_BASELINE','PROBE_UNAVAILABLE',
+            'NETWORK_REMAINED_REACHABLE','NETWORK_NOT_RESTORED',
+            'NETWORK_BLOCK_OBSERVED'}):
+        raise ValueError('EMULATOR_PROBE_INVALID_REPORT')
+    success = (p['online_baseline_reachable'] is True and
+               p.get('before',{}).get('network_reachable') is False and
+               p.get('after',{}).get('network_reachable') is False and
+               p['restored_reachable'] is True and
+               p['reason_code']=='NETWORK_BLOCK_OBSERVED')
+    if (p['status']=='network_isolation_observed') != success:
+        raise ValueError('EMULATOR_PROBE_FALSE_SUCCESS')
+    return {'status':p['status'],'scope':'transport_probe_only',
+            'reason_code':p['reason_code'],
+            'receipt_sha256':hashlib.sha256(raw).hexdigest(),
+            'offline_navigation_accepted':False}
+
 def run(app_root,summary_path):
     summary_path=Path(summary_path); summary=json.loads(summary_path.read_text())
     out=summary_path.parent
@@ -101,6 +145,7 @@ def run(app_root,summary_path):
     if findings.get('schema')!=1 or not isinstance(findings.get('findings'),list):
         raise ValueError('INVALID_SAFETY_FINDINGS')
     safety=release_assessment(findings['findings'])
+    network_probe=observed_emulator_network_probe(out)
     acceptance_records=summary.get('acceptance_evidence',[])
     acceptance=[validate_acceptance(e) for e in acceptance_records]
     offline_checks=[verify_offline_artifacts(e,out) for e in acceptance_records
@@ -116,6 +161,7 @@ def run(app_root,summary_path):
             'input_sha256':fingerprint,'source_inputs':inputs,'safety_release_gate':safety,
             'source_to_screen_records':len(acceptance),'offline_receipts_verified':len(offline_checks),
             'offline_acceptance':'not_established_by_receipt_validation',
+            'emulator_network_probe':network_probe,
             'independent_truth_records':len(truths),
             'benchmarks':benchmarks,'benchmark_status':'validated_records' if benchmarks else 'not_provided',
             'frozen_retests':retests,

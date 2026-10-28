@@ -160,6 +160,11 @@ jobs:
           script: |
             ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
             adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F DM_CAT5_STAGE:I > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
+            # After the navigation/emulator screens, observe actual device
+            # connectivity, not airplane-mode settings or host reachability.
+            # Inconclusive stays INCONCLUSIVE: this is transport evidence only,
+            # not proof that a published map was installed and used offline.
+            python3 ../ci/emulator_network_probe.py --output ../results/emulator-network-probe.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
