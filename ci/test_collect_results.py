@@ -13,7 +13,7 @@ CLASSNAME = "com.drivemate.tests.cat03.FixtureDecisionsTest"
 
 
 class CollectResultsTest(unittest.TestCase):
-    def collect(self, cases, classname=CLASSNAME, first_name='firstBehavior'):
+    def collect(self, cases, classname=CLASSNAME, first_name='firstBehavior', prior_result=None):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "categories/03-lane-guidance/decisions/FixtureDecisionsTest.kt"
@@ -33,6 +33,9 @@ class FixtureDecisionsTest {
                 )
                 (xml / "TEST-fixture.xml").write_text(f"<testsuite>{body}</testsuite>")
             output = root / "results/full-app.json"
+            if prior_result is not None:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(json.dumps(prior_result))
             subprocess.run(
                 [sys.executable, str(COLLECTOR), str(output), "https://example.test/run", "app-commit", "tests-commit", "media", str(xml)],
                 cwd=root, check=True, capture_output=True, text=True,
@@ -105,6 +108,32 @@ class FixtureDecisionsTest {
         self.assertEqual(1,len(rows))
         self.assertEqual('failed',rows[0][1]['status'])
         self.assertIn('UNMAPPED_TEST_CLASS',rows[0][1]['failure'])
+
+    def stale_prior_result(self):
+        return {
+            'run_url':'https://example.test/OLD', 'app_commit':'old-app',
+            'public_tests_sha':'old-suite',
+            'checklist':{'App unit tests':{'tests':[
+                {'class':'com.drivemate.app.OldPassTest','name':'stalePass','status':'passed'}]}},
+            'source_receipts':[{'scope':'old-run'}],
+            'offline_component_evidence':[{'case_id':'old-run'}],
+        }
+
+    def test_stale_prior_report_cannot_inject_passes_or_receipts(self):
+        doc=self.collect([('firstBehavior',''),('secondBehavior','')],
+                         prior_result=self.stale_prior_result())
+        self.assertEqual('app-commit',doc['app_commit'])
+        self.assertEqual('https://example.test/run',doc['run_url'])
+        self.assertNotIn('App unit tests',doc['checklist'])
+        self.assertNotIn('source_receipts',doc)
+        self.assertNotIn('offline_component_evidence',doc)
+
+    def test_new_run_no_results_cannot_inherit_prior_green(self):
+        doc=self.collect(None,prior_result=self.stale_prior_result())
+        self.assertNotIn('App unit tests',doc['checklist'])
+        rows=doc['checklist']['3 Lane guidance: decisions']['tests']
+        self.assertEqual(0,sum(t['status']=='passed' for t in rows))
+        self.assertTrue(all(t['status']=='failed' for t in rows))
 
     def test_duplicate_result_identity_cannot_inflate_passing_counts(self):
         doc=self.collect([('firstBehavior',''),('firstBehavior',''),('secondBehavior','')])

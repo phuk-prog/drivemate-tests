@@ -43,6 +43,14 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Verify approved public test source inventory (TF-05)
+        # Fail before using app credentials, Android SDK or emulator resources.
+        # Inventory source integrity is not proof of test execution or release readiness.
+        run: |
+          python3 -m unittest discover -s ci -p 'test_suite_inventory.py'
+          python3 ci/suite_inventory.py --root . \
+            --manifest ci/approved_suite_inventory.json \
+            --output results/suite-inventory.json
       - name: Check the app token is set
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
@@ -335,6 +343,7 @@ jobs:
             results/summary.json
             results/run-report.html
             results/process-summary.json
+            results/suite-inventory.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
