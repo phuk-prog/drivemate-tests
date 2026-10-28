@@ -386,6 +386,13 @@ def main(argv=None):
         meta["tile"] = tile
     if a.main:
         meta["main_roads"] = True
+    # Safety envelope only: never emit worldwide graph coordinates as a UK pack.
+    # This does NOT prove UK-only geography (Crown Dependencies and the NI border
+    # require an independently verified boundary polygon).
+    for latitude, longitude, _node_id in graph["nodes"]:
+        if (not math.isfinite(latitude) or not math.isfinite(longitude)
+                or not (48.0 <= latitude <= 62.0 and -12.0 <= longitude <= 4.0)):
+            raise ValueError("DMN_UK_ENVELOPE_VIOLATION: road node outside broad UK envelope")
     write(graph, a.out, meta)
     print(json.dumps(meta, sort_keys=True))
     return 0
