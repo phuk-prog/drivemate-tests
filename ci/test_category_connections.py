@@ -147,6 +147,39 @@ class CategoryConnectionContracts(unittest.TestCase):
         self.assertEqual(23, len(result["categories"]))
         self.assertFalse(result["runtime_network_verified"])
 
+    def test_sandbox_is_reported_at_category_level(self):
+        self.road.write_text('val url="https://master.apis.dev.openstreetmap.org/api/0.6"\n')
+        report = self.run_audit()
+        self.assertIn("test_service_reference_not_live", report["categories"]["1"]["finding_codes"])
+
+    def test_mapped_source_does_not_trust_arbitrary_host(self):
+        self.backup.write_text('val url="https://unknown.example.org/drive/v3/files"\n')
+        report = self.run_audit()
+        self.assertIn("destination_ownership_unverified", report["categories"]["3"]["finding_codes"])
+        self.assertEqual("blocked_needs_investigation", report["categories"]["3"]["status"])
+
+    def test_old_project_reference_without_release_path_is_reported(self):
+        self.assertEqual("old_or_unreachable_project_target", classify_url(
+            "https://github.com/phuk-prog/DriveMate/blob/main/README.md")["status"])
+        self.assertEqual("static_reference_only", classify_url(
+            "https://github.com/phuk-prog/DriveMate-extra/blob/main/README.md")["status"])
+
+    def test_configured_provider_is_source_expectation_not_verified_owner(self):
+        item = classify_source_text(
+            "app/src/main/java/com/drivemate/app/account/DriveAppDataBackup.kt",
+            'val url="https://www.googleapis.com/drive/v3/files"')[0]
+        self.assertEqual("source_configured_destination", item["destination_classification"])
+        self.assertFalse(item["external_ownership_verified"])
+
+    def test_review_location_reference_has_category22_owner(self):
+        self.assertEqual([22], source_role(
+            "app/src/main/java/com/drivemate/app/ui/ReviewLocationMap.kt")[0])
+
+    def test_download_source_does_not_trust_unrelated_github_repository(self):
+        self.road.write_text('val url="https://github.com/unrelated-owner/graph/releases/download/routing-uk"\n')
+        report = self.run_audit()
+        self.assertIn("destination_ownership_unverified", report["categories"]["1"]["finding_codes"])
+
     def test_missing_main_source_is_not_a_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, "PRODUCTION_APP_SOURCES_MISSING"):
