@@ -331,6 +331,18 @@ jobs:
             --summary results/summary.json --report results/service-probe.json \
             --batch "$DRIVEMATE_TEST_BATCH" --run-attempt "$GITHUB_RUN_ATTEMPT"
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
+      - name: Audit authentic same-session DMN offline route, screen and speech proof (TF-07)
+        # A missing genuine Android receipt is an honest BLOCKED observation,
+        # never a green offline-navigation claim. No product changes or data downloads.
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        run: |
+          python3 ci/dmn_single_session_audit.py \
+            --media-dir app-src/app/build/outputs/connected_android_test_additional_output \
+            --junit-dir app-src/app/build/outputs/androidTest-results \
+            --app-sha "${{ steps.install.outputs.app_sha }}" \
+            --tests-sha "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output results/tf07-dmn-single-session.json
       - name: Publish the summary and picture page only
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -344,6 +356,7 @@ jobs:
             results/run-report.html
             results/process-summary.json
             results/suite-inventory.json
+            results/tf07-dmn-single-session.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
