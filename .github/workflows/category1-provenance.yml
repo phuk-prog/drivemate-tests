@@ -6,12 +6,14 @@ on:
       - 'ci/category1_provenance_integrity.py'
       - 'ci/category1_regional_rights.py'
       - 'ci/category1_credits_link.py'
+      - 'ci/category1_join_priority.py'
       - '.github/workflows/category1-provenance.yml'
   push:
     branches: [main]
     paths:
       - 'ci/category1_provenance_integrity.py'
       - 'ci/category1_credits_link.py'
+      - 'ci/category1_join_priority.py'
       - '.github/workflows/category1-provenance.yml'
   workflow_dispatch:
 permissions:
@@ -60,7 +62,7 @@ jobs:
           path: app-src
           persist-credentials: false
       - name: Verify real publisher's provenance validator
-        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights ci.category1_credits_link
+        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights ci.category1_credits_link ci.category1_join_priority
       - name: Record immutable checked-out map/test revisions
         if: always()
         run: |
