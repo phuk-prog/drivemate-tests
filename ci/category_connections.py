@@ -37,6 +37,7 @@ SOURCE_CATEGORIES = {
     "controller/ShareText.kt": ([19], "attribution_or_reference"),
     "data/DataCredits.kt": ([1, 20], "attribution_or_reference"),
     "ui/MainMenu.kt": ([20], "attribution_or_reference"),
+    "ui/ReviewLocationMap.kt": ([22], "attribution_or_reference"),
     "PrivacyNotice.kt": ([20], "attribution_or_reference"),
 }
 OLD_PROJECTS = frozenset({"phuk-prog/drivemate-data", "phuk-prog/DriveMate-Navigation",
