@@ -1,0 +1,120 @@
+name: Verify actual published UK regional file bytes
+# Only public immutable map releases. No app source, APK or large map archive is uploaded.
+on:
+  pull_request:
+    paths:
+      - 'ci/download_published_region_files.py'
+      - 'ci/aggregate_published_region_bytes.py'
+      - 'ci/test_published_region_bytes.py'
+      - '.github/workflows/category1-published-bytes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: published-bytes-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: phuk-prog/drivemate-map
+    outputs:
+      catalog_sha256: ${{ steps.pin.outputs.catalog_sha256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run frozen real-byte and manifest contract regressions
+        run: python3 -m unittest discover -s ci -p test_published_region_bytes.py -v
+      - name: Fetch one published catalogue snapshot and verify actual catalogue bytes
+        run: |
+          mkdir -p results/snapshot
+          gh api repos/phuk-prog/drivemate-map/releases/tags/map-regions > results/snapshot/release.json
+          gh release download map-regions --repo phuk-prog/drivemate-map --pattern catalog.json --dir results/snapshot
+          python3 ci/category1_live_catalog.py --catalog results/snapshot/catalog.json --release results/snapshot/release.json --output results/snapshot/catalog-audit.json
+      - name: Pin SHA-256 once for all four independent download batches
+        id: pin
+        run: |
+          digest="$(sha256sum results/snapshot/catalog.json | cut -d' ' -f1)"
+          echo "catalog_sha256=$digest" >> "$GITHUB_OUTPUT"
+          echo "Pinned published catalogue SHA-256: $digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Share exact catalogue snapshot, not map files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-regions-catalog-snapshot
+          path: results/snapshot/catalog.json
+          if-no-files-found: error
+          retention-days: 30
+
+  verify-regions:
+    needs: snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: phuk-prog/drivemate-map
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Use single pinned public catalogue from snapshot job
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: public-regions-catalog-snapshot
+          path: results/snapshot
+      - name: Download and independently hash every assigned manifest and PMTiles
+        run: |
+          python3 ci/download_published_region_files.py \
+            --catalog results/snapshot/catalog.json \
+            --catalog-sha256 "${{ needs.snapshot.outputs.catalog_sha256 }}" \
+            --batch-index "${{ matrix.shard }}" --batch-count 4 \
+            --output "results/batch-${{ matrix.shard }}.json"
+      - name: Keep only bounded file-integrity receipts; never upload map bytes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: region-file-proof-${{ matrix.shard }}
+          path: results/batch-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  final-verdict:
+    needs: [snapshot, verify-regions]
+    if: always() && needs.snapshot.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Recover pinned catalogue
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: public-regions-catalog-snapshot
+          path: results/snapshot
+      - name: Recover all four independent bounded receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: region-file-proof-*
+          path: results/receipts
+          merge-multiple: true
+      - name: Fail closed unless 52 of 52 pinned published regional map and manifest files were actually hashed
+        run: |
+          python3 ci/aggregate_published_region_bytes.py \
+            --catalog results/snapshot/catalog.json \
+            --sha256 "${{ needs.snapshot.outputs.catalog_sha256 }}" \
+            --receipts results/receipts --output results/complete-published-bytes.json
+      - name: Preserve concise full verdict
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: published-actual-bytes-verdict
+          path: results/complete-published-bytes.json
+          if-no-files-found: warn
+          retention-days: 90
