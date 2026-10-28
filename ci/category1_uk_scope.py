@@ -92,3 +92,18 @@ class UkScopeTest(TestCase):
                  patch.object(regions, "publish_catalog") as publish:
                 regions.cmd_promote(args, object())
             publish.assert_not_called()
+
+    def test_workflow_runs_scope_cleanup_even_when_no_regions_need_building(self):
+        """The published workflow must reach cmd_promote on a due empty plan.
+
+        A Python-only cmd_promote test cannot catch a GitHub Actions job
+        guard that skips the publisher entirely. This checks that wiring.
+        """
+        workflow = (MAP / '.github/workflows/regional-maps.yml').read_text()
+        plan = workflow.split('\n  plan:', 1)[1].split('\n  build:', 1)[0]
+        promote = workflow.split('\n  promote:', 1)[1]
+        guard = promote.split('\n    steps:', 1)[0]
+        self.assertIn("due: ${{ steps.clock.outputs.due }}", plan)
+        self.assertIn("if: always() && needs.plan.outputs.due == 'true'", guard)
+        self.assertNotIn("needs.plan.outputs.matrix != '[]'", guard)
+        self.assertIn("if: needs.build.result != 'skipped'", promote)
