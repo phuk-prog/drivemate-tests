@@ -89,6 +89,51 @@ def verify_offline_artifacts(e, results_dir):
     return {'status':'verified','artifact_count':len(expected),'case_id':e['case_id']}
 
 
+
+def emulator_smoke_report(path, source_sha):
+    """Bounded, fail-closed source for environment status, never route acceptance."""
+    path=Path(path)
+    if not path.exists():
+        return {'status':'not_run','reason_code':'EMULATOR_NOT_PROBED',
+                'scope':'emulator_environment_smoke_only','offline_acceptance':False}
+    if path.is_symlink() or path.stat().st_size>4096:
+        raise ValueError('EMULATOR_SMOKE_INVALID_FILE')
+    raw=json.loads(path.read_text())
+    if (raw.get('schema')!=1 or raw.get('scope')!='emulator_environment_smoke_only'
+        or raw.get('source_kind')!='archived_real_uk_fixture'
+        or raw.get('source_sha256')!=source_sha
+        or raw.get('published_release_downloaded') is not False
+        or raw.get('navigation_tested') is not False
+        or raw.get('offline_acceptance') is not False
+        or raw.get('status') not in {'observed','inconclusive'}
+        or not isinstance(raw.get('network'),dict)):
+        raise ValueError('EMULATOR_SMOKE_INVALID_SCOPE')
+    fields=('online_before','reachable_isolated_before_readback',
+            'reachable_isolated_after_readback')
+    network=raw['network']
+    if network.get('method')!='adb_direct_reachability' or any(
+            network.get(k) is not None and type(network[k]) is not bool
+            for k in fields):
+        raise ValueError('EMULATOR_SMOKE_INVALID_NETWORK')
+    if raw['status']=='observed':
+        if (raw.get('reason_code') is not None or network.get('online_before') is not True
+            or network.get('reachable_isolated_before_readback') is not False
+            or network.get('reachable_isolated_after_readback') is not False
+            or raw.get('installed_sha256')!=source_sha
+            or raw.get('readback_sha256')!=source_sha):
+            raise ValueError('EMULATOR_SMOKE_FALSE_OBSERVATION')
+    else:
+        if raw.get('reason_code') not in {
+            'BASELINE_UNVERIFIED','NETWORK_REACHABLE_WHILE_ISOLATED',
+            'READBACK_DIGEST_MISMATCH','EMULATOR_EVIDENCE_COMMAND_FAILED','RESTORE_FAILED'
+        }:
+            raise ValueError('EMULATOR_SMOKE_INCOMPLETE_REASON')
+    return {'status':raw['status'],'reason_code':raw.get('reason_code'),
+            'scope':'emulator_environment_smoke_only',
+            'source_sha256':source_sha,'offline_acceptance':False,
+            'navigation_tested':False,'published_release_downloaded':False}
+
+
 def run(app_root,summary_path):
     summary_path=Path(summary_path); summary=json.loads(summary_path.read_text())
     out=summary_path.parent
@@ -97,6 +142,9 @@ def run(app_root,summary_path):
     inputs={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted((ROOT/'app-unit/resources').rglob('*')) if p.is_file()}
     fingerprint=hashlib.sha256(json.dumps(inputs,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    fixture_sha=inputs.get('app-unit/resources/cat3-published-manchester-lanes-3.json')
+    if not fixture_sha: raise ValueError('EMULATOR_SMOKE_SOURCE_MISSING')
+    smoke=emulator_smoke_report(out/'emulator-evidence-smoke.json',fixture_sha)
     findings=json.loads((ROOT/'ci/release-findings.json').read_text())
     if findings.get('schema')!=1 or not isinstance(findings.get('findings'),list):
         raise ValueError('INVALID_SAFETY_FINDINGS')
@@ -116,6 +164,7 @@ def run(app_root,summary_path):
             'input_sha256':fingerprint,'source_inputs':inputs,'safety_release_gate':safety,
             'source_to_screen_records':len(acceptance),'offline_receipts_verified':len(offline_checks),
             'offline_acceptance':'not_established_by_receipt_validation',
+            'emulator_environment_smoke':smoke,
             'independent_truth_records':len(truths),
             'benchmarks':benchmarks,'benchmark_status':'validated_records' if benchmarks else 'not_provided',
             'frozen_retests':retests,
