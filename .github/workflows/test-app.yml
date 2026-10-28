@@ -160,6 +160,11 @@ jobs:
           script: |
             ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
             adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F DM_CAT5_STAGE:I > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
+            # Test infrastructure only: actual device readback and ICMP reachability
+            # smoke; NEVER evidence of a downloaded release or offline navigation.
+            python3 ../ci/emulator_probe.py \
+              ../app-unit/resources/cat3-published-manchester-lanes-3.json \
+              ../results/emulator-evidence.json
             # Automatic emulator-origin evidence, after screen tests so airplane-mode
             # toggles cannot contaminate navigation regressions. Archived UK fixture
             # only: never claim an actual published-release offline navigation pass.
@@ -169,6 +174,7 @@ jobs:
         if: (success() || failure()) && steps.install.outcome == 'success'
         env:
           DIAGNOSTIC_STEPS: ${{ toJSON(steps) }}
+          EMULATOR_SMOKE_REQUIRED: ${{ steps.install.outputs.has_screen }}
         run: |
           mkdir -p results
           python3 -m pip install -q Pillow==11.0.0 || true
@@ -248,6 +254,7 @@ jobs:
             results/process-summary.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
+            results/emulator-evidence.json
             results/emulator-evidence-smoke.json
           if-no-files-found: error
           retention-days: 90
