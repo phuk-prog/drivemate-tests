@@ -5,11 +5,13 @@ on:
     paths:
       - 'ci/category1_provenance_integrity.py'
       - 'ci/category1_regional_rights.py'
+      - 'ci/category1_credits_link.py'
       - '.github/workflows/category1-provenance.yml'
   push:
     branches: [main]
     paths:
       - 'ci/category1_provenance_integrity.py'
+      - 'ci/category1_credits_link.py'
       - '.github/workflows/category1-provenance.yml'
   workflow_dispatch:
 permissions:
@@ -38,10 +40,30 @@ jobs:
           ref: ${{ steps.map.outputs.ref }}
           path: map-src
           persist-credentials: false
+      - name: Choose paired app branch, otherwise main (read-only)
+        id: app
+        env:
+          TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          test -n "$TOKEN" || { echo "::error::Missing private-app read token"; exit 1; }
+          if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/phuk-prog/drivemate-app" "$BRANCH" >/dev/null 2>&1; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate-app
+          ref: ${{ steps.app.outputs.ref }}
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          path: app-src
+          persist-credentials: false
       - name: Verify real publisher's provenance validator
-        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights
+        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights ci.category1_credits_link
       - name: Record immutable checked-out map/test revisions
         if: always()
         run: |
+          echo "app_sha=$(git -C app-src rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
           echo "map_sha=$(git -C map-src rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
           echo "tests_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
