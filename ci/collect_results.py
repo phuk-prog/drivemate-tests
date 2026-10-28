@@ -46,6 +46,69 @@ def results(xml_dir, source_items=None):
             yield item, test
 
 
+
+def verify_real_offline_component_receipt(test_name, path, source_file):
+    """Check actual Android receipt against pinned published test source.
+
+    This is a component test receipt, NEVER whole-UK offline acceptance.
+    Device-side real network probes and app file hashes remain supported by the
+    Kotlin test's JUnit pass plus receipt values; this collector checks their
+    scope and release identity and rejects missing/tampered/mislabelled files.
+    """
+    path=Path(path)
+    source_file=Path(source_file)
+    if (path.is_symlink() or not path.is_file() or path.stat().st_size>4096
+        or source_file.is_symlink() or not source_file.is_file()
+        or source_file.stat().st_size>2*1024*1024):
+        raise ValueError("OFFLINE_COMPONENT_FILE_INVALID")
+    try:
+        record=json.loads(path.read_text())
+        source=json.loads(source_file.read_text())
+        published=source['regions']['stockport']['map']
+        catalog_sha=source['test_source']['catalog_sha256']
+    except (UnicodeError,ValueError,KeyError,TypeError):
+        raise ValueError("OFFLINE_COMPONENT_RECORD_INVALID") from None
+    if record.get("schema")!=1:
+        raise ValueError("OFFLINE_COMPONENT_RECORD_INVALID")
+    if test_name=="publishedStockportInstalledByProductionRegionDownloader":
+        if (record.get("scope")!="published_stockport_display_install_only"
+            or record.get("offline_route_accepted") is not False
+            or record.get("screen_guidance_accepted") is not False):
+            raise ValueError("OFFLINE_COMPONENT_SCOPE_INVALID")
+        if (record.get("published_catalog_sha256")!=catalog_sha
+            or record.get("region_id")!="stockport"
+            or record.get("production_installer")!="RegionPacks.sync"
+            or record.get("published_map_tag")!=published['tag']
+            or record.get("installed_sha256")!=published['sha256']
+            or type(record.get("installed_bytes")) is not int
+            or record.get("installed_bytes")!=published['bytes']):
+            raise ValueError("OFFLINE_COMPONENT_SOURCE_MISMATCH")
+        return {"scope":"published_stockport_display_install_only",
+                "region":"stockport","installed_sha256":published["sha256"],
+                "published_catalog_sha256":catalog_sha,
+                "offline_navigation_accepted":False}
+    if test_name=="bundledManchesterRouterActuallyComputesWithoutNetwork":
+        if (record.get("scope")!="bundled_greater_manchester_offline_route_only"
+            or record.get("graph_source")!="bundled_app_asset_not_published_whole_uk"
+            or record.get("published_whole_uk_graph_verified") is not False
+            or record.get("production_guidance_screen_verified") is not False
+            or record.get("legal_truth_verified") is not False
+            or record.get("full_offline_acceptance") is not False):
+            raise ValueError("OFFLINE_COMPONENT_SCOPE_INVALID")
+        if (record.get("network_blocked_before_route") is not True
+            or record.get("network_blocked_after_route") is not True):
+            raise ValueError("OFFLINE_COMPONENT_NETWORK_UNVERIFIED")
+        if (type(record.get("route_points")) is not int or record["route_points"]<2
+            or type(record.get("route_steps")) is not int or record["route_steps"]<1):
+            raise ValueError("OFFLINE_COMPONENT_ROUTE_UNVERIFIED")
+        return {"scope":"bundled_greater_manchester_offline_route_only",
+                "route_points":record["route_points"],
+                "route_steps":record["route_steps"],
+                "network_isolation_reported":True,
+                "offline_navigation_accepted":False}
+    raise ValueError("OFFLINE_COMPONENT_UNSUPPORTED_TEST")
+
+
 def main():
     doc_path, run_url, app_commit, tests_sha, media_dir, *xml_dirs = sys.argv[1:]
     doc_path = Path(doc_path)
@@ -116,6 +179,28 @@ def main():
                 test['acceptance_evidence']=evidence
             except (OSError,ValueError,KeyError,TypeError) as exc:
                 test['status']='failed'; test['failure']='Pipeline evidence rejected: '+str(exc)[:120]
+    # Real Android component receipts are separate from published nationwide
+    # offline acceptance. A JUnit green without its paired observed receipt is
+    # a test failure, not an accepted navigation result.
+    component_names={
+        "publishedStockportInstalledByProductionRegionDownloader",
+        "bundledManchesterRouterActuallyComputesWithoutNetwork",
+    }
+    for _, test in found:
+        if test["name"] not in component_names or test["status"]!="passed":
+            continue
+        evidence=list(Path(media_dir).rglob(test["name"]+"-receipt.json"))
+        try:
+            if len(evidence)!=1:
+                raise ValueError("OFFLINE_COMPONENT_RECEIPT_MISSING_OR_DUPLICATED")
+            source=Path("app-src/app/src/androidTest/assets/stockport-live-region.json")
+            verified=verify_real_offline_component_receipt(test["name"],evidence[0],source)
+            test["offline_component_evidence"]=verified
+            doc.setdefault("offline_component_evidence",[]).append({
+                "case_id":test["name"],**verified})
+        except (OSError,ValueError,KeyError,TypeError) as e:
+            test["status"]="failed"
+            test["failure"]="Offline component evidence rejected: "+str(e)[:120]
     if not found:
         doc["checklist"]["drivemate-tests"] = {"tests": [{"class": "drivemate-tests", "name": "tests ran", "status": "failed",
                                                           "failure": "no results: the tests did not compile or run"}]}
