@@ -8,6 +8,7 @@ Do not upload APKs, disclose tokens or treat a missing build as green.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
@@ -111,11 +112,18 @@ def main():
     parser.add_argument("--apk", required=True)
     parser.add_argument("--source-report", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--app-root")
+    parser.add_argument("--app-sha")
     a = parser.parse_args()
     f = Path(a.source_report)
     if not f.is_file() or f.is_symlink() or f.stat().st_size > 1_000_000:
         raise ValueError("MISSING_OR_LARGE_SOURCE_REPORT")
     result = inspect(a.apk, json.loads(f.read_text()))
+    if a.app_root and result["apk_sha256"] is not None:
+        from apk_build_context import inspect_context
+        result["build_context"] = inspect_context(
+            a.apk, a.app_root, f, a.app_sha, os.environ.get("GITHUB_SHA"),
+            os.environ.get("GITHUB_RUN_ID"), os.environ.get("GITHUB_RUN_ATTEMPT"))
     out = Path(a.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
