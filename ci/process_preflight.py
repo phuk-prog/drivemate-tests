@@ -133,6 +133,44 @@ def observed_emulator_network_probe(results_dir):
             'receipt_sha256':hashlib.sha256(raw).hexdigest(),
             'offline_navigation_accepted':False}
 
+
+def observed_emulator_fixture_readback(results_dir, source_sha):
+    """Inspect runner-generated digests without claiming an offline drive."""
+    file=Path(results_dir)/'emulator-fixture-readback.json'
+    if not file.exists():
+        return {'status':'not_run','reason_code':'NO_EMULATOR_FILE_READBACK',
+                'scope':'emulator_fixture_transport_only','offline_acceptance':False}
+    if file.is_symlink() or not file.is_file() or file.stat().st_size>4096:
+        raise ValueError('EMULATOR_FILE_RECEIPT_INVALID')
+    try:
+        raw=file.read_bytes()
+        receipt=json.loads(raw)
+    except (OSError,ValueError,UnicodeError) as exc:
+        raise ValueError('EMULATOR_FILE_RECEIPT_INVALID') from exc
+    if (not isinstance(receipt,dict) or receipt.get('schema')!=1
+        or receipt.get('scope')!='emulator_fixture_transport_only'
+        or receipt.get('source_kind')!='archived_real_uk_fixture'
+        or receipt.get('source_sha256')!=source_sha
+        or receipt.get('published_release_downloaded') is not False
+        or receipt.get('production_map_cache_loaded') is not False
+        or receipt.get('offline_acceptance') is not False
+        or receipt.get('status') not in {'observed','inconclusive'}):
+        raise ValueError('EMULATOR_FILE_RECEIPT_INVALID_SCOPE')
+    if receipt['status']=='observed':
+        if (receipt.get('reason_code') is not None
+            or receipt.get('device_installed_sha256')!=source_sha
+            or receipt.get('device_readback_sha256')!=source_sha):
+            raise ValueError('EMULATOR_FILE_RECEIPT_FALSE_SUCCESS')
+    elif receipt.get('reason_code') not in {
+            'DEVICE_INSTALL_MISMATCH','DEVICE_READBACK_MISMATCH',
+            'DEVICE_OPERATION_FAILED','DEVICE_CLEANUP_FAILED'}:
+        raise ValueError('EMULATOR_FILE_RECEIPT_REASON_MISSING')
+    return {'status':receipt['status'],'reason_code':receipt.get('reason_code'),
+            'scope':'emulator_fixture_transport_only',
+            'receipt_sha256':hashlib.sha256(raw).hexdigest(),
+            'source_sha256':source_sha,'offline_acceptance':False}
+
+
 def run(app_root,summary_path):
     summary_path=Path(summary_path); summary=json.loads(summary_path.read_text())
     out=summary_path.parent
@@ -141,6 +179,9 @@ def run(app_root,summary_path):
     inputs={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted((ROOT/'app-unit/resources').rglob('*')) if p.is_file()}
     fingerprint=hashlib.sha256(json.dumps(inputs,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    archived_sha=inputs.get('app-unit/resources/cat3-published-manchester-lanes-3.json')
+    if not archived_sha: raise ValueError('ARCHIVED_UK_FIXTURE_NOT_FOUND')
+    fixture_probe=observed_emulator_fixture_readback(out,archived_sha)
     findings=json.loads((ROOT/'ci/release-findings.json').read_text())
     if findings.get('schema')!=1 or not isinstance(findings.get('findings'),list):
         raise ValueError('INVALID_SAFETY_FINDINGS')
@@ -162,6 +203,7 @@ def run(app_root,summary_path):
             'source_to_screen_records':len(acceptance),'offline_receipts_verified':len(offline_checks),
             'offline_acceptance':'not_established_by_receipt_validation',
             'emulator_network_probe':network_probe,
+            'emulator_fixture_readback':fixture_probe,
             'independent_truth_records':len(truths),
             'benchmarks':benchmarks,'benchmark_status':'validated_records' if benchmarks else 'not_provided',
             'frozen_retests':retests,
