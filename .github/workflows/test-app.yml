@@ -308,7 +308,7 @@ jobs:
               'apk_blocked_categories': apk['blocked_categories'],
               'apk_sha256': apk['apk_sha256'],
           }
-          p.write_text(json.dumps(s,indent=1)+'\\n')
+          p.write_text(json.dumps(s,indent=1)+'\n')
           PY_CONNECTIONS
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
