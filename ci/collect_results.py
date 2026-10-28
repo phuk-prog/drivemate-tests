@@ -113,8 +113,10 @@ def main():
     doc_path, run_url, app_commit, tests_sha, media_dir, *xml_dirs = sys.argv[1:]
     doc_path = Path(doc_path)
     shots = sorted(p.name for p in Path(media_dir).rglob("*.png")) if Path(media_dir).is_dir() else []
-    doc = json.loads(doc_path.read_text()) if doc_path.is_file() else {
-        "run_url": run_url, "app_commit": app_commit, "checklist": {}}
+    # A result file from an earlier run/attempt must never contribute green
+    # tests, receipts or app identity to this collection. Always rebuild from
+    # the currently supplied JUnit inputs and immutable run arguments.
+    doc = {"run_url": run_url, "app_commit": app_commit, "checklist": {}}
     doc["public_tests_sha"] = doc["drivemate_tests_sha"] = tests_sha
     # A compilation/emulator failure must not look green just because another suite ran.
     expected = []
