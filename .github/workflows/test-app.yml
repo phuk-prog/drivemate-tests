@@ -90,6 +90,16 @@ jobs:
           }
           KTS
           find app-src/app/src/test app-src/app/src/androidTest -type f | sed 's|app-src/app/src/||'
+      - name: Prepare pinned live Stockport source for real Android installation test
+        # No app source, new map or APK is committed or published.
+        if: steps.install.outputs.has_screen == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if find app-src/app/src/androidTest/java -name 'PublishedStockportOfflineScreenTest.kt' | grep -q .; then
+            python3 ci/prepare_stockport_live_test.py \
+              --output app-src/app/src/androidTest/assets/stockport-live-region.json
+          fi
       # Verify the map-schema dependency without building or publishing any map data.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
