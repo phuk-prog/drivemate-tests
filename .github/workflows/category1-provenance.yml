@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'ci/category1_provenance_integrity.py'
+      - 'ci/category1_regional_rights.py'
       - '.github/workflows/category1-provenance.yml'
   push:
     branches: [main]
@@ -38,7 +39,7 @@ jobs:
           path: map-src
           persist-credentials: false
       - name: Verify real publisher's provenance validator
-        run: python3 -m unittest -v ci.category1_provenance_integrity
+        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights
       - name: Record immutable checked-out map/test revisions
         if: always()
         run: |
