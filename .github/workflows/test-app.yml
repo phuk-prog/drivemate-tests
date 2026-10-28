@@ -160,6 +160,12 @@ jobs:
           script: |
             ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
             adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F DM_CAT5_STAGE:I > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
+            # Automatic emulator-origin evidence, after screen tests so airplane-mode
+            # toggles cannot contaminate navigation regressions. Archived UK fixture
+            # only: never claim an actual published-release offline navigation pass.
+            python3 ../ci/emulator_evidence.py \
+              --source ../app-unit/resources/cat3-published-manchester-lanes-3.json \
+              --out ../results/emulator-evidence-smoke.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -244,6 +250,7 @@ jobs:
             results/process-summary.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
+            results/emulator-evidence-smoke.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
