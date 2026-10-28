@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from dependency_graph import build as dependency_graph
@@ -134,6 +135,46 @@ def emulator_smoke_report(path, source_sha):
             'navigation_tested':False,'published_release_downloaded':False}
 
 
+
+def emulator_smoke_record(out, required=False):
+    """Verify bounded reports from the device smoke, *never* offline acceptance."""
+    path=Path(out)/'emulator-evidence.json'
+    if not path.exists():
+        if required:
+            raise ValueError('EMULATOR_SMOKE_MISSING')
+        return {'status':'not_collected','scope':'emulator_smoke_only'}
+    if path.is_symlink() or not path.is_file() or path.stat().st_size>8192:
+        raise ValueError('EMULATOR_SMOKE_INVALID')
+    try:
+        record=json.loads(path.read_text())
+    except (OSError,UnicodeError,json.JSONDecodeError):
+        raise ValueError('EMULATOR_SMOKE_INVALID') from None
+    fixture=ROOT/'app-unit/resources/cat3-published-manchester-lanes-3.json'
+    expected=hashlib.sha256(fixture.read_bytes()).hexdigest()
+    if (record.get('schema')!=1 or record.get('scope')!='emulator_smoke_only'
+        or record.get('source')!='frozen_public_test_fixture_not_live_release'
+        or record.get('probe_method')!='adb_ping_icmp_smoke_not_app_connectivity'
+        or record.get('fixture_sha256')!=expected
+        or record.get('device_readback_sha256')!=expected
+        or record.get('file_integrity_verified') is not True
+        or record.get('published_release_download_verified') is not False
+        or record.get('offline_navigation_accepted') is not False
+        or type(record.get('network_isolation_observed')) is not bool):
+        raise ValueError('EMULATOR_SMOKE_INVALID')
+    if record['network_isolation_observed'] and (
+            record.get('baseline_reachable') is not True
+            or record.get('isolation_probe_reachable') is not False
+            or record.get('recovery_reachable') is not True
+            or record.get('network_reason')!='probe_blocked'):
+        raise ValueError('EMULATOR_SMOKE_FALSE_ISOLATION')
+    # Report only a compact set of observed metrics, never raw device data.
+    return {'status':'device_readback_verified',
+            'scope':'emulator_smoke_only',
+            'network_isolation_observed':record['network_isolation_observed'],
+            'network_reason':record.get('network_reason','unknown'),
+            'published_release_download_verified':False,
+            'offline_navigation_accepted':False}
+
 def run(app_root,summary_path):
     summary_path=Path(summary_path); summary=json.loads(summary_path.read_text())
     out=summary_path.parent
@@ -149,6 +190,7 @@ def run(app_root,summary_path):
     if findings.get('schema')!=1 or not isinstance(findings.get('findings'),list):
         raise ValueError('INVALID_SAFETY_FINDINGS')
     safety=release_assessment(findings['findings'])
+    smoke=emulator_smoke_record(out,required=os.getenv('EMULATOR_SMOKE_REQUIRED')=='true')
     acceptance_records=summary.get('acceptance_evidence',[])
     acceptance=[validate_acceptance(e) for e in acceptance_records]
     offline_checks=[verify_offline_artifacts(e,out) for e in acceptance_records
@@ -163,6 +205,7 @@ def run(app_root,summary_path):
     report={'schema':1,'app_sha':summary['app_commit'],'test_sha':summary['public_tests_sha'],
             'input_sha256':fingerprint,'source_inputs':inputs,'safety_release_gate':safety,
             'source_to_screen_records':len(acceptance),'offline_receipts_verified':len(offline_checks),
+            'emulator_smoke':smoke,
             'offline_acceptance':'not_established_by_receipt_validation',
             'emulator_environment_smoke':smoke,
             'independent_truth_records':len(truths),
