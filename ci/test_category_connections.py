@@ -184,6 +184,34 @@ class CategoryConnectionContracts(unittest.TestCase):
         self.assertEqual(0, report["categories"]["3"]["unresolved_references"])
         self.assertEqual(1, report["categories"]["4"]["unresolved_references"])
 
+    def test_review_location_links_belong_to_current_map_corrections_category(self):
+        records = classify_source_text(
+            "app/src/main/java/com/drivemate/app/ui/ReviewLocationMap.kt",
+            'fun osmUrl() = "https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude"\n'
+            'fun panoramaxUrl() = "https://panoramax.fr/#focus=map&map=18/$latitude/$longitude"',
+        )
+        self.assertEqual(2, len(records))
+        self.assertEqual({"www.openstreetmap.org", "panoramax.fr"}, {r["host"] for r in records})
+        for record in records:
+            self.assertEqual([22], record["categories"])
+            self.assertEqual("assigned", record["category_assignment"])
+            self.assertEqual("attribution_or_reference", record["source_role"])
+
+    def test_review_location_mapping_removes_only_unassigned_reliability_finding(self):
+        review = self.root / "app/src/main/java/com/drivemate/app/ui/ReviewLocationMap.kt"
+        review.parent.mkdir(parents=True)
+        review.write_text(
+            'fun osmUrl() = "https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude"\n'
+            'fun panoramaxUrl() = "https://panoramax.fr/#focus=map&map=18/$latitude/$longitude"\n'
+        )
+        report = self.run_audit()
+        self.assertEqual(0, report["categories"]["2"]["unassigned_references"])
+        self.assertEqual(2, report["categories"]["22"]["references"])
+        self.assertEqual(2, report["categories"]["22"]["ownership_unverified_references"])
+        self.assertFalse(report["categories"]["22"]["live_http_verified"])
+        self.assertFalse(report["runtime_network_verified"])
+        self.assertEqual("not_selected", self.run_audit(batch="A")["categories"]["22"]["status"])
+
 
 if __name__ == "__main__":
     unittest.main()

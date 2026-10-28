@@ -43,6 +43,14 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Verify approved public test source inventory (TF-05)
+        # Fail before using app credentials, Android SDK or emulator resources.
+        # Inventory source integrity is not proof of test execution or release readiness.
+        run: |
+          python3 -m unittest discover -s ci -p 'test_suite_inventory.py'
+          python3 ci/suite_inventory.py --root . \
+            --manifest ci/approved_suite_inventory.json \
+            --output results/suite-inventory.json
       - name: Check the app token is set
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
@@ -163,6 +171,14 @@ jobs:
         run: |
           python3 -m unittest discover -s ci -p 'test_*.py'
           python3 ci/verify_frozen_lanes.py
+      - name: Observe reviewed public services with bounded receipts
+        id: serviceprobe
+        # Provider failures are observations; malformed/missing harness evidence fails CI.
+        run: |
+          python3 ci/service_probe.py \
+            --app-sha "${{ steps.install.outputs.app_sha }}" --test-sha "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --batch "$DRIVEMATE_TEST_BATCH" --output results/service-probe.json
       - id: android
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
@@ -244,7 +260,7 @@ jobs:
           summary = json.loads(target.read_text())
           diagnostics = []
           steps = json.loads(os.environ.get("DIAGNOSTIC_STEPS", "{}"))
-          for name in ("schema", "java", "collection", "android", "sdk", "gradle", "kvm", "unit", "screen"):
+          for name in ("schema", "java", "collection", "serviceprobe", "android", "sdk", "gradle", "kvm", "unit", "screen"):
               if steps.get(name, {}).get("outcome") == "failure":
                   diagnostics.append({"stage": name, "message": "Setup or execution step failed before completion"})
           for stage in ("unit", "screen"):
@@ -311,6 +327,9 @@ jobs:
           }
           p.write_text(json.dumps(s,indent=1)+'\n')
           PY_CONNECTIONS
+          python3 ci/service_report.py \
+            --summary results/summary.json --report results/service-probe.json \
+            --batch "$DRIVEMATE_TEST_BATCH" --run-attempt "$GITHUB_RUN_ATTEMPT"
           python3 ci/run_report.py results/full-app.json "$media" results/run-report.html || echo "picture page not built"
       - name: Publish the summary and picture page only
         # Only once the app was fetched, and never for a cancelled run.
@@ -324,12 +343,14 @@ jobs:
             results/summary.json
             results/run-report.html
             results/process-summary.json
+            results/suite-inventory.json
             results/test-dependencies.json
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
             results/routing-release-alignment.json
             results/category-connection-audit.json
             results/apk-connection-audit.json
+            results/service-probe.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
