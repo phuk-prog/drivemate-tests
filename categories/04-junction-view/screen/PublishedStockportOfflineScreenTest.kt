@@ -1,7 +1,6 @@
 package com.drivemate.tests.cat04
 
 import android.app.Application
-import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.drivemate.app.data.OfflineRouter
@@ -92,9 +91,12 @@ class PublishedStockportOfflineScreenTest {
     }
 
     private fun shell(command: String) {
-        instrumentation.uiAutomation.executeShellCommand(command).use { stream ->
-            val bytes = ByteArray(1024)
-            while (android.os.ParcelFileDescriptor.AutoCloseInputStream(stream).read(bytes)>0) { }
+        // Shell exit status alone is not network-isolation evidence; real device
+        // socket probes check transport before and after the routed journey.
+        val fd = instrumentation.uiAutomation.executeShellCommand(command)
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).use {
+            val buffer=ByteArray(1024)
+            while (it.read(buffer)>0) { }
         }
     }
 
