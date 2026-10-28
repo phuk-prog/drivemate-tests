@@ -179,6 +179,7 @@ def main():
         elif a.verify_region_releases:
             result["region_release_inventory"]={"status":"blocked_by_catalog_failure"}
     except (ValueError, TypeError, UnicodeError, json.JSONDecodeError, OSError) as e:
+        result["status"] = "failed"
         result["failures"] = [str(e)]
     output = Path(a.output)
     output.parent.mkdir(parents=True, exist_ok=True)
