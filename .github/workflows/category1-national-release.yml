@@ -1,0 +1,40 @@
+name: Category 1 national release metadata audit
+# Read-only: validates rolling pointer bytes against dated release asset metadata.
+# Does NOT download 1GB DMN pieces/UK PMTiles or claim installed offline guidance.
+on:
+  pull_request:
+    paths:
+      - 'ci/category1_national_release.py'
+      - 'ci/test_category1_national_release.py'
+      - '.github/workflows/category1-national-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  national-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: phuk-prog/drivemate-map
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Frozen national pointer and app-schema regressions
+        run: python3 -m unittest discover -s ci -p test_category1_national_release.py -v
+      - name: Verify actual current rolling pointer bytes and dated asset metadata
+        run: |
+          python3 ci/category1_national_release.py --live \
+            --output results/category1-national-release.json
+      - name: Record exact test revision
+        if: always()
+        run: echo "public_test_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve bounded metadata receipt only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: category1-national-release-metadata
+          path: results/category1-national-release.json
+          if-no-files-found: warn
+          retention-days: 90
