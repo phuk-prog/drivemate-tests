@@ -3,7 +3,6 @@
   "baseline_commit": "ff8844847f00bd77ee7b72757a2831c1d9b328db",
   "scope": "approved public Kotlin test source and helpers; Git blob SHA-1 pins exact bytes",
   "files": {
-    "app-unit/java/com/drivemate/app/NavigationLinkTest.kt": "62e67f9dad220d7409522cea6443a47b1638f038",
     "app-unit/java/com/drivemate/app/controller/OnlineRoadDataTest.kt": "aea860b9b9059d81730cd77ee5b8bb8fca28745c",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
     "app-unit/java/com/drivemate/app/data/MemoryPreferences.kt": "81b88db08b9e78fe17ec05aef917306b04758ba5",
@@ -13,6 +12,7 @@
     "app-unit/java/com/drivemate/app/data/RoadDetailsTest.kt": "8fda79dd97a9144d6ad1ba8edbb24f15698fff1c",
     "app-unit/java/com/drivemate/app/data/UkJoinTest.kt": "bfefdd2d38908661a77ea4bee54ee60e7033d5c8",
     "app-unit/java/com/drivemate/app/dmn/DmnPackWriterTest.kt": "2c467613631edafb86ce9d3d288ed14429d99e36",
+    "app-unit/java/com/drivemate/app/dmn/DmnTilesStampTest.kt": "b9bd04b07c25250022407f90898de00d668fac87",
     "app-unit/java/com/drivemate/app/dmn/UnmarkedRoundaboutTest.kt": "0ba7b350b5d2bb873bd3bedb00a95582bc5833a5",
     "app-unit/java/com/drivemate/app/map/JourneyMapLookTest.kt": "824e5a1b0eb6bbc5935cf8f9d8987743b2f85f00",
     "app-unit/java/com/drivemate/app/map/JourneyMotionAndRoadsTest.kt": "ba354b68650ff13b04356172de01b9217e8b5a88",
@@ -21,6 +21,7 @@
     "app-unit/java/com/drivemate/app/nav/LaneTimingTest.kt": "dba0b15f2c8b716aad3ee984b95221b115ef0772",
     "app-unit/java/com/drivemate/app/nav/ParkedFixAgeTest.kt": "005e82c9f93d46819cbf32a1d9e1b578470edf84",
     "app-unit/java/com/drivemate/app/nav/PositionUncertaintyTest.kt": "530cbd23d98b83da188ca259f96b41edc1eca92e",
+    "app-unit/java/com/drivemate/app/NavigationLinkTest.kt": "62e67f9dad220d7409522cea6443a47b1638f038",
     "app-unit/java/com/drivemate/app/ui/JourneyDetailTest.kt": "16853bf1b416090934a4cdae75eaa2c86bf8c105",
     "app-unit/java/com/drivemate/app/ui/WhatsNewTest.kt": "e3f29bb7c00f75aa2ad9e1fde9dc583cae2e4219",
     "categories/01-turn-by-turn-guidance/decisions/TurnByTurnDecisionsTest.kt": "396dd230cdab3cd5690e339b58521ef155589654",
