@@ -153,5 +153,37 @@ class CategoryConnectionContracts(unittest.TestCase):
                 audit(temp, programme())
 
 
+    def test_tf02_category_counts_are_explicit_not_just_blocked_flags(self):
+        report = self.run_audit()
+        c1 = report["categories"]["1"]
+        self.assertEqual(2, c1["references"])
+        self.assertEqual(1, c1["reference_status_counts"]["old_or_unreachable_project_target"])
+        self.assertEqual(1, c1["reference_status_counts"]["static_reference_only"])
+        self.assertEqual(2, c1["ownership_unverified_references"])
+        self.assertEqual(1, c1["unresolved_references"])
+        self.assertEqual(0, report["categories"]["23"]["unresolved_references"])
+        self.assertFalse(report["runtime_network_verified"])
+
+    def test_tf02_test_server_and_unknown_owner_are_counted_without_live_claim(self):
+        osm = self.root / "app/src/main/java/com/drivemate/app/osm/OsmConnection.kt"
+        osm.parent.mkdir(parents=True, exist_ok=True)
+        osm.write_text('val test = "https://master.apis.dev.openstreetmap.org/api/0.6"\\n')
+        unexpected = self.root / "app/src/main/java/com/drivemate/app/Unexpected.kt"
+        unexpected.write_text('val api = "https://unknown.example.net/v1"\\n')
+        report = self.run_audit()
+        self.assertEqual(1, report["categories"]["22"]["reference_status_counts"]["test_service_reference_not_live"])
+        self.assertEqual(1, report["categories"]["22"]["unresolved_references"])
+        self.assertEqual(1, report["categories"]["2"]["unassigned_references"])
+        self.assertEqual(1, report["categories"]["2"]["ownership_unverified_references"])
+        self.assertFalse(report["categories"]["22"]["live_http_verified"])
+
+    def test_tf02_batch_counts_exclude_unselected_categories(self):
+        report = self.run_audit(batch="A")
+        self.assertEqual({}, report["categories"]["3"]["reference_status_counts"])
+        self.assertEqual(0, report["categories"]["3"]["ownership_unverified_references"])
+        self.assertEqual(0, report["categories"]["3"]["unresolved_references"])
+        self.assertEqual(1, report["categories"]["4"]["unresolved_references"])
+
+
 if __name__ == "__main__":
     unittest.main()

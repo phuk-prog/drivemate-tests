@@ -158,9 +158,24 @@ def audit(app_root, programme, alignment=None, batch="all"):
             status = "no_static_url_observed"
         else:
             status = "static_inventory_only"
+        # Every static reference remains ownership-unverified until independent
+        # publisher and live service checks; URL syntax never proves a service.
+        status_counts = {key: sum(r["status"] == key for r in subset)
+                         for key in sorted({r["status"] for r in subset})}
+        unresolved_statuses = {
+            "old_or_unreachable_project_target", "invalid_url",
+            "insecure_http_reference", "test_service_reference_not_live",
+        }
+        unassigned = sum(r["category_assignment"] == "needs_review" for r in subset)
+        unresolved = sum(r["status"] in unresolved_statuses or
+                         r["category_assignment"] == "needs_review" for r in subset)
         mapping[str(cid)] = {
             "name": category["name"], "status": status,
             "references": len(subset), "finding_codes": sorted(set(flags)),
+            "reference_status_counts": status_counts,
+            "ownership_unverified_references": len(subset),
+            "unresolved_references": unresolved,
+            "unassigned_references": unassigned,
             "live_http_verified": False, "installed_apk_verified": False,
             "download_runtime_verified": False,
         }
