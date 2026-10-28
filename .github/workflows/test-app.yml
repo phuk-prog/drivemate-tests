@@ -104,7 +104,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate-map
-          ref: 34ef3193fb5f5ba8f2060b33474559e064b5e7c6
+          ref: d20c41f039f20b900eb46523827b01eecee167f3
           path: map-schema
           persist-credentials: false
       - name: Diagnose routing graph downloader/publisher alignment
