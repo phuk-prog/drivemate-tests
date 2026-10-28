@@ -13,9 +13,9 @@ import re
 import subprocess
 import tempfile
 
-HEX64 = re.compile(r"[0-9a-f]{64}\\Z")
-REGION = re.compile(r"[a-z0-9][a-z0-9-]{0,70}\\Z")
-TAG = re.compile(r"map-data-region-[a-z0-9-]+-r[0-9]+-a[0-9]+(?:-part[0-9]{3})?\\Z")
+HEX64 = re.compile(r"[0-9a-f]{64}\Z")
+REGION = re.compile(r"[a-z0-9][a-z0-9-]{0,70}\Z")
+TAG = re.compile(r"map-data-region-[a-z0-9-]+-r[0-9]+-a[0-9]+(?:-part[0-9]{3})?\Z")
 MAX_ASSET_BYTES = 1_950_000_000
 MAX_MANIFEST_BYTES = 2_000_000
 
@@ -63,7 +63,7 @@ def validate_manifest(raw, region_name, map_pointer):
         raise ValueError("MANIFEST_FILES_MISSING")
     for name, item in files.items():
         if (not isinstance(name,str) or not name or len(name)>220 or "/" in name
-            or "\\\\" in name or ".." in name or not isinstance(item,dict)
+            or "\\" in name or ".." in name or not isinstance(item,dict)
             or type(item.get("bytes")) is not int or not 0 < item["bytes"] <= MAX_ASSET_BYTES
             or not isinstance(item.get("sha256"),str) or not HEX64.fullmatch(item["sha256"])
             or not isinstance(item.get("tag"),str) or not TAG.fullmatch(item["tag"])
@@ -175,10 +175,10 @@ def main():
     out.parent.mkdir(parents=True,exist_ok=True)
     def record(rows):
         # Partial evidence persists after every region for CI diagnostics.
-        out.write_text(json.dumps({"schema":1,"partial":True,"regions":rows},indent=2)+"\\n")
+        out.write_text(json.dumps({"schema":1,"partial":True,"regions":rows},indent=2)+"\n")
     result=run_batch(catalog,a.batch_index,a.batch_count,progress=record)
     result["catalog_sha256"]=a.catalog_sha256
-    out.write_text(json.dumps(result,sort_keys=True,indent=2)+"\\n")
+    out.write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
     print(json.dumps({k:result[k] for k in (
         "batch_index","total","verified","failed","manifest_bytes_verified",
         "map_bytes_verified","catalog_sha256")},sort_keys=True),flush=True)
