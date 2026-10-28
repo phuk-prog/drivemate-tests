@@ -14,7 +14,7 @@ import subprocess
 import time
 
 
-TCP = ["adb", "shell", "toybox", "nc", "-z", "-w", "3", "1.1.1.1", "443"]
+TCP = ["adb", "shell", "toybox", "nc", "-w", "3", "-q", "1", "1.1.1.1", "443"]
 AIRPLANE_ON = ["adb", "shell", "cmd", "connectivity", "airplane-mode", "enable"]
 AIRPLANE_OFF = ["adb", "shell", "cmd", "connectivity", "airplane-mode", "disable"]
 WIFI_OFF = ["adb", "shell", "svc", "wifi", "disable"]
@@ -24,7 +24,7 @@ DATA_ON = ["adb", "shell", "svc", "data", "enable"]
 
 
 def execute_adb(argv):
-    return subprocess.run(argv, capture_output=True, text=True, timeout=9, check=False)
+    return subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=9, check=False)
 
 
 def run(output, *, execute=execute_adb, settle=lambda: time.sleep(2)):
@@ -43,7 +43,7 @@ def run(output, *, execute=execute_adb, settle=lambda: time.sleep(2)):
                 return None
             # Reject unsupported command/option as UNKNOWN, not an apparent
             # disconnected socket.
-            stderr = (r.stderr or "").lower()
+            stderr = ((r.stderr or "") + " " + (r.stdout or "")).lower()
             if any(word in stderr for word in
                    ("not found", "unknown option", "invalid option", "usage:", "permission denied")):
                 return None
@@ -75,6 +75,8 @@ def run(output, *, execute=execute_adb, settle=lambda: time.sleep(2)):
 
     if not controls_ok:
         reason = "CONTROL_COMMAND_FAILED"
+    elif online is None:
+        reason = "PROBE_UNAVAILABLE"
     elif online is not True:
         reason = "NO_ONLINE_BASELINE"
     elif before is None or after is None:
