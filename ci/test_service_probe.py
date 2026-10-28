@@ -12,7 +12,7 @@ from unittest.mock import patch
 from urllib.error import URLError
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 
-from service_probe import HTTPTransport, ProbeError, probe, probe_cohort
+from service_probe import ENDPOINTS, HTTPTransport, ProbeError, probe, probe_cohort
 
 CONTEXT = {'app_sha': 'a'*40, 'test_sha': 'b'*40, 'run_id': '123', 'run_attempt': '2'}
 
@@ -216,3 +216,28 @@ class ServiceProbeContracts(unittest.TestCase):
         self.assertNotIn('example_secret', rendered)
         self.assertNotIn('Set-Cookie', rendered)
         self.assertNotIn('https://', rendered)
+
+    def test_malformed_retry_after_is_ignored_without_crashing_cohort(self):
+        delays=[]
+        MetadataServer.responses=[(429, {'Retry-After':'²'}, b''),
+                                  (200, {}, b'{"schema":1,"regions":{}}')]
+        report=probe_cohort(CONTEXT, endpoint_ids=['map_catalog'],transport=self.transport,
+                            sleep=delays.append)
+        self.assertEqual('observed_schema_only',report['cases'][0]['outcome'])
+        self.assertTrue(report['cases'][0]['recovered'])
+        self.assertEqual([0.25],delays)
+
+    def test_dns_resolution_deadline_returns_before_resolver_finishes(self):
+        entered,done,release=threading.Event(),threading.Event(),threading.Event()
+        def blocked_resolver(host,port):
+            entered.set();release.wait(2);done.set()
+            return [(socket.AF_INET,socket.SOCK_STREAM,6,'',('8.8.8.8',443))]
+        transport=HTTPTransport(opener=LocalOpener('http://127.0.0.1:%d/'%self.server.server_port),
+                                resolver=blocked_resolver)
+        try:
+            with self.assertRaises(TimeoutError):
+                transport(ENDPOINTS['map_catalog'],timeout=0.05)
+            self.assertTrue(entered.is_set())
+            self.assertFalse(done.is_set(),'DNS must not hold the request beyond its deadline')
+            self.assertEqual([],MetadataServer.calls)
+        finally: release.set()

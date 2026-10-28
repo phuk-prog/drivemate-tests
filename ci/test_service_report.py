@@ -30,7 +30,10 @@ class ServiceReportContracts(unittest.TestCase):
             'cases': [{'id': identity, 'categories': list(ENDPOINTS[identity].categories),
                        'host': urlsplit(ENDPOINTS[identity].url).hostname,
                        'context': self.context, 'batch': 'A', 'outcome': 'forbidden_cause_unknown',
-                       'attempts': [{'outcome': 'forbidden_cause_unknown'}],
+                       'attempts': [{'outcome': 'forbidden_cause_unknown', 'http_status':403,
+                           'dns':'resolved','tls':'verified','body_bytes':0,'truncated':False,
+                           'body_sha256':None,'schema_status':'unknown','version_status':'unknown',
+                           'freshness':'unknown','redirect_hosts':[]}], 'recovered':False,
                        'provider_consumer_verified': False, 'navigation_accepted': False,
                        'authenticated_expected_bytes_verified': False} for identity in ids],
             'counts': {'observations': len(ids), 'outcomes': {'forbidden_cause_unknown': len(ids)}}}
@@ -93,3 +96,28 @@ class ServiceReportContracts(unittest.TestCase):
         with self.assertRaises(ValueError): attach(self.summary,self.report,batch='A',run_attempt='2')
         target=self.root/'other.json'; target.write_text(json.dumps(self.receipt)); self.report.symlink_to(target)
         with self.assertRaises(ValueError): attach(self.summary,self.report,batch='A',run_attempt='2')
+
+    def test_contradictory_or_malformed_attempts_cannot_be_counted_as_schema_observed(self):
+        valid = copy.deepcopy(self.receipt)
+        mutations = [
+            lambda c:c.update(attempts=[None]),
+            lambda c:c.update(outcome='observed_schema_only'),
+            lambda c:c['attempts'][0].update(outcome='observed_schema_only'),
+            lambda c:c.update(attempts=[{'outcome':'observed_schema_only','http_status':200,
+                'schema_status':'observed_shape_only','body_sha256':None,'truncated':False}],
+                outcome='observed_schema_only'),
+            lambda c:c.update(attempts=[{'outcome':'observed_schema_only','http_status':200,
+                'schema_status':'observed_shape_only','body_sha256':'d'*64,'truncated':True}],
+                outcome='observed_schema_only'),
+            lambda c:c.update(recovered=True),
+            lambda c:c.update(attempts=c['attempts']*2),
+        ]
+        for index, mutate in enumerate(mutations):
+            with self.subTest(index=index):
+                self.receipt=copy.deepcopy(valid)
+                mutate(self.receipt['cases'][0])
+                outcomes={}
+                for case in self.receipt['cases']:
+                    outcomes[case['outcome']]=outcomes.get(case['outcome'],0)+1
+                self.receipt['counts']['outcomes']=outcomes
+                with self.assertRaises(ValueError): self.execute()
