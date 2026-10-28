@@ -38,7 +38,8 @@ def inspect(root, inventory_path):
         raise ValueError("SUITE_INVENTORY_INVALID") from exc
     files = approved.get("files") if isinstance(approved, dict) else None
     if (
-        approved.get("schema") != 1
+        not isinstance(approved, dict)
+        or approved.get("schema") != 1
         or not isinstance(approved.get("baseline_commit"), str)
         or not SHA_RE.fullmatch(approved["baseline_commit"])
         or not isinstance(files, dict)
