@@ -4,6 +4,8 @@ The production join merges overlapping regional copies in publication order:
 the first version of an OSM way wins. This regression tests only release
 metadata ordering, not synthetic roads, lane arrows or UK legal truth.
 """
+import hashlib
+import json
 import os
 from pathlib import Path
 import sys
@@ -32,6 +34,17 @@ class Category1JoinPriorityTest(unittest.TestCase):
             uk_join.sources_key([self.newest, self.older]),
             uk_join.sources_key([dict(self.newest), dict(self.older)]),
         )
+
+    def test_existing_multisource_cache_is_invalidated_on_migration(self):
+        # Old cache keys sorted SHA hashes, even when a different region won.
+        legacy = hashlib.sha256(json.dumps(sorted([
+            self.newest["sha256"], self.older["sha256"]
+        ])).encode()).hexdigest()
+        self.assertNotEqual(legacy, uk_join.sources_key([self.newest, self.older]))
+
+    def test_single_source_key_remains_compatible_to_avoid_unneeded_rebuild(self):
+        legacy = hashlib.sha256(json.dumps([self.newest["sha256"]]).encode()).hexdigest()
+        self.assertEqual(legacy, uk_join.sources_key([self.newest]))
 
     def test_modified_source_bytes_invalidate_cache(self):
         changed = {**self.older, "sha256": "c" * 64}
