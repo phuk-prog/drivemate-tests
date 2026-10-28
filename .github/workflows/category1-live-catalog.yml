@@ -1,0 +1,47 @@
+name: Category 1 live UK catalogue audit
+# Read-only: checks actual published map-regions/catalog.json against GitHub
+# release digest. Region presence is not complete UK road or offline acceptance.
+on:
+  pull_request:
+    paths:
+      - 'ci/category1_live_catalog.py'
+      - 'ci/test_category1_live_catalog.py'
+      - '.github/workflows/category1-live-catalog.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  published-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: phuk-prog/drivemate-map
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test independent catalogue integrity and scope contract
+        run: python3 -m unittest discover -s ci -p test_category1_live_catalog.py -v
+      - name: Download exact current published catalogue and release metadata
+        run: |
+          mkdir -p results/live-catalog
+          gh api repos/phuk-prog/drivemate-map/releases/tags/map-regions > results/live-catalog/release.json
+          gh release download map-regions --repo phuk-prog/drivemate-map --pattern catalog.json --dir results/live-catalog
+      - name: Audit immutable release bytes and live region membership
+        run: |
+          python3 ci/category1_live_catalog.py \
+            --catalog results/live-catalog/catalog.json \
+            --release results/live-catalog/release.json \
+            --output results/category1-live-catalog-audit.json
+      - name: Record frozen public audit revision
+        if: always()
+        run: echo "public_test_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve bounded evidence, not the large downloaded catalogue
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: category1-live-catalog-audit
+          path: results/category1-live-catalog-audit.json
+          if-no-files-found: warn
+          retention-days: 90
