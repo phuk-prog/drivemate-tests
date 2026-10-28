@@ -18,6 +18,15 @@ def source():
                      "manifest":{"tag":"map-data-region-greater-manchester-r123-a1","bytes":89,
                             "sha256":"c"*64}}
     }}
+    for region_id in ("scotland","wales","northern-ireland-area"):
+        value["regions"][region_id]={
+            "id":region_id,"name":region_id,
+            "bounds":[-5.0,53.0,-4.0,54.0],
+            "map":{"tag":"map-data-region-"+region_id+"-r123-a1",
+                   "bytes":256,"sha256":"d"*64},
+            "manifest":{"tag":"map-data-region-"+region_id+"-r123-a1",
+                        "bytes":128,"sha256":"e"*64}
+        }
     raw=json.dumps(value).encode()
     metadata={"tag_name":"map-regions","assets":[{
         "name":"catalog.json","size":len(raw),
