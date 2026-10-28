@@ -7,6 +7,7 @@ on:
       - 'ci/category1_live_catalog.py'
       - 'ci/test_category1_live_catalog.py'
       - 'ci/test_category1_release_inventory.py'
+      - 'ci/test_category1_live_fail_closed.py'
       - '.github/workflows/category1-live-catalog.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +27,7 @@ jobs:
         run: |
           python3 -m unittest discover -s ci -p test_category1_live_catalog.py -v
           python3 -m unittest discover -s ci -p test_category1_release_inventory.py -v
+          python3 -m unittest discover -s ci -p test_category1_live_fail_closed.py -v
       - name: Download exact current published catalogue and release metadata
         run: |
           mkdir -p results/live-catalog
