@@ -213,6 +213,14 @@ jobs:
             python3 ../ci/emulator_network_probe.py --output ../results/emulator-network-probe.json
             # Record actual device fixture bytes separately; no production app cache.
             python3 ../ci/emulator_fixture_readback.py --source ../app-unit/resources/cat3-published-manchester-lanes-3.json --out ../results/emulator-fixture-readback.json
+      - name: Inspect URL constants in the exact emulator-built debug APK
+        # Read APK bytes on-runner; upload only a bounded receipt, never the APK.
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        run: |
+          python3 ci/apk_connection_check.py \
+            --apk app-src/app/build/outputs/apk/debug/app-debug.apk \
+            --source-report results/category-connection-audit.json \
+            --output results/apk-connection-audit.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -288,13 +296,17 @@ jobs:
           p=Path('results/summary.json')
           s=json.loads(p.read_text())
           report=json.loads(Path('results/category-connection-audit.json').read_text())
+          apk=json.loads(Path('results/apk-connection-audit.json').read_text())
           s['category_connections']={
               'scope':report['scope'],
               'category_status':{k:v['status'] for k,v in report['categories'].items()},
               'blocked_categories':[int(k) for k,v in report['categories'].items()
                                     if v['status']=='blocked_needs_investigation'],
               'verified_live_downloads':0,
-              'apk_binary_inspected':False,
+              'apk_binary_inspected': apk['dex_count'] > 0,
+              'apk_status': apk['status'],
+              'apk_blocked_categories': apk['blocked_categories'],
+              'apk_sha256': apk['apk_sha256'],
           }
           p.write_text(json.dumps(s,indent=1)+'\\n')
           PY_CONNECTIONS
@@ -316,6 +328,7 @@ jobs:
             results/emulator-fixture-readback.json
             results/routing-release-alignment.json
             results/category-connection-audit.json
+            results/apk-connection-audit.json
           if-no-files-found: error
           retention-days: 90
       - name: Every test passed
