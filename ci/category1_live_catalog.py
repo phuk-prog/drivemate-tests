@@ -9,6 +9,7 @@ import json
 import math
 from pathlib import Path
 import re
+import subprocess
 
 OUT_OF_UK = {"isle-of-man", "guernsey-jersey"}
 PROBES = {"England": "greater-manchester", "Scotland": "scotland",
@@ -82,19 +83,102 @@ def audit_catalog(catalog):
             "claim": "published_catalog_metadata_only"}
 
 
+
+def verify_region_release_inventory(catalog, fetch_release):
+    """Cross-check immutable regional pointers against GitHub release metadata.
+
+    Only GitHub-advertised size and SHA-256 digests, not downloaded PMTiles
+    bytes or a verified installed navigation asset. Each release tag is
+    fetched at most once. Each region's map and manifest may use different
+    immutable tags because the publisher reuses unchanged map assets.
+    """
+    entries=catalog.get("regions", {})
+    if not isinstance(entries, dict) or not entries:
+        raise ValueError("REGIONAL_RELEASE_INDEX_MISSING")
+    resolved={}
+    verified=0
+    for region, info in sorted(entries.items()):
+        if not isinstance(info, dict):
+            raise ValueError("REGIONAL_RELEASE_POINTER_INVALID")
+        for kind, filename in (("map", "drivemate-v1.pmtiles"),
+                               ("manifest", "manifest.json")):
+            pointer=info.get(kind)
+            if not isinstance(pointer, dict):
+                raise ValueError("REGIONAL_RELEASE_POINTER_INVALID")
+            tag=pointer.get("tag")
+            if (not isinstance(tag, str) or len(tag)>180
+                or not re.fullmatch(r"[a-z0-9-]+", tag)
+                or not tag.startswith("map-data-region-" + region + "-")):
+                raise ValueError("REGIONAL_RELEASE_POINTER_INVALID")
+            if tag not in resolved:
+                try:
+                    release=fetch_release(tag)
+                except (KeyError, OSError, subprocess.CalledProcessError,
+                        subprocess.TimeoutExpired, ValueError):
+                    raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED") from None
+                if not isinstance(release, dict):
+                    raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED")
+                resolved[tag]=release
+            release=resolved[tag]
+            if release.get("tag_name")!=tag:
+                raise ValueError("REGIONAL_RELEASE_TAG_MISMATCH")
+            assets=release.get("assets")
+            if not isinstance(assets, list):
+                raise ValueError("REGIONAL_RELEASE_ASSET_MISSING")
+            matches=[asset for asset in assets
+                     if isinstance(asset,dict) and asset.get("name")==filename]
+            if len(matches)>1:
+                raise ValueError("REGIONAL_RELEASE_ASSET_DUPLICATE")
+            if not matches:
+                raise ValueError("REGIONAL_RELEASE_ASSET_MISSING")
+            asset=matches[0]
+            if (type(asset.get("size")) is not int
+                or asset.get("size") != pointer.get("bytes")
+                or asset.get("digest") != "sha256:" + str(pointer.get("sha256",""))):
+                raise ValueError("REGIONAL_RELEASE_ASSET_MISMATCH")
+            verified+=1
+    return {"scope":"release_asset_metadata_only",
+            "regions_checked":len(entries),"assets_verified":verified,
+            "release_tags_checked":len(resolved),
+            "actual_map_bytes_downloaded":"unknown",
+            "offline_navigation_acceptance":"unknown"}
+
+
+def github_release(tag):
+    """Read only published release metadata; never download multi-GB PMTiles."""
+    cmd=["gh","api","repos/phuk-prog/drivemate-map/releases/tags/"+tag]
+    try:
+        result=subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              check=False,timeout=30)
+        if result.returncode or len(result.stdout)>8_000_000:
+            raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED")
+        return json.loads(result.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED") from None
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--catalog", required=True)
     p.add_argument("--release", required=True)
     p.add_argument("--output", required=True)
+    p.add_argument("--verify-region-releases", action="store_true")
     a = p.parse_args()
     result = {"schema": 1, "audit": "cat1-live-catalog", "status": "failed"}
     try:
         raw = Path(a.catalog).read_bytes()
         release = json.loads(Path(a.release).read_text())
         result["published_asset"] = verify_asset(raw, release)
-        result.update(audit_catalog(json.loads(raw)))
-    except (ValueError, TypeError, UnicodeError, json.JSONDecodeError) as e:
+        catalog=json.loads(raw)
+        result.update(audit_catalog(catalog))
+        # Do not spend API calls proving regional pointers until the catalogue
+        # itself satisfies the UK-scope and integrity gate.
+        if a.verify_region_releases and result["status"]=="passed":
+            result["region_release_inventory"]=verify_region_release_inventory(
+                catalog, github_release)
+        elif a.verify_region_releases:
+            result["region_release_inventory"]={"status":"blocked_by_catalog_failure"}
+    except (ValueError, TypeError, UnicodeError, json.JSONDecodeError, OSError) as e:
         result["failures"] = [str(e)]
     output = Path(a.output)
     output.parent.mkdir(parents=True, exist_ok=True)
