@@ -220,6 +220,7 @@ jobs:
           python3 ci/apk_connection_check.py \
             --apk app-src/app/build/outputs/apk/debug/app-debug.apk \
             --source-report results/category-connection-audit.json \
+            --app-root app-src --app-sha "${{ steps.install.outputs.app_sha }}" \
             --output results/apk-connection-audit.json
       - name: Summary and picture page
         # Only once the app was fetched, and never for a cancelled run.
