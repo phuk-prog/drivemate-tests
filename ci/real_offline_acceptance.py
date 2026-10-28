@@ -10,6 +10,12 @@ from pathlib import Path
 import re
 import subprocess
 
+# These are distinct current source-backed locations: the published map workflow
+# targets its own repository, while the shipped app still requests the old one.
+APP_TARGET_REPO = "phuk-prog/drivemate-data"
+PUBLISHER_REPO = "phuk-prog/drivemate-map"
+ROUTING_TAG = "routing-uk"
+
 STAGES=(
     "published_catalog_hash_verified",
     "region_pmtiles_bytes_verified",
@@ -69,7 +75,7 @@ def release_readiness(status_code,assets=None):
 
 def public_release_lookup(repo,tag):
     # No client secrets, no redirects to untrusted URLs or arbitrary user input.
-    if repo!="phuk-prog/drivemate-data" or tag!="routing-uk":
+    if repo not in {APP_TARGET_REPO, PUBLISHER_REPO} or tag!=ROUTING_TAG:
         raise ValueError("UNTRUSTED_RELEASE_TARGET")
     args=["gh","api","-i","repos/"+repo+"/releases/tags/"+tag]
     try:
@@ -95,23 +101,52 @@ def public_release_lookup(repo,tag):
     return release_readiness(200,data.get("assets"))
 
 
+def release_target_inventory():
+    """Inspect each known release owner separately; metadata is not graph installation.
+
+    Only these two code-reviewed repositories can be queried. Even a 200 release
+    with a manifest hash does not verify downloaded bytes or an Android route.
+    """
+    app = public_release_lookup(APP_TARGET_REPO, ROUTING_TAG)
+    publisher = public_release_lookup(PUBLISHER_REPO, ROUTING_TAG)
+    return {
+        "scope": "two_public_github_release_tag_metadata_lookups_only",
+        "app_target_repository": APP_TARGET_REPO,
+        "publisher_repository": PUBLISHER_REPO,
+        "release_tag": ROUTING_TAG,
+        "source_repository_mismatch": APP_TARGET_REPO != PUBLISHER_REPO,
+        "app_target": app,
+        "publisher_target": publisher,
+        "app_graph_download_verified": False,
+        "offline_acceptance": False,
+        "limitations": "No manifest byte readback, app network request, installed routing graph, screen or legal-road truth",
+    }
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output",required=True)
     a=parser.parse_args()
-    public=public_release_lookup("phuk-prog/drivemate-data","routing-uk")
+    targets=release_target_inventory()
+    public=targets["app_target"]
     # The gate does not import CI's previous map evidence as current app evidence;
     # every stage stays unknown until produced from the same Android test run.
     stages={name:None for name in STAGES}
-    stages["routing_graph_public_release_verified"]=public["public_verified"]
+    # Publication metadata cannot prove the actual graph bytes. A missing
+    # release is False; a visible metadata-only release remains UNKNOWN.
+    stages["routing_graph_public_release_verified"]=(
+        None if public["public_verified"] else False)
     verdict=evaluate(stages)
     record={"schema":1,"published_graph_release":public,
+            "publisher_graph_release":targets["publisher_target"],
+            "routing_release_targets":targets,
             "source":"github_public_api_live",
             "offline_acceptance":verdict}
     p=Path(a.output)
     p.parent.mkdir(parents=True,exist_ok=True)
     p.write_text(json.dumps(record,sort_keys=True,indent=2)+"\n")
     print(json.dumps({"published_graph_release":public["status"],
+                      "publisher_graph_release":targets["publisher_target"]["status"],
                       "real_offline_acceptance":verdict["status"],
                       "unknown_stages":len(verdict["unknown_stages"])},sort_keys=True))
     # Diagnosis job may PASS for an honest BLOCKED; do not return acceptance true.
