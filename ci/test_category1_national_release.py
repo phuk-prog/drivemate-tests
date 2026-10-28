@@ -73,11 +73,13 @@ class NationalReleaseMetadata(unittest.TestCase):
 
     def test_dmn_untrusted_release_tag_and_path_fail_closed(self):
         self.dmn["release"] = "dmn-uk-../../evil"
-        with self.assertRaises(ValueError):
+        self.rolling["assets"] = [asset("dmn-uk.json", json.dumps(self.dmn).encode())]
+        with self.assertRaisesRegex(ValueError, "DMN_APP_SCHEMA_INCOMPATIBLE"):
             verify_dmn(json.dumps(self.dmn).encode(), self.rolling, self.dated)
         self.dmn["release"] = "dmn-uk-20261028-15"
         self.dmn["tiles"]["212_-9"]["file"] = "../dmn-212_-9.dmnpack"
-        with self.assertRaises(ValueError):
+        self.rolling["assets"] = [asset("dmn-uk.json", json.dumps(self.dmn).encode())]
+        with self.assertRaisesRegex(ValueError, "DMN_PIECE_APP_INCOMPATIBLE"):
             verify_dmn(json.dumps(self.dmn).encode(), self.rolling, self.dated)
 
     def test_ukmap_published_pointer_matches_dated_release(self):
@@ -91,7 +93,8 @@ class NationalReleaseMetadata(unittest.TestCase):
             verify_ukmap(self.map_raw, self.map_rolling, self.map_dated)
         self.map_dated["assets"][0]["digest"] = "sha256:" + "a" * 64
         self.map["map"]["bytes"] = 2_000_000_001
-        with self.assertRaises(ValueError):
+        self.map_rolling["assets"] = [asset("ukmap.json", json.dumps(self.map).encode())]
+        with self.assertRaisesRegex(ValueError, "UKMAP_APP_SCHEMA_INCOMPATIBLE"):
             verify_ukmap(json.dumps(self.map).encode(), self.map_rolling, self.map_dated)
 
 if __name__ == "__main__":
