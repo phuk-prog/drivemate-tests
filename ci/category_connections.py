@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 URL = re.compile(r"https?://[^\s\"'<>\\]+", re.IGNORECASE)
 GITHUB_RELEASE = re.compile(
-    r"^https://github\.com/(?P<repo>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/releases/download/"
+    r"^https?://(?:www\.)?github\.com/(?P<repo>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/releases/download/"
     r"(?P<tag>[A-Za-z0-9._-]+)", re.IGNORECASE
 )
 # Scoped to current *new* category numbering, not historical folder IDs.
@@ -35,7 +35,7 @@ SOURCE_CATEGORIES = {
     "account/DriveAppDataBackup.kt": ([3], "network_service"),
     "controller/NavigationSession.kt": ([22], "network_service"),
     "controller/ShareText.kt": ([19], "attribution_or_reference"),
-    "data/DataCredits.kt": ([20], "attribution_or_reference"),
+    "data/DataCredits.kt": ([1, 20], "attribution_or_reference"),
     "ui/MainMenu.kt": ([20], "attribution_or_reference"),
     "PrivacyNotice.kt": ([20], "attribution_or_reference"),
 }
@@ -53,6 +53,31 @@ def source_role(path):
     return ([], "out_of_scope")
 
 
+
+# Examine exact GitHub repository path segments across links, raw files and API.
+# Matching a repository string is a static finding, never live availability.
+GITHUB_PROJECT_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def github_repository(parsed):
+    host = (parsed.hostname or "").lower()
+    parts = [x for x in parsed.path.split("/") if x]
+    if host in {"github.com", "www.github.com", "raw.githubusercontent.com"}:
+        segments = parts[:2]
+    elif host == "api.github.com" and parts[:1] == ["repos"]:
+        segments = parts[1:3]
+    else:
+        return None
+    if len(segments) != 2:
+        return None
+    owner, project = segments
+    if host in {"github.com", "www.github.com"} and project.endswith(".git"):
+        project = project[:-4]
+    if not project or not GITHUB_PROJECT_NAME.fullmatch(owner) or not GITHUB_PROJECT_NAME.fullmatch(project):
+        return None
+    return owner + "/" + project
+
+
 def classify_url(value):
     # A closing bracket is part of a valid bare IPv6 authority.
     raw = value.rstrip(".,;)}")
@@ -61,22 +86,28 @@ def classify_url(value):
         host = (parsed.hostname or "").lower()
         parsed.port  # Validate malformed/out-of-range ports too.
     except ValueError:
-        # Do not publish the raw token or parser exception: it may contain keys.
-        return {"status": "invalid_url", "host": "", "repository": None}
+        # Never print raw tokens: query strings can contain API keys.
+        return {"status": "invalid_url", "host": "", "repository": None,
+                "finding_codes": ["invalid_url"]}
     if not host or parsed.scheme not in {"https", "http"}:
-        return {"status": "invalid_url", "host": host, "repository": None}
+        return {"status": "invalid_url", "host": host, "repository": None,
+                "finding_codes": ["invalid_url"]}
     found = GITHUB_RELEASE.match(raw)
-    repo = found.group("repo") if found else None
+    repo = github_repository(parsed)
+    issues = []
     if repo and repo.casefold() in {x.casefold() for x in OLD_PROJECTS}:
-        status = "old_or_unreachable_project_target"
-    elif parsed.scheme != "https":
-        status = "insecure_http_reference"
-    elif host == "master.apis.dev.openstreetmap.org":
-        status = "test_service_reference_not_live"
-    else:
-        status = "static_reference_only"
+        issues.append("old_or_unreachable_project_target")
+    if parsed.scheme != "https":
+        issues.append("insecure_http_reference")
+    if host == "master.apis.dev.openstreetmap.org":
+        issues.append("test_service_reference_not_live")
+    status = next((code for code in ("old_or_unreachable_project_target",
+                                    "insecure_http_reference",
+                                    "test_service_reference_not_live")
+                   if code in issues), "static_reference_only")
     return {"status": status, "host": host, "repository": repo,
-            "release_tag": found.group("tag") if found else None}
+            "release_tag": found.group("tag") if found else None,
+            "finding_codes": sorted(issues)}
 
 
 def classify_source_text(path, content):
@@ -138,10 +169,14 @@ def audit(app_root, programme, alignment=None, batch="all"):
     for category in programme["categories"]:
         cid = category["id"]
         subset = [x for x in records if cid in x["categories"]] if cid in chosen else []
+        blocked_codes = {
+            "old_or_unreachable_project_target", "invalid_url",
+            "insecure_http_reference", "test_service_reference_not_live",
+        }
         flags = sorted(set(
-            x["status"] for x in subset if x["status"] in {
-                "old_or_unreachable_project_target", "invalid_url", "insecure_http_reference"
-            }
+            code for item in subset
+            for code in item.get("finding_codes", [item["status"]])
+            if code in blocked_codes
         ))
         if any(x["category_assignment"] == "needs_review" for x in subset):
             flags.append("unassigned_source_needs_review")
