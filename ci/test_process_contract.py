@@ -69,7 +69,7 @@ class ProcessContractTest(unittest.TestCase):
     def evidence(self):
         return {'app_sha':'a'*40,'test_sha':'b'*40,'map_sha256':'c'*64,
                 'input_sha256':'d'*64,'case_id':'osm-way-930354',
-                'mode':'offline','country':'GB','source_kind':'published_real_uk',
+                'mode':'controlled_cache','country':'GB','source_kind':'published_real_uk',
                 'stages':{s:{'artifact_sha256':'e'*64,'status':'passed'} for s in ('source','loader','session','screen')},
                 'legal_truth':{'status':'unknown'}}
 
@@ -106,36 +106,36 @@ class ProcessContractTest(unittest.TestCase):
             self.c.validate_retest(a,b)
 
     def test_benchmarks_refuse_different_routes_or_online_offline_modes(self):
-        a=self.evidence(); a['engine']='DMN'
+        a=self.evidence(); a.update(engine='DMN',mode='offline')
         b=copy.deepcopy(a); b.update(engine='Reference',mode='online')
         with self.assertRaisesRegex(ValueError,'INCOMPARABLE_BENCHMARK'):
             self.c.validate_benchmark([a,b])
 
     def test_missing_competitor_coverage_remains_incomplete(self):
-        a=self.evidence(); a.update(engine='DMN',correct=8,total=10,unknown=2)
+        a=self.evidence(); a.update(engine='DMN',mode='offline',correct=8,total=10,unknown=2)
         r=self.c.validate_benchmark([a])
         self.assertEqual('incomplete',r[0]['coverage'])
         self.assertIsNone(r[0]['rank'])
 
     def test_skipped_benchmark_cases_cannot_receive_a_rank(self):
-        a=self.evidence(); a.update(engine='DMN',correct=8,total=10,unknown=0,skipped=2)
+        a=self.evidence(); a.update(engine='DMN',mode='offline',correct=8,total=10,unknown=0,skipped=2)
         r=self.c.validate_benchmark([a])
         self.assertEqual('incomplete',r[0]['coverage'])
         self.assertIsNone(r[0]['rank'])
 
     def test_unidentified_routes_cannot_receive_a_rank(self):
-        a=self.evidence(); a.update(engine='DMN',correct=10,total=10,unknown=0); del a['case_id']
+        a=self.evidence(); a.update(engine='DMN',mode='offline',correct=10,total=10,unknown=0); del a['case_id']
         with self.assertRaisesRegex(ValueError,'CASE_ID_REQUIRED'):
             self.c.validate_benchmark([a])
 
     def test_benchmark_denominator_cannot_change_between_engines(self):
-        a=self.evidence(); a.update(engine='DMN',correct=8,total=10,unknown=0)
+        a=self.evidence(); a.update(engine='DMN',mode='offline',correct=8,total=10,unknown=0)
         b=copy.deepcopy(a); b.update(engine='competitor',total=9)
         with self.assertRaisesRegex(ValueError,'eligible_denominator'):
             self.c.validate_benchmark([a,b])
 
     def test_different_provider_map_builds_are_disclosed_not_falsely_identical(self):
-        a=self.evidence(); a.update(engine='DMN',correct=8,total=10,unknown=0)
+        a=self.evidence(); a.update(engine='DMN',mode='offline',correct=8,total=10,unknown=0)
         b=copy.deepcopy(a); b.update(engine='competitor',correct=9,map_sha256='f'*64)
         r=self.c.validate_benchmark([a,b])
         self.assertEqual((2,1),tuple(x['rank'] for x in r))
