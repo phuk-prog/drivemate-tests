@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import socket
 import ssl
+import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlsplit
@@ -81,12 +82,28 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def _public_destination(url, resolver):
+def _public_destination(url, resolver, deadline):
     parsed = urlsplit(url)
     if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
             or parsed.port not in (None, 443)):
         raise ProbeError('unsafe_destination')
-    addresses = resolver(parsed.hostname, 443)
+    # getaddrinfo has no portable per-call timeout. Bound the caller's wait,
+    # and never allow a late DNS result to trigger a network request.
+    finished = threading.Event()
+    result = {}
+    def resolve():
+        try:
+            result['addresses'] = resolver(parsed.hostname, 443)
+        except BaseException as error:
+            result['error'] = error
+        finally:
+            finished.set()
+    threading.Thread(target=resolve, daemon=True, name='bounded-service-dns').start()
+    if not finished.wait(max(0.0, deadline - time.monotonic())):
+        raise TimeoutError('DNS deadline exceeded')
+    if 'error' in result:
+        raise result['error']
+    addresses = result['addresses']
     if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
         raise ProbeError('unsafe_destination')
     return parsed.hostname.lower()
@@ -109,7 +126,7 @@ class HTTPTransport:
         redirects = []
         deadline = time.monotonic() + timeout
         for hop in range(4):
-            host = _public_destination(url, self.resolver)
+            host = _public_destination(url, self.resolver, deadline)
             request = Request(url, headers={
                 'User-Agent': 'DriveMate-public-service-audit/1',
                 'Accept': 'application/json', 'Accept-Encoding': 'identity',
@@ -297,7 +314,7 @@ def probe(endpoint_id, context, *, batch='all', transport=None, now=None, sleep=
         if attempt['outcome'] not in TRANSIENT or index == MAX_ATTEMPTS - 1:
             break
         retry_after = raw.get('retry_after', '') or ''
-        delay = min(float(retry_after), 2.0) if retry_after.isdigit() else 0.25
+        delay = min(int(retry_after), 2) if re.fullmatch(r'[0-9]{1,6}', retry_after) else 0.25
         sleep(delay)
     return {'id': endpoint_id, 'categories': list(endpoint.categories),
             'host': urlsplit(endpoint.url).hostname, 'context': context, 'batch': batch,
