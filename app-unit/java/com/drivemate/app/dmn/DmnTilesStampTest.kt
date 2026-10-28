@@ -35,12 +35,12 @@ class DmnTilesStampTest {
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-    private fun installedPiece(stamp: String?): String {
+    private fun installedPiece(stamp: String?, damagePack: Boolean = false): String {
         val raw = requireNotNull(
             javaClass.classLoader!!.getResourceAsStream("dmn/dmn-test.dmnpack")
         ) { "Expected frozen DMNPACK2 writer fixture missing" }.use { it.readBytes() }
         // Use real test-writer bytes, not invented UK road geometry or live release bytes.
-        File(folder.root, fileName).writeBytes(raw)
+        File(folder.root, fileName).writeBytes(if (damagePack) byteArrayOf(0, 1, 2, 3) else raw)
         val hash = sha256(raw)
         if (stamp != null) {
             File(folder.root, "$fileName.sha256").writeText(if (stamp == "CURRENT") hash else stamp)
@@ -68,12 +68,19 @@ class DmnTilesStampTest {
         assertEquals(DmnTiles.Offline.MISSING, readiness())
     }
 
-    @Test fun staleStampAgainstCurrentIndexMustNotReportReady() {
-        installedPiece("0".repeat(64))
-        // Current source DmnTiles.held() checks only stamp existence.
-        // RED must remain until readiness compares the actual stamp text with the
-        // current index's expected SHA. An old parseable pack may still be usable
-        // as a separately labelled fallback; it must not be marked current READY.
+    @Test fun unreadablePieceWithStaleStampCannotReportOfflineReady() {
+        installedPiece("0".repeat(64), damagePack = true)
+        // Deliberately unreadable pack: no offline DMN router can open it.
+        // Source DmnTiles.held() sees only existence of two files and reports READY.
+        // A parseable older pack is a separate fallback policy question, NOT
+        // something this regression requires us to reject.
         assertEquals(DmnTiles.Offline.MISSING, readiness())
+    }
+
+    @Test fun parseableOldPackIsNotAssumedToBeMissing() {
+        installedPiece("0".repeat(64))
+        // Current API reports *potential offline availability*, not release freshness.
+        // Do not ban valid last-week fallback on an unreviewed assumption.
+        assertEquals(DmnTiles.Offline.READY, readiness())
     }
 }
