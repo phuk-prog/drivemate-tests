@@ -36,7 +36,8 @@ jobs:
           python3 ci/category1_live_catalog.py \
             --catalog results/live-catalog/catalog.json \
             --release results/live-catalog/release.json \
-            --output results/category1-live-catalog-audit.json
+            --output results/category1-live-catalog-audit.json \
+            --verify-region-releases
       - name: Record frozen public audit revision
         if: always()
         run: echo "public_test_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
