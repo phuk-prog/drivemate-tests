@@ -18,6 +18,43 @@ def read_json(path, limit):
     return json.loads(raw), raw
 
 
+TRANSIENT_OUTCOMES = {'dns_failed', 'timeout', 'network_unavailable',
+                      'incomplete_response', 'rate_limited', 'server_unavailable'}
+KNOWN_OUTCOMES = TRANSIENT_OUTCOMES | {
+    'observed_schema_only', 'authentication_required', 'forbidden_cause_unknown',
+    'resource_missing_or_inaccessible', 'http_unavailable', 'redirect_blocked',
+    'body_truncated', 'unsupported_encoding', 'invalid_json',
+    'schema_mismatch', 'version_mismatch', 'tls_failed', 'unsafe_destination',
+}
+
+
+def validate_attempts(case):
+    attempts = case['attempts']
+    if any(not isinstance(attempt, dict) for attempt in attempts):
+        raise ValueError('INVALID_SERVICE_ATTEMPT')
+    for attempt in attempts:
+        outcome = attempt.get('outcome')
+        status = attempt.get('http_status')
+        if (outcome not in KNOWN_OUTCOMES or
+            (status is not None and (type(status) is not int or not 100 <= status <= 599)) or
+            type(attempt.get('truncated')) is not bool or
+            attempt.get('schema_status') not in ('unknown', 'mismatch', 'observed_shape_only')):
+            raise ValueError('INVALID_SERVICE_ATTEMPT')
+        if outcome == 'observed_schema_only':
+            digest = attempt.get('body_sha256')
+            if (status is None or not 200 <= status < 300 or
+                attempt['truncated'] or attempt['schema_status'] != 'observed_shape_only' or
+                not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest) or
+                type(attempt.get('body_bytes')) is not int or attempt['body_bytes'] <= 0 or
+                attempt.get('dns') != 'resolved' or attempt.get('tls') != 'verified'):
+                raise ValueError('INVALID_SERVICE_SUCCESS_EVIDENCE')
+    if (attempts[-1].get('outcome') != case['outcome'] or
+        (len(attempts) == 2 and attempts[0].get('outcome') not in TRANSIENT_OUTCOMES) or
+        case.get('recovered') is not (
+            len(attempts) == 2 and case['outcome'] == 'observed_schema_only')):
+        raise ValueError('CONTRADICTORY_SERVICE_ATTEMPTS')
+
+
 def attach(summary_file, report_file, *, batch, run_attempt):
     summary, _ = read_json(summary_file, 4 * 1024 * 1024)
     report, raw = read_json(report_file, 1024 * 1024)
@@ -59,6 +96,7 @@ def attach(summary_file, report_file, *, batch, run_attempt):
             or not isinstance(case.get('outcome'),str)
             or not re.fullmatch('[a-z_]{1,64}',case['outcome'])):
             raise ValueError('INVALID_SERVICE_CASE')
+        validate_attempts(case)
         seen.add(identity); outcomes[case['outcome']] += 1
         for category in endpoint.categories:
             categories.setdefault(str(category),Counter())[case['outcome']] += 1
