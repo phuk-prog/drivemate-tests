@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from dependency_graph import build as dependency_graph
 from process_contract import release_assessment, validate_acceptance, validate_benchmark, independent_truth, validate_retest
@@ -28,6 +29,66 @@ def retest_records(directory):
     return records
 
 
+
+def verify_offline_artifacts(e, results_dir):
+    """Cross-check offline proof against local runner files, never self-declared digests.
+
+    Only files observed during this exact CI run may qualify. This checks
+    integrity and trace consistency, NOT whether a runtime actually produced
+    a truthful network probe; real offline acceptance needs a trusted runner.
+    """
+    proof=e['offline_proof']
+    files=proof.get('artifacts')
+    if not isinstance(files, dict):
+        raise ValueError('OFFLINE_ARTIFACT_MISSING:artifacts')
+    root=Path(results_dir) / 'offline-evidence'
+    if root.is_symlink():
+        raise ValueError('OFFLINE_ARTIFACT_PATH_INVALID:directory')
+    expected={
+        'network_probe':proof['network']['probe_sha256'],
+        'catalog':proof['delivery']['catalog_sha256'],
+        'manifest':proof['delivery']['manifest_sha256'],
+        'installed':proof['delivery']['installed_sha256'],
+        'readback':proof['delivery']['read_sha256'],
+    }
+    paths={}
+    for kind, sha in expected.items():
+        name=files.get(kind)
+        # Only single-component filenames inside the dedicated evidence dir.
+        # No traversal, arbitrary private-file reads or symlink escapes.
+        if (not isinstance(name,str) or len(name)>80
+            or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*',name)
+            or '..' in name):
+            raise ValueError('OFFLINE_ARTIFACT_PATH_INVALID:'+kind)
+        path=root/name
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            raise ValueError('OFFLINE_ARTIFACT_PATH_INVALID:'+kind)
+        if not path.is_file():
+            raise ValueError('OFFLINE_ARTIFACT_MISSING:'+kind)
+        if kind in ('network_probe','catalog','manifest') and path.stat().st_size>10*1024*1024:
+            raise ValueError('OFFLINE_ARTIFACT_TOO_LARGE:'+kind)
+        h=hashlib.sha256()
+        with path.open('rb') as stream:
+            for block in iter(lambda:stream.read(1024*1024),b''):
+                h.update(block)
+        if h.hexdigest()!=sha:
+            raise ValueError('OFFLINE_ARTIFACT_DIGEST_MISMATCH:'+kind)
+        paths[kind]=path
+    try:
+        trace=json.loads(paths['network_probe'].read_text())
+        if (not isinstance(trace,dict) or trace.get('schema')!=1
+            or trace.get('case_id')!=e['case_id']
+            or trace.get('method')!=proof['network']['method']
+            or not isinstance(trace.get('before'),dict)
+            or not isinstance(trace.get('after'),dict)
+            or trace['before'].get('network_reachable') is not False
+            or trace['after'].get('network_reachable') is not False):
+            raise ValueError('OFFLINE_NETWORK_TRACE_INVALID')
+    except (UnicodeError,json.JSONDecodeError):
+        raise ValueError('OFFLINE_NETWORK_TRACE_INVALID') from None
+    return {'status':'verified','artifact_count':len(expected),'case_id':e['case_id']}
+
+
 def run(app_root,summary_path):
     summary_path=Path(summary_path); summary=json.loads(summary_path.read_text())
     out=summary_path.parent
@@ -40,7 +101,10 @@ def run(app_root,summary_path):
     if findings.get('schema')!=1 or not isinstance(findings.get('findings'),list):
         raise ValueError('INVALID_SAFETY_FINDINGS')
     safety=release_assessment(findings['findings'])
-    acceptance=[validate_acceptance(e) for e in summary.get('acceptance_evidence',[])]
+    acceptance_records=summary.get('acceptance_evidence',[])
+    acceptance=[validate_acceptance(e) for e in acceptance_records]
+    offline_checks=[verify_offline_artifacts(e,out) for e in acceptance_records
+                    if e.get('mode')=='offline']
     truths=list((ROOT/'evidence/legal-truth').glob('*.json'))
     for p in truths: independent_truth(json.loads(p.read_text()))
     benchmarks=[]
@@ -50,10 +114,13 @@ def run(app_root,summary_path):
     retests=retest_records(ROOT/'evidence/retests')
     report={'schema':1,'app_sha':summary['app_commit'],'test_sha':summary['public_tests_sha'],
             'input_sha256':fingerprint,'source_inputs':inputs,'safety_release_gate':safety,
-            'source_to_screen_records':len(acceptance),'independent_truth_records':len(truths),
+            'source_to_screen_records':len(acceptance),'offline_receipts_verified':len(offline_checks),
+            'offline_acceptance':'not_established_by_receipt_validation',
+            'independent_truth_records':len(truths),
             'benchmarks':benchmarks,'benchmark_status':'validated_records' if benchmarks else 'not_provided',
             'frozen_retests':retests,
             'limitations':['Framework validation is not category or real-drive acceptance',
+                           'Offline proof files are checked for hash and trace consistency, not runtime authenticity',
                            'Zero truth/benchmark records is missing evidence, not a passing comparison',
                            'Dependency edges describe observed test imports, not an exhaustive runtime graph']}
     summary['process']=report
