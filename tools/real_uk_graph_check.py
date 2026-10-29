@@ -199,6 +199,37 @@ def verify(path):
     if not closed:
         errors.append("no closed physical barrier nodes included in sampled road graph")
 
+
+    # Compare the complete source roundabout node-pair inventory to DMN,
+    # not merely whether already-emitted edges are well formed.
+    ring_expected = Counter()
+    for wid, tags, positions in source.ways:
+        if tags.get("junction") not in ("roundabout", "circular"):
+            continue
+        orientation = d.direction(tags)
+        refs = [p[0] for p in positions]
+        for a, b in zip(refs, refs[1:]):
+            if a == b:
+                continue
+            if orientation >= 0:
+                ring_expected[(wid, a, b)] += 1
+            if orientation <= 0:
+                ring_expected[(wid, b, a)] += 1
+    ring_actual = Counter()
+    for e in graph["edges"]:
+        wid, flags, *_ = graph["ways"][e[6]]
+        if flags & 1:
+            ring_actual[(wid, graph_nodes[e[0]], graph_nodes[e[1]])] += 1
+    missing = ring_expected - ring_actual
+    invented = ring_actual - ring_expected
+    if missing:
+        errors.append(f"roundabout source arcs missing: {sum(missing.values())}, examples {list(missing)[:4]}")
+    if invented:
+        errors.append(f"roundabout graph arcs not in tagged source: {sum(invented.values())}, examples {list(invented)[:4]}")
+    roundabouts = audit_roundabouts(graph)
+    if not roundabouts["complete_simple_rings"]:
+        errors.append("no actual complete directed roundabout ring in Greater Manchester sample")
+
     return {
         "scope": "Actual Greater Manchester OSM extract; graph edges, directed roundabout rings, approaches/exits and barrier bans; source-based only",
         "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
@@ -238,7 +269,6 @@ def main():
     for key in ("road_ways", "graph_nodes", "graph_edges", "oneway_directed_edges_checked",
                 "motorway_and_slip_edges_checked", "motorway_link_shared_node_count",
                 "closed_barrier_nodes_on_graph", "blocked_barrier_through_moves_checked"):
-        print(f"{key}: {report[key]}")
         print(f"{key}: {report[key]}")
     print("Roundabouts:", json.dumps(report["roundabouts"], sort_keys=True))
     print("Real UK road graph check:", report["result"])
