@@ -108,6 +108,16 @@ jobs:
             python3 ci/prepare_stockport_live_test.py \
               --output app-src/app/src/androidTest/assets/stockport-live-region.json
           fi
+      - name: Stage one authentic published Stockport DMN road piece for Android parser check
+        # One real source tile; not whole UK installation, worker, journey or speech proof.
+        if: steps.install.outputs.has_screen == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if find app-src/app/src/androidTest/java -name 'PublishedDmnStockportSourceTest.kt' | grep -q .; then
+            python3 ci/prepare_dmn_stockport_android.py \
+              --output-dir app-src/app/src/androidTest/assets
+          fi
       # Verify the map-schema dependency without building or publishing any map data.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
