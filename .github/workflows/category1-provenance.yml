@@ -1,19 +1,14 @@
-name: Category 1 map provenance integrity
-# Fast Python-only public source-validator pretest. No emulator, map download or APK.
+name: Category 1 UK graph join and scope checks
+# Fast Python-only UK graph processing tests; licensing reviews are deferred from active categories.
 on:
   pull_request:
     paths:
-      - 'ci/category1_provenance_integrity.py'
-      - 'ci/category1_regional_rights.py'
-      - 'ci/category1_credits_link.py'
       - 'ci/category1_join_priority.py'
       - 'ci/category1_uk_scope.py'
       - '.github/workflows/category1-provenance.yml'
   push:
     branches: [main]
     paths:
-      - 'ci/category1_provenance_integrity.py'
-      - 'ci/category1_credits_link.py'
       - 'ci/category1_join_priority.py'
       - 'ci/category1_uk_scope.py'
       - '.github/workflows/category1-provenance.yml'
@@ -21,7 +16,7 @@ on:
 permissions:
   contents: read
 jobs:
-  rights-metadata:
+  uk-graph-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -63,8 +58,8 @@ jobs:
           token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           path: app-src
           persist-credentials: false
-      - name: Verify real publisher's provenance validator
-        run: python3 -m unittest -v ci.category1_provenance_integrity ci.category1_regional_rights ci.category1_credits_link ci.category1_join_priority ci.category1_uk_scope
+      - name: Verify regional join priority and UK map scope
+        run: python3 -m unittest -v ci.category1_join_priority ci.category1_uk_scope
       - name: Record immutable checked-out map/test revisions
         if: always()
         run: |
