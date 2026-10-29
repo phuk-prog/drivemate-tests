@@ -57,3 +57,33 @@ def verify(receipt_file, index_file, piece_file):
         "guidance_screen_verified":False,"speech_verified":False,
         "independent_legal_truth_verified":False,"release_allowed":False
     }
+
+
+def verify_install_route(receipt_file, index_file, piece_file):
+    """Validate bounded Android downloader/installer evidence against published bytes."""
+    path = Path(receipt_file)
+    if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= 4096:
+        raise ValueError("DMN_INSTALL_RECEIPT_MISSING_OR_OVERSIZED")
+    record = json.loads(path.read_text())
+    idx = json.loads(Path(index_file).read_text())
+    raw = Path(piece_file).read_bytes()
+    piece = idx["tiles"]["213_-9"]
+    expected = {
+        "schema": 1,
+        "scope": "published_stockport_subset_tls_download_install_offline_route",
+        "published_release": idx["release"],
+        "installed_sha256": digest(raw), "installed_bytes": len(raw),
+        "download_calls": 3, "checksum_rejection_verified": True,
+        "corruption_repair_verified": True, "offline_route_computed": True,
+        "route_time_network_requests": 0,
+        "complete_uk_verified": False, "independent_legal_truth_verified": False,
+    }
+    if piece.get("sha256") != digest(raw) or piece.get("bytes") != len(raw):
+        raise ValueError("DMN_INSTALL_PUBLISHED_BYTES_MISMATCH")
+    if any(type(record.get(k)) is not type(v) or record.get(k) != v for k,v in expected.items()):
+        raise ValueError("DMN_INSTALL_SCOPE_OR_BYTES_MISMATCH")
+    metres = record.get("route_metres")
+    if (type(record.get("route_edges")) is not int or record["route_edges"] <= 0
+            or type(metres) not in (int, float) or not 100 < metres < 100000):
+        raise ValueError("DMN_INSTALL_ROUTE_EMPTY_OR_UNBOUNDED")
+    return record

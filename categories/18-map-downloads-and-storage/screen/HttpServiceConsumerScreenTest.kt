@@ -49,7 +49,7 @@ class HttpServiceConsumerScreenTest {
         socket.outputStream.flush()
     }
 
-    private class LocalTlsServer(context: SSLContext, val handle: (String, SSLSocket) -> Unit) : Closeable {
+    internal class LocalTlsServer(context: SSLContext, val handle: (String, SSLSocket) -> Unit) : Closeable {
         private val listener = context.serverSocketFactory.createServerSocket(
             0, 16, InetAddress.getByName("127.0.0.1")) as SSLServerSocket
         private val connections = CopyOnWriteArrayList<SSLSocket>()
@@ -117,7 +117,7 @@ class HttpServiceConsumerScreenTest {
         return server to client
     }
 
-    private fun withServer(handler: (String, SSLSocket) -> Unit, test: (LocalTlsServer) -> Unit) {
+    internal fun withServer(handler: (String, SSLSocket) -> Unit, test: (LocalTlsServer) -> Unit) {
         synchronized(TLS_LOCK) {
             val original = HttpsURLConnection.getDefaultSSLSocketFactory()
             val (serverContext, clientContext) = contexts()

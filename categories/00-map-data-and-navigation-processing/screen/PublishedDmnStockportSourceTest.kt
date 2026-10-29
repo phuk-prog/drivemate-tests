@@ -3,6 +3,8 @@ package com.drivemate.tests.cat00
 import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.drivemate.app.data.Http
+import com.drivemate.tests.cat18.HttpServiceConsumerScreenTest
 import com.drivemate.app.dmn.DmnPack
 import com.drivemate.app.dmn.DmnTiles
 import com.drivemate.app.nav.LatLon
@@ -96,4 +98,95 @@ class PublishedDmnStockportSourceTest {
             dir.deleteRecursively()
         }
     }
+
+    /** Authentic published bytes over controlled TLS, using the production HTTP downloader
+     * and installer. This is a declared one-tile subset, never whole-UK coverage. */
+    @Test fun publishedRoadPackDownloadsInstallsRepairsAndRoutesOffline() {
+        val index = JSONObject(instrumentation.context.assets.open("cat1-dmn-stockport-index.json")
+            .bufferedReader().use { it.readText() })
+        val piece = index.getJSONObject("tiles").getJSONObject("213_-9")
+        val name = piece.getString("file")
+        val bytes = instrumentation.context.assets.open("cat1-dmn-stockport-piece.dmnpack")
+            .use { it.readBytes() }
+        val subset = JSONObject(index.toString()).apply {
+            put("tiles", JSONObject().put("213_-9", piece))
+            remove("main"); remove("regions")
+        }.toString()
+        val dir = File(app.cacheDir, "m02-real-published-dmn-install").apply {
+            deleteRecursively(); require(mkdirs())
+        }
+        val oldText = DmnTiles.getText
+        val oldDownload = DmnTiles.download
+        var corruptResponse = true
+        var downloadCalls = 0
+        try {
+            DmnTiles.forget()
+            HttpServiceConsumerScreenTest().withServer({ path, socket ->
+                val body = when (path) {
+                    "/index" -> subset.toByteArray()
+                    "/piece" -> if (corruptResponse) ByteArray(bytes.size) else bytes
+                    else -> throw AssertionError("Unexpected request $path")
+                }
+                socket.outputStream.write(("HTTP/1.1 200 OK\r\nContent-Length: ${body.size}\r\n" +
+                    "Connection: close\r\n\r\n").toByteArray(Charsets.US_ASCII))
+                socket.outputStream.write(body); socket.outputStream.flush()
+            }) { server ->
+                DmnTiles.getText = { Http.getBounded("${server.url}/index", 4 * 1024 * 1024) }
+                DmnTiles.download = { url, target, limit ->
+                    assertTrue(url.endsWith("/${index.getString("release")}/$name"))
+                    assertEquals(piece.getLong("bytes"), limit)
+                    downloadCalls++
+                    Http.download("${server.url}/piece", target, limit)
+                }
+                try {
+                    DmnTiles.fetchAll(dir)
+                    fail("Corrupted published response must fail installation")
+                } catch (_: java.io.IOException) { }
+                assertFalse(File(dir, name).exists())
+                assertFalse(File(dir, "$name.sha256").exists())
+                corruptResponse = false
+                DmnTiles.fetchAll(dir)
+                val installed = File(dir, name)
+                assertEquals(piece.getLong("bytes"), installed.length())
+                assertEquals(piece.getString("sha256"), sha(installed))
+                assertEquals(piece.getString("sha256"), File(dir, "$name.sha256").readText())
+                DmnTiles.fetchAll(dir)
+                assertEquals("Already verified file must not download again", 2, downloadCalls)
+                installed.writeBytes(ByteArray(bytes.size))
+                DmnTiles.fetchAll(dir)
+                assertEquals("Matching stamp cannot hide local corruption", 3, downloadCalls)
+                assertEquals(piece.getString("sha256"), sha(installed))
+                val requestsAfterInstall = server.paths.size
+                DmnTiles.getText = { throw AssertionError("Route must not fetch metadata") }
+                DmnTiles.download = { _, _, _ -> throw AssertionError("Route must not download pieces") }
+                val points = listOf(LatLon(53.4051, -2.1630), LatLon(53.4106, -2.1591))
+                assertEquals(DmnTiles.Offline.READY, DmnTiles.offline(dir, points))
+                val router = requireNotNull(DmnTiles.router(dir, points))
+                val start = requireNotNull(router.snap(points[0], null, 150.0))
+                val finish = requireNotNull(router.snap(points[1], null, 150.0))
+                assertNotEquals(start, finish)
+                val plan = router.plan(start, finish)
+                assertTrue("Real offline route must traverse roads", plan.edges.isNotEmpty())
+                assertTrue(plan.metres > 100.0)
+                assertTrue(plan.seconds > 0.0)
+                assertEquals(requestsAfterInstall, server.paths.size)
+                val receipt = JSONObject().put("schema", 1)
+                    .put("scope", "published_stockport_subset_tls_download_install_offline_route")
+                    .put("published_release", index.getString("release"))
+                    .put("installed_sha256", sha(installed)).put("installed_bytes", installed.length())
+                    .put("download_calls", downloadCalls).put("checksum_rejection_verified", true)
+                    .put("corruption_repair_verified", true).put("offline_route_computed", true)
+                    .put("route_metres", plan.metres).put("route_edges", plan.edges.size)
+                    .put("route_time_network_requests", server.paths.size - requestsAfterInstall)
+                    .put("complete_uk_verified", false).put("independent_legal_truth_verified", false)
+                val out = File(requireNotNull(app.externalMediaDirs.firstOrNull()), "additional_test_output")
+                    .apply { mkdirs() }
+                File(out, "m02-published-dmn-install-route-receipt.json").writeText(receipt.toString())
+            }
+        } finally {
+            DmnTiles.getText = oldText; DmnTiles.download = oldDownload
+            DmnTiles.forget(); dir.deleteRecursively()
+        }
+    }
+
 }

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from dmn_android_reader_evidence import verify
+from dmn_android_reader_evidence import verify, verify_install_route
 
 
 class TestAndroidDmnReaderEvidence(unittest.TestCase):
@@ -65,6 +65,28 @@ class TestAndroidDmnReaderEvidence(unittest.TestCase):
         self.obj["edge_count"]=0;self.save()
         with self.assertRaisesRegex(ValueError,"EMPTY_GRAPH"):
             verify(self.receipt,self.index,self.piece)
+
+
+    def test_installed_offline_route_receipt(self):
+        self.obj = {"schema":1,
+            "scope":"published_stockport_subset_tls_download_install_offline_route",
+            "published_release":self.idx["release"],
+            "installed_sha256":self.idx["tiles"]["213_-9"]["sha256"],
+            "installed_bytes":self.piece.stat().st_size, "download_calls":3,
+            "checksum_rejection_verified":True,"corruption_repair_verified":True,
+            "offline_route_computed":True,"route_time_network_requests":0,
+            "complete_uk_verified":False,"independent_legal_truth_verified":False,
+            "route_metres":1200.0,"route_edges":18}
+        self.save()
+        self.assertTrue(verify_install_route(self.receipt,self.index,self.piece)["offline_route_computed"])
+        for key, value in (("complete_uk_verified",True), ("route_time_network_requests",1),
+                           ("route_edges",0), ("route_metres",float("nan")),
+                           ("checksum_rejection_verified",False)):
+            original = self.obj[key]
+            self.obj[key] = value; self.save()
+            with self.assertRaises(ValueError):
+                verify_install_route(self.receipt,self.index,self.piece)
+            self.obj[key] = original
 
 
 if __name__=="__main__":
