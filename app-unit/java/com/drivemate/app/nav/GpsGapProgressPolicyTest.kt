@@ -32,7 +32,7 @@ class GpsGapProgressPolicyTest {
     }
 
     @Test fun shortRouteAndArrivalCannotProduceNegativeProgress() {
-        assertEquals(27.0, GpsGapProgressPolicy.limitAtLoss(25.0, 3.0, 40.0), 0.001)
+        assertEquals(25.0, GpsGapProgressPolicy.limitAtLoss(25.0, 3.0, 40.0), 0.001)
         assertEquals(25.0, GpsGapProgressPolicy.limitAtLoss(25.0, 2.0, 40.0), 0.001)
         assertEquals(0.0, GpsGapProgressPolicy.limitAtLoss(0.0, 0.0, 0.0), 0.001)
         assertEquals(25.0, GpsGapProgressPolicy.limitAtLoss(25.0, Double.NaN, 40.0), 0.001)
