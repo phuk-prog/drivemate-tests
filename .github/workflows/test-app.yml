@@ -130,6 +130,22 @@ jobs:
               summary.write('Offline road-graph release target: **' + result['reason'] + '** (acceptance OPEN)\\n')
           assert result['offline_acceptance'] is False
           PY
+      - name: Trace current app regional map download to DMN installation (Category 1)
+        # SOURCE ONLY: detect the skip branch without claiming installed UK routing.
+        run: |
+          python3 ci/dmn_download_path.py \
+            --app-root app-src --app-sha "${{ steps.install.outputs.app_sha }}" \
+            --output results/dmn-download-path.json
+          python3 - <<'PY_DMN_PATH'
+          import json, os
+          result = json.load(open("results/dmn-download-path.json"))
+          assert result["release_allowed"] is False
+          assert result["offline_route_to_screen_voice_verified"] is False
+          assert result["real_device_behavior"] == "unknown"
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("Category 1 DMN download source path: **" + result["finding"] +
+                            "** (real device/UK graph acceptance UNKNOWN)\\n")
+          PY_DMN_PATH
       - name: Audit production external links in their current test categories
         # One source-only pass over exact app SHA; no network probing or APK assertions.
         run: |
@@ -348,6 +364,7 @@ jobs:
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
             results/routing-release-alignment.json
+            results/dmn-download-path.json
             results/category-connection-audit.json
             results/apk-connection-audit.json
             results/service-probe.json
