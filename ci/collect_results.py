@@ -14,6 +14,7 @@ import sys
 import xml.etree.ElementTree as ET
 from test_selection import selected
 from process_contract import validate_acceptance
+from dmn_android_reader_evidence import verify as verify_android_dmn_reader
 
 CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound", "cat03": "3 Lane guidance", "cat04": "4 Junction view", "cat05": "5 3D immersive navigation", "cat06": "6 Speed limits", "cat07": "7 Road alerts", "cat08": "8 Rerouting", "cat09": "9 Traffic", "cat10": "10 Position and GPS"}
 
@@ -203,6 +204,24 @@ def main():
         except (OSError,ValueError,KeyError,TypeError) as e:
             test["status"]="failed"
             test["failure"]="Offline component evidence rejected: "+str(e)[:120]
+    # The real published road-pack reader needs its Android-written receipt, not
+    # merely a green JUnit method. Missing or misleading evidence fails closed.
+    for _, test in found:
+        if test["name"]!="realPublishedStockportPieceLoadsThroughProductionAndroidDmnReader" or test["status"]!="passed":
+            continue
+        try:
+            evidence=list(Path(media_dir).rglob("cat1-published-dmn-stockport-reader-receipt.json"))
+            if len(evidence)!=1:
+                raise ValueError("DMN_READER_RECEIPT_MISSING_OR_DUPLICATED")
+            verified=verify_android_dmn_reader(
+                evidence[0],
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-index.json",
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-piece.dmnpack")
+            test["published_dmn_reader_evidence"]=verified
+            doc.setdefault("published_dmn_reader_evidence",[]).append(verified)
+        except (OSError,ValueError,KeyError,TypeError) as e:
+            test["status"]="failed"
+            test["failure"]="Published DMN reader evidence rejected: "+str(e)[:130]
     if not found:
         doc["checklist"]["drivemate-tests"] = {"tests": [{"class": "drivemate-tests", "name": "tests ran", "status": "failed",
                                                           "failure": "no results: the tests did not compile or run"}]}
