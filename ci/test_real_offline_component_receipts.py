@@ -26,7 +26,7 @@ class RealOfflineComponentReceiptsTest(unittest.TestCase):
                         "installed_sha256":"b"*64,
                         "installed_bytes":12,"production_installer":"RegionPacks.sync",
                         "offline_route_accepted":False,"screen_guidance_accepted":False}
-        self.route={"schema":1,"scope":"bundled_greater_manchester_offline_route_only",
+        self.route={"schema":1,"scope":"bundled_dmn_greater_manchester_offline_route_only",
                     "graph_source":"bundled_app_asset_not_published_whole_uk",
                     "network_blocked_before_route":True,
                     "network_blocked_after_route":True,
@@ -60,8 +60,13 @@ class RealOfflineComponentReceiptsTest(unittest.TestCase):
 
     def test_bundled_gm_route_receipt_never_promotes_to_whole_uk(self):
         result=self.verify("bundledManchesterRouterActuallyComputesWithoutNetwork",self.route)
-        self.assertEqual("bundled_greater_manchester_offline_route_only",result["scope"])
+        self.assertEqual("bundled_dmn_greater_manchester_offline_route_only",result["scope"])
         self.assertFalse(result["offline_navigation_accepted"])
+
+    def test_old_engine_scope_does_not_masquerade_as_dmn(self):
+        self.route["scope"]="bundled_greater_manchester_offline_route_only"
+        with self.assertRaisesRegex(ValueError,"OFFLINE_COMPONENT_SCOPE_INVALID"):
+            self.verify("bundledManchesterRouterActuallyComputesWithoutNetwork",self.route)
 
     def test_missing_before_after_network_proof_fails_closed(self):
         self.route["network_blocked_after_route"]=False
