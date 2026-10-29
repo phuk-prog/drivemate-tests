@@ -52,6 +52,9 @@ class M01NationalMapSelectionTest {
             assertEquals(national.bytes, choice.asset.bytes)
             assertEquals("The download worker must choose the same national map",
                 national.tag, MapData.nationalMapForDownload()?.snapshotTag)
+            activeField.set(null, null)
+            assertEquals("A failed or missing regional lookup must not hide the UK archive",
+                national.tag, MapData.mapArchiveDownload()?.snapshotTag)
         } finally {
             ukField.set(null, oldUk)
             activeField.set(null, oldRegion)
