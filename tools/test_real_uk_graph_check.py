@@ -34,6 +34,17 @@ class RoundaboutTopologyTest(unittest.TestCase):
         self.assertEqual(0, result["incomplete_or_complex_components"])
         self.assertEqual([], result["errors"])
 
+    def test_pyramid_area_is_reported_as_location_candidate_not_legal_proof(self):
+        g = graph([1, 2, 3, 4],
+                  [(100, True), (200, False)],
+                  [(0, 1, 0), (1, 2, 0), (2, 0, 0), (3, 0, 1)])
+        g["nodes"] = [(53.40917, -2.17428, n) for n in [1, 2, 3, 4]]
+        result = audit_roundabouts(g)
+        self.assertEqual(1, len(result["pyramid_m60_j1_area_candidates"]))
+        self.assertLess(result["pyramid_m60_j1_area_candidates"][0]["nearest_node_metres"], 50)
+        self.assertEqual("OSM ring candidate only, not verified exit order",
+                         result["pyramid_m60_j1_area_candidates"][0]["evidence_scope"])
+
     def test_open_source_ring_is_unknown_not_invented_as_a_closed_roundabout(self):
         g = graph([1, 2, 3, 4, 5],
                   [(100, True), (200, False), (201, False)],
