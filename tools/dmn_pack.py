@@ -187,7 +187,10 @@ class Reader(osmium.SimpleHandler):
         if tags.get("type") not in ("restriction", "restriction:motorcar"):
             return
         kind = tags.get("restriction:motorcar") or tags.get("restriction")
-        if not kind or "motorcar" in tags.get("except", "") or tags.get("restriction:conditional"):
+        # A timed companion tag does not erase an unconditional restriction.
+        # Preserve the unconditional ban/only rule conservatively; interpreting
+        # conditional-only or time-specific exceptions needs verified time rules.
+        if not kind or "motorcar" in tags.get("except", ""):
             return
         frm, to, via_n, via_w = None, None, [], []
         for m in r.members:

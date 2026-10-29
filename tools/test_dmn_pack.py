@@ -153,7 +153,7 @@ class DmnPackTests(unittest.TestCase):
 
     def test_via_way_only_and_no_restrictions_preserve_approach_context(self):
         # A parser/writer fixture, not an assertion of actual UK traffic law.
-        def make_graph(kind):
+        def make_graph(kind, conditional=False):
             nodes = "".join(
                 f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
                 for i in range(1, 10))
@@ -168,6 +168,9 @@ class DmnPackTests(unittest.TestCase):
                    '<member type="way" ref="200" role="via"/>'
                    '<member type="way" ref="300" role="to"/>'
                    f'<tag k="type" v="restriction"/><tag k="restriction" v="{kind}"/></relation>')
+            if conditional:
+                rel = rel.replace("</relation>",
+                    '<tag k="restriction:conditional" v="none @ (Sa-Su)"/></relation>')
             xml = '<osm version="0.6">' + nodes + ''.join(way(*w) for w in ways) + rel + '</osm>'
             with tempfile.TemporaryDirectory() as tmp:
                 source = Path(tmp) / 'via.osm'
@@ -193,6 +196,16 @@ class DmnPackTests(unittest.TestCase):
         self.assertIn((n[100, 1, 2], n[200, 2, 3], n[200, 3, 4], n[300, 4, 5]),
                       no["seqs"])
         self.assertNotIn((n[100, 1, 2], n[400, 2, 6]), no["bans"])
+        # A timed companion must not silently remove a fixed no_* rule.
+        mixed = make_graph("no_right_turn", conditional=True)
+        x = arcs(mixed)
+        self.assertIn((x[100, 1, 2], x[200, 2, 3], x[200, 3, 4], x[300, 4, 5]),
+                      mixed["seqs"])
+        # A time-only rule remains UNKNOWN without a verified clock parser.
+        time_only = make_graph("", conditional=True)
+        self.assertFalse(time_only["bans"])
+        self.assertFalse(time_only["seqs"])
+
 
     def test_fixture_is_what_the_tool_writes_today(self):
         with tempfile.TemporaryDirectory() as tmp:
