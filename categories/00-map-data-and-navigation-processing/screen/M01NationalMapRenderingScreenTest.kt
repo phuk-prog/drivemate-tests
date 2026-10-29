@@ -91,11 +91,19 @@ class M01NationalMapRenderingScreenTest {
                 }
                 var foundRoads = false
                 compose.waitUntil(45_000) {
+                    // MapLibre's native renderer has no actor before the first completed
+                    // post-camera frame. Querying it early crashes the whole Android
+                    // instrumentation process instead of reporting a missing map.
+                    if (failure.get() != null) return@waitUntil true
+                    if (renderedFrames.get() <= beforeMove) return@waitUntil false
                     compose.runOnIdle {
-                        val v = view.get()!!
-                        val seen = map.get()!!.queryRenderedFeatures(
-                            RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
-                        foundRoads = renderedFrames.get() > beforeMove && seen.isNotEmpty()
+                        val v = view.get()
+                        if (v != null && v.width > 0 && v.height > 0 &&
+                            renderedFrames.get() > beforeMove) {
+                            val seen = map.get()!!.queryRenderedFeatures(
+                                RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
+                            foundRoads = seen.isNotEmpty()
+                        }
                     }
                     foundRoads || failure.get() != null
                 }
