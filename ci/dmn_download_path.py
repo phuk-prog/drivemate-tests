@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Source-only Category 1 DMN download-path diagnostic.
+"""Source-only DMN UK road download and GPS matching contract.
 
-The report NEVER claims a real Android install, compatible UK graph, offline
-route or driving acceptance. It checks an exact checked-out app revision and
-is safe to publish because it contains only fixed source paths and SHA-256s.
+This checks the exact app source. It is not a claim about installed graph bytes,
+road-law truth, network-isolated journeys or independent final acceptance.
 """
 import argparse
 import hashlib
@@ -15,19 +14,17 @@ PATHS = {
     "map_ui": "app/src/main/java/com/drivemate/app/ui/MainMenu.kt",
     "map_worker": "app/src/main/java/com/drivemate/app/data/MapPack.kt",
     "whole_uk": "app/src/main/java/com/drivemate/app/data/WholeUk.kt",
-    "catalogue": "app/src/main/java/com/drivemate/app/data/MapData.kt",
     "dmn": "app/src/main/java/com/drivemate/app/dmn/DmnTiles.kt",
-    "legacy_roads": "app/src/main/java/com/drivemate/app/data/RoadPack.kt",
+    "router": "app/src/main/java/com/drivemate/app/data/Router.kt",
+    "session": "app/src/main/java/com/drivemate/app/controller/NavigationSession.kt",
 }
 RULES = {
     "map_ui_requests_map_pack": ("map_ui", r'Choice\s*\(\s*"Download map"\s*,[\s\S]{0,150}?MapPack\.setWanted\s*\('),
-    "secondary_ui_requests_road_pack": ("map_ui", r'Choice\s*\(\s*"Download UK roads"\s*,[\s\S]{0,150}?RoadPack\.setWanted\s*\('),
     "map_worker_calls_whole_uk": ("map_worker", r'WholeUk\.fetchAll\s*\(\s*ctx\s*\)'),
-    "regional_snapshot_flag": ("catalogue", r'fun\s+isRegionalSnapshot\s*\(\s*\)\s*=\s*activeRegion\s*!=\s*null'),
-    "regional_snapshot_skips_dmn": ("whole_uk", r'if\s*\(\s*!MapData\.isRegionalSnapshot\(\)\s*\)\s*DmnTiles\.fetchAll\s*\('),
-    "skipped_branch_reports_complete": ("whole_uk", r'else\s+onProgress\s*\(\s*1f\s*\)'),
-    "dmn_has_independent_uk_installer": ("dmn", r'fun\s+fetchAll\s*\(\s*dir\s*:\s*File'),
-    "secondary_roads_use_separate_store": ("legacy_roads", r'object\s+RoadPack\s*\{'),
+    "whole_uk_fetches_dmn": ("whole_uk", r'DmnTiles\.fetchAll\s*\(\s*dmn\s*\)'),
+    "dmn_has_uk_installer": ("dmn", r'fun\s+fetchAll\s*\(\s*dir\s*:\s*File'),
+    "router_selects_dmn": ("router", r'com\.drivemate\.app\.dmn\.Dmn\.route\s*\('),
+    "gps_road_evidence_uses_dmn": ("session", r'com\.drivemate\.app\.dmn\.Dmn\.matchTrace\s*\('),
 }
 SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 
@@ -37,29 +34,35 @@ def assess_source(sources, app_sha):
         raise ValueError("APP_REVISION_NOT_PINNED")
     if not isinstance(sources, dict) or set(sources) != set(PATHS):
         raise ValueError("APP_SOURCE_COHORT_INCOMPLETE")
-    for name, content in sources.items():
-        if not isinstance(content, str) or not content:
-            raise ValueError("INVALID_APP_SOURCE:" + name)
+    if any(not isinstance(value, str) or not value for value in sources.values()):
+        raise ValueError("INVALID_APP_SOURCE")
     checks = {key: re.search(pattern, sources[name]) is not None
               for key, (name, pattern) in RULES.items()}
-    all_links = all(checks.values())
+    checks["regional_imagery_cannot_skip_dmn"] = (
+        re.search(r'if\s*\(\s*!MapData\.isRegionalSnapshot\(\)\s*\)\s*DmnTiles\.fetchAll', sources["whole_uk"]) is None
+        and re.search(r'^\s*DmnTiles\.fetchAll\s*\(\s*dmn\s*\)', sources["whole_uk"], re.M) is not None
+    )
+    checks["no_secondary_legacy_routing_toggle"] = (
+        "RoadPack." not in sources["map_ui"]
+        and '"Download UK roads"' not in sources["map_ui"]
+    )
+    aligned = all(checks.values())
     return {
         "schema": 1,
-        "issue": "CAT1-DMN-DOWNLOAD-PATH-01",
+        "issue": "M02-DMN-SOURCE-PATH",
         "scope": "static_exact_app_source_only",
         "app_commit": app_sha,
         "checks": checks,
-        "source_chain_verified": all_links,
-        "finding": ("REGIONAL_SNAPSHOT_BYPASSES_DMN_FETCH_AND_COMPLETES_PROGRESS"
-                    if all_links else "SOURCE_CONTRACT_CHANGED_REVIEW_REQUIRED"),
+        "source_chain_verified": aligned,
+        "finding": "DMN_SOURCE_PATH_ALIGNED_NOT_RUNTIME_PROOF" if aligned
+                   else "SOURCE_CONTRACT_CHANGED_REVIEW_REQUIRED",
         "regional_snapshot_dmn_install_observed": False,
         "android_network_install_verified": False,
         "dmn_graph_compatibility_verified": False,
         "offline_route_to_screen_voice_verified": False,
         "real_device_behavior": "unknown",
         "release_allowed": False,
-        "interpretation": ("A source branch can skip the DMN fetch while reporting 100%; "
-                           "no phone-level reproduction, licensing or compatibility proven."),
+        "interpretation": "The source calls DMN for road pieces, routing and conservative matching; no network or legal-road acceptance is inferred.",
     }
 
 
@@ -93,7 +96,7 @@ def main():
     dest = Path(args.output)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print("CAT1 DMN source check:", result["finding"], "- offline acceptance NOT verified")
+    print("M02 DMN source check:", result["finding"], "- offline acceptance NOT verified")
 
 
 if __name__ == "__main__":

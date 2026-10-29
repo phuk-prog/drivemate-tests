@@ -1,6 +1,6 @@
 package com.drivemate.tests.cat01
 
-import com.drivemate.app.data.Valhalla
+import com.drivemate.app.data.DrivingSide
 import com.drivemate.app.nav.Format
 import com.drivemate.app.nav.LatLon
 import com.drivemate.app.nav.TurnInstructions
@@ -49,8 +49,8 @@ class TurnByTurnLawTest {
 
     /** L1 Highway Code rule 186: UK roundabouts go clockwise (traffic keeps left); not in France. */
     @Test fun ukDrivesOnTheLeft() {
-        assertTrue("Manchester", Valhalla.drivesOnLeft(LatLon(53.48, -2.24)))
-        assertTrue("Belfast", Valhalla.drivesOnLeft(LatLon(54.60, -5.93)))
-        assertFalse("Paris", Valhalla.drivesOnLeft(LatLon(48.85, 2.35)))
+        assertTrue("Manchester", DrivingSide.drivesOnLeft(LatLon(53.48, -2.24)))
+        assertTrue("Belfast", DrivingSide.drivesOnLeft(LatLon(54.60, -5.93)))
+        assertFalse("Paris", DrivingSide.drivesOnLeft(LatLon(48.85, 2.35)))
     }
 }

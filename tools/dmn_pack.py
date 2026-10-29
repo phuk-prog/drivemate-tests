@@ -47,6 +47,7 @@ MAIN = {"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_
 UNKNOWN_BY_DEFAULT = {"service", "track"}
 # Most specific first: a car's own rule beats the general one.
 ACCESS_KEYS = ("motorcar", "motor_vehicle", "vehicle", "access")
+TURN_KEYS = ("restriction:motorcar", "restriction:motor_vehicle", "restriction:vehicle", "restriction")
 CLOSED = {"no", "agricultural", "forestry", "emergency", "bus", "psv", "military", "disabled", "use_sidepath"}
 RESTRICTED = {"private", "destination", "customers", "delivery", "permit", "residents", "discouraged", "permissive_private"}
 OPEN = {"yes", "permissive", "designated", "official", "public"}
@@ -63,21 +64,39 @@ class NoEdges(Exception):
     pass
 
 
-def car_access(tags, highway):
-    """(access code, restricted) for one road, from its access tags."""
+def car_access(tags, highway, travel=None):
+    """(access code, restricted) for a car, with directional and conditional tags.
+
+    More specific vehicle classes take precedence over generic access rules.
+    Within the same class, forward/backward applies before the general tag.
+    Without a verified clock/date model, conditional restrictions are UNKNOWN:
+    they must not become an unrestricted through-road in the offline graph.
+    """
     for key in ACCESS_KEYS:
-        value = tags.get(key)
-        if value is None:
-            continue
-        value = value.split(";")[0].strip()
-        if value in OPEN:
-            return ALLOWED, False
-        if value in RESTRICTED:
-            return UNKNOWN, True
-        if value in CLOSED:
-            return PROHIBITED, False
+        scoped = (f"{key}:{travel}", key) if travel else (key,)
+        for rule in scoped:
+            # A conditional override of an unconditional same-scope tag can
+            # change the legal result at some time: never silently assume it.
+            if tags.get(f"{rule}:conditional"):
+                return UNKNOWN, True
+            value = tags.get(rule)
+            if value is None:
+                continue
+            value = value.split(";")[0].strip()
+            if value in OPEN:
+                # Vehicle permission does not remove a time-specific one-way
+                # direction restriction; the offline direction remains unknown.
+                if travel and tags.get("oneway:conditional"):
+                    return UNKNOWN, True
+                return ALLOWED, False
+            if value in RESTRICTED:
+                return UNKNOWN, True
+            if value in CLOSED:
+                return PROHIBITED, False
     if highway in ("construction", "proposed"):
         return PROHIBITED, False
+    if travel and tags.get("oneway:conditional"):
+        return UNKNOWN, True
     return (UNKNOWN if highway in UNKNOWN_BY_DEFAULT else ALLOWED), False
 
 
@@ -132,6 +151,37 @@ def gate_access(tags):
     return (access if any(k in tags for k in ACCESS_KEYS) else UNKNOWN), restricted
 
 
+def conditional_turn_kinds(value):
+    """Known bans, conservatively at all hours; never interpret the schedule.
+
+    Semicolons within schedule parentheses are not clause separators. Unknown
+    values/syntax are counted explicitly, even when other clauses are usable.
+    `none` removes no conservative ban: a timed relaxation cannot open a road.
+    """
+    clauses, start, depth, unresolved = [], 0, 0, False
+    for pos, char in enumerate(value):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                unresolved = True
+                depth = 0
+        elif char == ";" and depth == 0:
+            clauses.append(value[start:pos])
+            start = pos + 1
+    clauses.append(value[start:])
+    unresolved |= depth != 0
+    kinds = []
+    for clause in clauses:
+        match = re.fullmatch(r"\s*(no_[a-z_]+|only_[a-z_]+|none)\s*@\s*(\S.*?)\s*", clause, re.S)
+        if not match:
+            unresolved = True
+        elif match.group(1) != "none" and match.group(1) not in kinds:
+            kinds.append(match.group(1))
+    return kinds, unresolved
+
+
 def metres(a, b):
     """Great-circle distance in metres between (lat, lon) points."""
     la1, la2 = math.radians(a[0]), math.radians(b[0])
@@ -150,6 +200,9 @@ class Reader(osmium.SimpleHandler):
         self.special = {}       # node id -> "barrier" | "turning"
         self.gates = {}         # node id -> (access, restricted) for the pieces either side
         self.restrictions = []  # (kind, from way, [via nodes], [via ways], to way)
+        self.conditional_only_enforced = 0  # conservative all-hours restriction; not a time-aware legal claim
+        self.conditional_turns_enforced = 0
+        self.conditional_turns_unresolved = 0
 
     def node(self, n):
         tags = n.tags
@@ -186,8 +239,24 @@ class Reader(osmium.SimpleHandler):
         tags = r.tags
         if tags.get("type") not in ("restriction", "restriction:motorcar"):
             return
-        kind = tags.get("restriction:motorcar") or tags.get("restriction")
-        if not kind or "motorcar" in tags.get("except", "") or tags.get("restriction:conditional"):
+        # Motor cars inherit motor-vehicle and vehicle restrictions. A more
+        # specific car rule wins over these parent classes and the general rule.
+        kind = next((tags.get(key) for key in TURN_KEYS if tags.get(key)), None)
+        # A timed companion never erases a permanent restriction. Apply every
+        # recognisable no_*/only_* clause, including timed companions, at all
+        # hours until the offline router supports verified local schedules.
+        # This may reject a legal off-hours shortcut, but cannot knowingly
+        # recommend a turn prohibited during the schedule. Mixed/ambiguous
+        # schedules remain unverified, never reported as legally resolved.
+        if "motorcar" in tags.get("except", ""):
+            return
+        conditional = next((tags.get(key + ":conditional") for key in TURN_KEYS
+                            if tags.get(key + ":conditional")), "")
+        timed_kinds, unresolved = conditional_turn_kinds(conditional) if conditional else ([], False)
+        if unresolved:
+            self.conditional_turns_unresolved += 1
+        kinds = list(dict.fromkeys(([kind] if kind else []) + timed_kinds))
+        if not kinds:
             return
         frm, to, via_n, via_w = None, None, [], []
         for m in r.members:
@@ -198,7 +267,12 @@ class Reader(osmium.SimpleHandler):
             elif m.role == "via":
                 (via_n if m.type == "n" else via_w).append(m.ref)
         if frm and to and frm > 0 and to > 0 and (via_n or via_w) and not (via_n and via_w):
-            self.restrictions.append((kind, frm, via_n, via_w, to))
+            for rule in kinds:
+                self.restrictions.append((rule, frm, via_n, via_w, to))
+                if rule in timed_kinds:
+                    self.conditional_turns_enforced += 1
+                    if not kind:
+                        self.conditional_only_enforced += 1
 
 
 def build(path, tile=None, main_only=False):
@@ -228,7 +302,8 @@ def build(path, tile=None, main_only=False):
     keep_way = []
     for wid, tags, nodes in reader.ways:
         highway = tags["highway"]
-        access, restricted = car_access(tags, highway)
+        forward_access, forward_restricted = car_access(tags, highway, "forward")
+        backward_access, backward_restricted = car_access(tags, highway, "backward")
         kph = speed_kph(tags, highway)
         flags = (1 if tags.get("junction") in ("roundabout", "circular") else 0) | (2 if tags.get("toll") == "yes" else 0)
         w = len(ways)
@@ -244,9 +319,9 @@ def build(path, tile=None, main_only=False):
             dist = max(metres(a[1:], b[1:]), 0.01)
             piece = min(k, 32767)
             if go >= 0:
-                edges.append([ia, ib, dist, kph, access, restricted, w, piece, 0])
+                edges.append([ia, ib, dist, kph, forward_access, forward_restricted, w, piece, 0])
             if go <= 0:
-                edges.append([ib, ia, dist, kph, access, restricted, w, piece, 1])
+                edges.append([ib, ia, dist, kph, backward_access, backward_restricted, w, piece, 1])
     if not edges:
         raise NoEdges()
     gates = {node_ix[n]: g for n, g in reader.gates.items() if n in node_ix}
@@ -323,6 +398,111 @@ def build(path, tile=None, main_only=False):
                     if len(path) > 250:
                         break
 
+    # A single-via-road only_* restriction depends on its specified approach.
+    # Use context-prefixed forbidden sequences, not globally forbidden exits.
+    # Unresolved forks and chains too long for DMNPACK2 are not asserted.
+    for kind, frm, via_n, via_w, to in reader.restrictions:
+        if not (kind.startswith("only_") and not via_n and len(via_w) == 1):
+            continue
+        via = way_ix.get(via_w[0])
+        start_way = way_ix.get(frm)
+        if via is None or start_way is None or way_ix.get(to) is None:
+            continue
+        via_edges = set(way_edges.get(via, []))
+        for incoming in way_edges.get(start_way, []):
+            entry = edges[incoming][1]
+            at = entry
+            seen = {edges[incoming][0]}
+            path = [incoming]
+            for _ in range(253):
+                next_edges = [e for e in out_edges.get(at, [])
+                              if e in via_edges and edges[e][1] not in seen]
+                if len(next_edges) != 1:
+                    break
+                chosen = next_edges[0]
+                path.append(chosen)
+                seen.add(at)
+                at = edges[chosen][1]
+                allowed = leaving(to, at)
+                if not allowed:
+                    continue
+                if len(allowed) != 1 or len(path) + 1 > 255:
+                    break
+                bans.update((incoming, e) for e in out_edges.get(entry, []) if e != path[1])
+                for pos in range(1, len(path)):
+                    prefix = path[:pos + 1]
+                    keep = {path[pos + 1]} if pos + 1 < len(path) else set(allowed)
+                    for e in out_edges.get(edges[path[pos]][1], []):
+                        if e not in keep:
+                            seqs.add(tuple(prefix + [e]))
+                break
+
+    # Ordered multiple-via-way turn relations. DMNPACK2 supports banned sequences
+    # but not a relation object or a clock, so encode only a UNIQUE directed
+    # from -> via[0] -> ... -> via[n] -> to chain. Never turn a restriction
+    # into a global exit ban: it applies to the specified approach alone.
+    # Ambiguous, disconnected, looping, or overlong chains remain UNKNOWN.
+    def multi_via_chains(frm, via_way_ids, to):
+        from_way = way_ix.get(frm)
+        via_ways = [way_ix.get(w) for w in via_way_ids]
+        if from_way is None or any(w is None for w in via_ways) or way_ix.get(to) is None:
+            return
+        for approach in way_edges.get(from_way, []):
+            complete = []
+            visits = 0
+            exceeded = False
+
+            def follow(path, stage, entered, seen):
+                nonlocal visits, exceeded
+                visits += 1
+                if visits > 8192:
+                    exceeded = True
+                    return
+                at = edges[path[-1]][1]
+                if entered and stage == len(via_ways) - 1:
+                    for finish in leaving(to, at):
+                        if len(path) < 255 and edges[finish][1] not in seen:
+                            complete.append(tuple(path + [finish]))
+                            if len(complete) > 1:
+                                return
+                if len(path) >= 254 or len(complete) > 1:
+                    return
+                for nxt in out_edges.get(at, []):
+                    endpoint = edges[nxt][1]
+                    if endpoint in seen:
+                        continue
+                    w = edges[nxt][6]
+                    if w == via_ways[stage]:
+                        follow(path + [nxt], stage, True, seen | {endpoint})
+                    elif entered and stage + 1 < len(via_ways) and w == via_ways[stage + 1]:
+                        follow(path + [nxt], stage + 1, True, seen | {endpoint})
+                    if exceeded or len(complete) > 1:
+                        return
+
+            follow([approach], 0, False, {edges[approach][0], edges[approach][1]})
+            if not exceeded and len(complete) == 1:
+                yield complete[0]
+
+    for kind, frm, via_n, via_w, to in reader.restrictions:
+        if via_n or len(via_w) < 2 or not (kind.startswith("no_") or kind.startswith("only_")):
+            continue
+        for chain in multi_via_chains(frm, via_w, to):
+            if kind.startswith("no_"):
+                seqs.add(chain)
+                continue
+            # "Only" forbids deviations after the specified incoming road;
+            # prefix every later ban with that approach and the via pieces.
+            first, second = chain[:2]
+            at = edges[first][1]
+            bans.update((first, e) for e in out_edges.get(at, []) if e != second)
+            for pos in range(1, len(chain) - 1):
+                prefix = chain[:pos + 1]
+                keep = chain[pos + 1]
+                at = edges[chain[pos]][1]
+                for e in out_edges.get(at, []):
+                    if e != keep:
+                        seqs.add(tuple(prefix + (e,)))
+
     # Only roads touching the tile are written; renumber what is kept.
     kept_edges = [i for i, e in enumerate(edges) if keep_way[e[6]]]
     if not kept_edges:
@@ -341,6 +521,9 @@ def build(path, tile=None, main_only=False):
         "edges": [(new_node[edges[i][0]], new_node[edges[i][1]], edges[i][2], edges[i][3], edges[i][4],
                    edges[i][5], new_way[edges[i][6]], edges[i][7], edges[i][8]) for i in kept_edges],
         "bans": bans, "seqs": seqs, "uturn": uturn,
+        "conditional_only_turns_conservatively_enforced": reader.conditional_only_enforced,
+        "conditional_turns_conservatively_enforced": reader.conditional_turns_enforced,
+        "conditional_turn_relations_unresolved": reader.conditional_turns_unresolved,
     }
 
 
@@ -390,6 +573,15 @@ def main(argv=None):
             "nodes": len(graph["nodes"]), "ways": len(graph["ways"]), "edges": len(graph["edges"]),
             "banned_pairs": len(graph["bans"]), "sequences": len(graph["seqs"]), "uturn_nodes": len(graph["uturn"]),
             "writer": "drivemate-tests tools/dmn_pack.py"}
+    if graph.get("conditional_only_turns_conservatively_enforced", 0):
+        # Preserve binary identity of already-frozen packs with no such
+        # restrictions. Only new affected packs need the explicit caveat.
+        meta["conditional_only_turns_conservatively_enforced"] = graph["conditional_only_turns_conservatively_enforced"]
+        meta["time_dependent_turn_legality_verified"] = False
+    for key in ("conditional_turns_conservatively_enforced", "conditional_turn_relations_unresolved"):
+        if graph.get(key, 0):
+            meta[key] = graph[key]
+            meta["time_dependent_turn_legality_verified"] = False
     if tile:
         meta["tile"] = tile
     if a.main:

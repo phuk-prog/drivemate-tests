@@ -14,7 +14,7 @@ import sys
 import xml.etree.ElementTree as ET
 from test_selection import selected
 from process_contract import validate_acceptance
-from dmn_android_reader_evidence import verify as verify_android_dmn_reader
+from dmn_android_reader_evidence import verify as verify_android_dmn_reader, verify_install_route, verify_four_nation_routes
 
 CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound", "cat03": "3 Lane guidance", "cat04": "4 Junction view", "cat05": "5 3D immersive navigation", "cat06": "6 Speed limits", "cat07": "7 Road alerts", "cat08": "8 Rerouting", "cat09": "9 Traffic", "cat10": "10 Position and GPS"}
 
@@ -89,7 +89,7 @@ def verify_real_offline_component_receipt(test_name, path, source_file):
                 "published_catalog_sha256":catalog_sha,
                 "offline_navigation_accepted":False}
     if test_name=="bundledManchesterRouterActuallyComputesWithoutNetwork":
-        if (record.get("scope")!="bundled_greater_manchester_offline_route_only"
+        if (record.get("scope")!="bundled_dmn_greater_manchester_offline_route_only"
             or record.get("graph_source")!="bundled_app_asset_not_published_whole_uk"
             or record.get("published_whole_uk_graph_verified") is not False
             or record.get("production_guidance_screen_verified") is not False
@@ -102,7 +102,7 @@ def verify_real_offline_component_receipt(test_name, path, source_file):
         if (type(record.get("route_points")) is not int or record["route_points"]<2
             or type(record.get("route_steps")) is not int or record["route_steps"]<1):
             raise ValueError("OFFLINE_COMPONENT_ROUTE_UNVERIFIED")
-        return {"scope":"bundled_greater_manchester_offline_route_only",
+        return {"scope":"bundled_dmn_greater_manchester_offline_route_only",
                 "route_points":record["route_points"],
                 "route_steps":record["route_steps"],
                 "network_isolation_reported":True,
@@ -222,6 +222,36 @@ def main():
         except (OSError,ValueError,KeyError,TypeError) as e:
             test["status"]="failed"
             test["failure"]="Published DMN reader evidence rejected: "+str(e)[:130]
+    for _, test in found:
+        if test["name"] != "publishedRoadPackDownloadsInstallsRepairsAndRoutesOffline" or test["status"] != "passed":
+            continue
+        try:
+            evidence = list(Path(media_dir).rglob("m02-published-dmn-install-route-receipt.json"))
+            if len(evidence) != 1:
+                raise ValueError("DMN_INSTALL_RECEIPT_MISSING_OR_DUPLICATED")
+            verified = verify_install_route(evidence[0],
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-index.json",
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-piece.dmnpack")
+            test["published_dmn_install_route_evidence"] = verified
+            doc.setdefault("published_dmn_install_route_evidence", []).append(verified)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            test["status"] = "failed"
+            test["failure"] = "Published DMN install/route evidence rejected: " + str(e)[:130]
+    for _, test in found:
+        if test["name"] != "fourNationPublishedRoadPacksDownloadInstallSelectAndRouteOffline" or test["status"] != "passed":
+            continue
+        try:
+            evidence = list(Path(media_dir).rglob("m02-four-nation-dmn-install-route-receipt.json"))
+            if len(evidence) != 1:
+                raise ValueError("DMN_FOUR_NATION_RECEIPT_MISSING_OR_DUPLICATED")
+            verified = verify_four_nation_routes(evidence[0],
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-index.json",
+                "app-src/app/src/androidTest/assets")
+            test["four_nation_dmn_install_route_evidence"] = verified
+            doc.setdefault("four_nation_dmn_install_route_evidence", []).append(verified)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            test["status"] = "failed"
+            test["failure"] = "Four-nation DMN evidence rejected: " + str(e)[:130]
     if not found:
         doc["checklist"]["drivemate-tests"] = {"tests": [{"class": "drivemate-tests", "name": "tests ran", "status": "failed",
                                                           "failure": "no results: the tests did not compile or run"}]}

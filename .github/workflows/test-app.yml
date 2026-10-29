@@ -108,8 +108,8 @@ jobs:
             python3 ci/prepare_stockport_live_test.py \
               --output app-src/app/src/androidTest/assets/stockport-live-region.json
           fi
-      - name: Stage one authentic published Stockport DMN road piece for Android parser check
-        # One real source tile; not whole UK installation, worker, journey or speech proof.
+      - name: Stage authentic four-nation DMN road pieces for Android install/route checks
+        # Four authentic tiles; controlled TLS installer/route smoke, not whole-UK or speech proof.
         if: steps.install.outputs.has_screen == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -125,23 +125,8 @@ jobs:
           ref: d20c41f039f20b900eb46523827b01eecee167f3
           path: map-schema
           persist-credentials: false
-      - name: Diagnose routing graph downloader/publisher alignment
-        # Checked-out app and pinned map-publisher code; this is NOT an offline acceptance test.
-        run: |
-          python3 ci/routing_release_alignment.py \
-            --app-file app-src/app/src/main/java/com/drivemate/app/data/RoadPack.kt \
-            --publisher-workflow map-schema/.github/workflows/map-data.yml \
-            --publisher-repository phuk-prog/drivemate-map \
-            --output results/routing-release-alignment.json
-          python3 - <<'PY'
-          import json, os
-          result = json.load(open('results/routing-release-alignment.json'))
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write('Offline road-graph release target: **' + result['reason'] + '** (acceptance OPEN)\\n')
-          assert result['offline_acceptance'] is False
-          PY
-      - name: Trace current app regional map download to DMN installation (Category 1)
-        # SOURCE ONLY: detect the skip branch without claiming installed UK routing.
+      - name: Trace DMN graph download, routing and matching source path (M02)
+        # SOURCE ONLY: verify DMN code wiring without claiming installed UK routing.
         run: |
           python3 ci/dmn_download_path.py \
             --app-root app-src --app-sha "${{ steps.install.outputs.app_sha }}" \
@@ -161,7 +146,6 @@ jobs:
         run: |
           python3 ci/category_connections.py \
             --app-root app-src --programme ci/programme.json \
-            --routing-alignment results/routing-release-alignment.json \
             --batch "${DRIVEMATE_TEST_BATCH}" \
             --output results/category-connection-audit.json
           python3 - <<'PY'
@@ -373,7 +357,6 @@ jobs:
             results/test-dependencies.json
             results/frozen-source-provenance.json
             results/emulator-fixture-readback.json
-            results/routing-release-alignment.json
             results/dmn-download-path.json
             results/category-connection-audit.json
             results/apk-connection-audit.json

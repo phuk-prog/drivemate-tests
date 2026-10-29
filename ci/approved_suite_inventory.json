@@ -14,7 +14,7 @@
     "app-unit/java/com/drivemate/app/data/RoadDetailsTest.kt": "8fda79dd97a9144d6ad1ba8edbb24f15698fff1c",
     "app-unit/java/com/drivemate/app/data/UkJoinTest.kt": "69feca98aecf095e46a8a4a19307e9ca191da392",
     "app-unit/java/com/drivemate/app/dmn/DmnPackWriterTest.kt": "2c467613631edafb86ce9d3d288ed14429d99e36",
-    "app-unit/java/com/drivemate/app/dmn/DmnTilesStampTest.kt": "00f41fa6c2b1c7b8f9bbea15ea9c5376184da14a",
+    "app-unit/java/com/drivemate/app/dmn/DmnTilesStampTest.kt": "b829f8dc722edb93db9469283c7d993d702395b6",
     "app-unit/java/com/drivemate/app/dmn/UnmarkedRoundaboutTest.kt": "0ba7b350b5d2bb873bd3bedb00a95582bc5833a5",
     "app-unit/java/com/drivemate/app/map/JourneyMapLookTest.kt": "824e5a1b0eb6bbc5935cf8f9d8987743b2f85f00",
     "app-unit/java/com/drivemate/app/map/JourneyMotionAndRoadsTest.kt": "ba354b68650ff13b04356172de01b9217e8b5a88",
@@ -27,7 +27,7 @@
     "app-unit/java/com/drivemate/app/ui/JourneyDetailTest.kt": "16853bf1b416090934a4cdae75eaa2c86bf8c105",
     "app-unit/java/com/drivemate/app/ui/WhatsNewTest.kt": "e3f29bb7c00f75aa2ad9e1fde9dc583cae2e4219",
     "categories/01-turn-by-turn-guidance/decisions/TurnByTurnDecisionsTest.kt": "396dd230cdab3cd5690e339b58521ef155589654",
-    "categories/01-turn-by-turn-guidance/law/TurnByTurnLawTest.kt": "0f6a7ab08fb43cc023f694b15964447902c7c08d",
+    "categories/01-turn-by-turn-guidance/law/TurnByTurnLawTest.kt": "761b5dece204e15e09136addb82839d74f66af7f",
     "categories/01-turn-by-turn-guidance/screen/TurnCardScreenTest.kt": "f5478b6048415190f401e310120639b5f8b15aa3",
     "categories/02-voice-and-sound/decisions/VoiceAndSoundDecisionsTest.kt": "b47b9663cdc8ee522786d20ac3aa45f88e954a4d",
     "categories/02-voice-and-sound/law/VoiceAndSoundLawTest.kt": "d19ccb39a3ee78f4b5f23e70abc9eb9be457db98",
@@ -54,7 +54,7 @@
     "categories/04-junction-view/screen/JunctionMapScreenTest.kt": "ef3214402f802f72bcbbadf56414c3c02c4069bf",
     "categories/04-junction-view/screen/JunctionSessionScreenTest.kt": "dd928cdee227866fb4c8df070873f640e5c25506",
     "categories/04-junction-view/screen/JunctionViewScreenTest.kt": "733a8cd9662c55e5f9d80936917346c8009302ed",
-    "categories/04-junction-view/screen/PublishedStockportOfflineScreenTest.kt": "cc085d096ee7b0aebd2070e70ca85411857985e3",
+    "categories/04-junction-view/screen/PublishedStockportOfflineScreenTest.kt": "8437246605a11e768861afa1d2246a247bf48772",
     "categories/05-3d-immersive-navigation/decisions/ImmersiveNavigationDecisionsTest.kt": "8998cb77dcf701dd1a8a1b414542ca40b55a2b4f",
     "categories/05-3d-immersive-navigation/law/ImmersiveNavigationLawTest.kt": "fca2d9b490eda7ed14a0249f3d5605fce62fd581",
     "categories/05-3d-immersive-navigation/screen/ImmersiveBuildingsScreenTest.kt": "735fce5567d46fb2f2d007728a3ba022054f92d8",
@@ -71,8 +71,8 @@
     "categories/10-position-and-gps/decisions/PositionGpsDecisionsTest.kt": "b31491126e815df7bfc0231e8c2503bbc2ce941e",
     "categories/10-position-and-gps/screen/GpsAcceptanceScreenTest.kt": "63628e10412507de127e19edd1c3a8e00de1c08a",
     "categories/10-position-and-gps/screen/GpsFilterScreenTest.kt": "78d42bc5c438bbb9a1c5d2aa61fd59efc422c4f2",
-    "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "1486daf8835e97012e7b98a63ed636f90d30ffb5",
+    "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "7d4d46312a12175c7f64eb23c3f093917709a569",
     "categories/00-map-data-and-navigation-processing/screen/M01NationalMapRenderingScreenTest.kt": "55e334220cb4cb31cb16b7de6179a0bb57e02a69",
-    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "165e029359c1b081a10c623ace10b9057d91f8d4"
+    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "222ee6b4a957164ae5763343039a9338cc3722e7"
   }
 }

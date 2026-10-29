@@ -3,7 +3,7 @@ package com.drivemate.tests.cat04
 import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.drivemate.app.data.OfflineRouter
+import com.drivemate.app.dmn.Dmn
 import com.drivemate.app.data.PublishedRegionCatalog
 import com.drivemate.app.data.RegionPacks
 import com.drivemate.app.nav.LatLon
@@ -110,9 +110,9 @@ class PublishedStockportOfflineScreenTest {
     @Test fun bundledManchesterRouterActuallyComputesWithoutNetwork() {
         val begin = LatLon(53.4051,-2.1630) // Stockport station area (real UK position)
         val end = LatLon(53.4106,-2.1591)   // Stockport town-centre area
-        assertTrue(OfflineRouter.covers(begin))
-        assertTrue(OfflineRouter.covers(end))
-        OfflineRouter.context=app
+        assertTrue(Dmn.covers(listOf(begin)))
+        assertTrue(Dmn.covers(listOf(end)))
+        Dmn.context=app
         assertTrue("Online baseline is required for a real isolation test",reachable())
         var disconnectedBefore=false
         var disconnectedAfter=false
@@ -123,7 +123,7 @@ class PublishedStockportOfflineScreenTest {
             Thread.sleep(1500)
             disconnectedBefore=!reachable()
             assertTrue("Network still reachable after isolation; no offline proof",disconnectedBefore)
-            val routes=OfflineRouter.route(listOf(begin,end),null,false,emptySet())
+            val routes=Dmn.route(listOf(begin,end),null)
             assertTrue("Bundled Greater Manchester graph did not calculate a real route",routes.isNotEmpty())
             val route=routes.first()
             assertTrue("Actual route has insufficient geometry",route.points.size>=2)
@@ -133,7 +133,7 @@ class PublishedStockportOfflineScreenTest {
             assertTrue("Network became reachable during route computation",disconnectedAfter)
             receipt("bundledManchesterRouterActuallyComputesWithoutNetwork",
                 JSONObject().put("schema",1)
-                    .put("scope","bundled_greater_manchester_offline_route_only")
+                    .put("scope","bundled_dmn_greater_manchester_offline_route_only")
                     .put("origin","stockport_station_area")
                     .put("destination","stockport_town_centre_area")
                     .put("graph_source","bundled_app_asset_not_published_whole_uk")
@@ -146,7 +146,7 @@ class PublishedStockportOfflineScreenTest {
                     .put("legal_truth_verified",false)
                     .put("full_offline_acceptance",false))
         } finally {
-            // Do not contaminate another test even when native Valhalla fails.
+            // Restore connectivity after the network-isolated DMN route check.
             shell("cmd connectivity airplane-mode disable")
             shell("svc wifi enable")
             shell("svc data enable")

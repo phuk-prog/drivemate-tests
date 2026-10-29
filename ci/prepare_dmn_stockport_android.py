@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Stage authentic UK DMN Stockport source bytes for one Android parser check.
+"""Stage authentic published four-nation UK DMN bytes for Android acceptance.
 
-Bounded to one actually published UK road tile. No substituted coordinates,
-fabricated pack bytes, production app change, offline session or road-law claim.
+Bounded to four published tiles (at most32MB total), reusing Stockport bytes. No substituted coordinates,
+fabricated pack bytes, production app change or independent road-law claim.
 """
 import argparse
 import hashlib
@@ -11,6 +11,8 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+
+from dmn_live_bytes import sample_pieces, check_piece_bytes
 
 REPO = "phuk-prog/drivemate-map"
 KEY = "213_-9"
@@ -60,9 +62,21 @@ def stage(out):
             raise ValueError("LIVE_STOCKPORT_PIECE_DIGEST_MISMATCH")
         (out / "cat1-dmn-stockport-index.json").write_bytes(data)
         (out / "cat1-dmn-stockport-piece.dmnpack").write_bytes(contents)
-        print(json.dumps({"scope": "one_real_published_stockport_dmn_tile",
+        samples = sample_pieces(index)
+        for nation, entry in samples.items():
+            source = Path(temp) / entry["file"]
+            if not source.exists():
+                run("gh", "release", "download", tag, "--repo", REPO,
+                    "--pattern", entry["file"], "--dir", temp)
+            raw = source.read_bytes()
+            check_piece_bytes(raw, entry)
+            (out / ("m02-" + nation + ".dmnpack")).write_bytes(raw)
+        (out / "m02-four-nation-dmn-samples.json").write_text(
+            json.dumps(samples, sort_keys=True) + "\n")
+        print(json.dumps({"scope": "four_real_published_nation_tiles_with_stockport_parser_sample",
                           "index_sha256": sha(data), "piece_sha256": sha(contents),
                           "piece_bytes": len(contents), "release": tag,
+                          "nation_samples": len(samples),
                           "full_uk_offline_acceptance": False}, sort_keys=True))
 
 

@@ -77,6 +77,73 @@ class DmnTilesStampTest {
         assertEquals(DmnTiles.Offline.MISSING, readiness())
     }
 
+    @Test fun fullUkFetchRechecksStampedBytesAndRepairsSameSizeCorruption() {
+        val good = requireNotNull(javaClass.classLoader!!.getResourceAsStream("dmn/dmn-test.dmnpack"))
+            .use { it.readBytes() }
+        installedPiece("CURRENT")
+        val existing = File(folder.root, fileName)
+        val damaged = good.clone().apply { this[lastIndex] = (this[lastIndex].toInt() xor 1).toByte() }
+        existing.writeBytes(damaged)
+        assertEquals(good.size.toLong(), existing.length())
+        val originalDownload = DmnTiles.download
+        val originalGetText = DmnTiles.getText
+        try {
+            DmnTiles.getText = { File(folder.root, indexName).readText() }
+            var repairs = 0
+            DmnTiles.download = { _, destination, _ ->
+                repairs++
+                destination.writeBytes(good)
+            }
+            DmnTiles.fetchAll(folder.root)
+            assertEquals("The matching stamp must not hide changed bytes", 1, repairs)
+            org.junit.Assert.assertArrayEquals(good, existing.readBytes())
+        } finally {
+            DmnTiles.download = originalDownload
+            DmnTiles.getText = originalGetText
+        }
+    }
+
+    @Test fun missingPublishedCorridorBlockRequiresCompleteMainRoadFallback() {
+        // Fixture metadata, not a claim of genuine UK road or legal coverage.
+        // In the old selection, one existing regional block was enough to
+        // report READY across a long drive with multiple missing blocks.
+        val raw = requireNotNull(
+            javaClass.classLoader!!.getResourceAsStream("dmn/dmn-test.dmnpack")
+        ).use { it.readBytes() }
+        val hash = sha256(raw)
+        fun piece(name: String, held: Boolean = true): JSONObject {
+            if (held) {
+                File(folder.root, name).writeBytes(raw)
+                File(folder.root, "$name.sha256").writeText(hash)
+            }
+            return JSONObject().put("file", name).put("sha256", hash).put("bytes", raw.size)
+        }
+        val tiles = JSONObject()
+            .put("213_-9", piece("dmn-213_-9.dmnpack"))
+            .put("206_-1", piece("dmn-206_-1.dmnpack"))
+        val regions = JSONObject().put("main-25_-2", piece("dmn-main-25_-2.dmnpack"))
+        val mainName = "dmn-main-uk.dmnpack"
+        val mainEntry = piece(mainName, held = false)
+        val index = JSONObject().put("schema", 1).put("format", "DMNPACK2")
+            .put("release", "dmn-uk-20261028-15")
+            .put("tiles", tiles).put("regions", regions).put("main", mainEntry)
+        File(folder.root, indexName).writeText(index.toString())
+        val trip = listOf(
+            com.drivemate.app.nav.LatLon(53.4, -2.2),
+            com.drivemate.app.nav.LatLon(51.5, -0.1)
+        )
+        assertEquals(
+            "One region cannot silently substitute for the full corridor/main roads",
+            DmnTiles.Offline.PARTIAL, DmnTiles.offline(folder.root, trip)
+        )
+        piece(mainName)
+        DmnTiles.forget()
+        assertEquals(
+            "Once the complete main-road fallback is installed, all required pieces are present",
+            DmnTiles.Offline.READY, DmnTiles.offline(folder.root, trip)
+        )
+    }
+
     @Test fun parseableOldPackIsNotAssumedToBeMissing() {
         installedPiece("0".repeat(64))
         // Current API reports *potential offline availability*, not release freshness.
