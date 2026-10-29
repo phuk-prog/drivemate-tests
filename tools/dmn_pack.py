@@ -83,6 +83,10 @@ def car_access(tags, highway, travel=None):
                 continue
             value = value.split(";")[0].strip()
             if value in OPEN:
+                # Vehicle permission does not remove a time-specific one-way
+                # direction restriction; the offline direction remains unknown.
+                if travel and tags.get("oneway:conditional"):
+                    return UNKNOWN, True
                 return ALLOWED, False
             if value in RESTRICTED:
                 return UNKNOWN, True

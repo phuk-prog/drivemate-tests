@@ -36,6 +36,9 @@ class DmnPackTests(unittest.TestCase):
                          d.car_access({'vehicle:backward:conditional': 'no @ (Mo-Fr)'}, 'residential', 'forward'))
         self.assertEqual((d.UNKNOWN, True),
                          d.car_access({'oneway:conditional': 'yes @ (Mo-Fr)'}, 'residential', 'forward'))
+        self.assertEqual((d.UNKNOWN, True),
+                         d.car_access({'motorcar': 'yes',
+                                       'oneway:conditional': 'yes @ (Mo-Fr)'}, 'residential', 'forward'))
         self.assertEqual((d.PROHIBITED, False),
                          d.car_access({'access': 'no', 'oneway:conditional': 'yes @ (Mo-Fr)'}, 'residential', 'forward'))
         self.assertEqual((d.UNKNOWN, True),
