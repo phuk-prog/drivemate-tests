@@ -23,7 +23,7 @@ class DmnAmbiguousRoadMatchTest {
             to = intArrayOf(1, 0, 3, 2),
             metres = FloatArray(4) { 67f },
             kph = FloatArray(4) { 30f },
-            access = byteArrayOf(0, 0, if (secondAllowed) 0 else 2, if (secondAllowed) 0 else 2),
+            access = byteArrayOf(0, 0, if (secondAllowed) 0.toByte() else 2.toByte(), if (secondAllowed) 0.toByte() else 2.toByte()),
             startAccess = ByteArray(4),
             finishAccess = ByteArray(4),
             restricted = BooleanArray(4),
@@ -44,9 +44,10 @@ class DmnAmbiguousRoadMatchTest {
 
     @Test fun uniqueDirectionalNearRoadIsAccepted() {
         val point = LatLon(53.400005, -2.1995)
-        val result = router().snapForMatch(point, 90f, 5.0)
+        val r = router()
+        val result = r.snapForMatch(point, 90f, 5.0)
         assertNotNull(result)
-        assertEquals(0, router().pack.way[result!!])
+        assertEquals(0, r.pack.way[result!!])
     }
 
     @Test fun largerPositionErrorWidensAmbiguityInsteadOfInventingAChoice() {
