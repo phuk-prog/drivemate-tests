@@ -26,6 +26,7 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * M01: actual Android/MapLibre road-layer rendering against the immutable UK
@@ -56,6 +57,7 @@ class M01NationalMapRenderingScreenTest {
         val map = AtomicReference<MapLibreMap?>()
         val view = AtomicReference<MapView?>()
         val failure = AtomicReference<String?>()
+        val renderedFrames = AtomicLong()
         try {
             val style = OwnMap.prepare(OwnMap.appStyle(false, MapLayout.OWN),
                 pmtiles, null).toString()
@@ -65,6 +67,9 @@ class M01NationalMapRenderingScreenTest {
                         MapLibre.getInstance(appContext)
                         MapView(appContext).also { v ->
                             view.set(v)
+                            v.addOnDidFinishRenderingFrameListener(MapView.OnDidFinishRenderingFrameWithStatsListener { done, _ ->
+                                if (done) renderedFrames.incrementAndGet()
+                            })
                             v.addOnDidFailLoadingMapListener { failure.set("MapLibre style load failed") }
                             v.onCreate(Bundle()); v.onStart(); v.onResume()
                             v.getMapAsync { m ->
@@ -78,6 +83,7 @@ class M01NationalMapRenderingScreenTest {
             val dir = File(requireNotNull(ctx.externalMediaDirs.firstOrNull()), "additional_test_output")
                 .apply { mkdirs() }
             for (city in cities) {
+                val beforeMove = renderedFrames.get()
                 compose.runOnIdle {
                     map.get()!!.moveCamera(CameraUpdateFactory.newCameraPosition(
                         CameraPosition.Builder().target(LatLng(city.latitude, city.longitude))
@@ -89,7 +95,7 @@ class M01NationalMapRenderingScreenTest {
                         val v = view.get()!!
                         val seen = map.get()!!.queryRenderedFeatures(
                             RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
-                        foundRoads = seen.isNotEmpty()
+                        foundRoads = renderedFrames.get() > beforeMove && seen.isNotEmpty()
                     }
                     foundRoads || failure.get() != null
                 }
