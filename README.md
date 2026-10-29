@@ -4,6 +4,8 @@ The testing for DriveMate. Every test runs here, in this public repository.
 
 Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
 
+**Current category scope (29 October 2026):** The original 23 categories are the only active work order. Map/source licensing and usage-rights reviews are deferred: do not plan them, add licensing tests, or use them as Category 1–23 acceptance tasks unless the owner reactivates them. Existing historical test files, mandatory credits/notices and production safety controls are retained; the dedicated Category 1 licensing-review workflow no longer invokes the rights/credits test modules. Road-traffic legality and safety checks remain in scope.
+
 ## Layout
 
 - `categories/NN-name/law/`: law tests. They check the app against the law and official sources
