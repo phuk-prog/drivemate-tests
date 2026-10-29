@@ -47,8 +47,7 @@ class M01NationalMapSelectionTest {
             assertNotNull("The verified published whole-UK archive is available", choice)
             assertEquals(national.tag, choice!!.snapshotTag)
             assertEquals(MapLayout.OWN, choice.layout)
-            assertEquals("https://github.com/phuk-prog/drivemate-map/releases/download/" +
-                national.tag + "/drivemate-v1.pmtiles", choice.url)
+            assertEquals(MapReleaseSource.base + "/" + national.tag + "/drivemate-v1.pmtiles", choice.url)
             assertEquals(national.sha256, choice.asset.sha256)
             assertEquals(national.bytes, choice.asset.bytes)
         } finally {
