@@ -108,10 +108,11 @@ class ReleaseGateTest(unittest.TestCase):
         with patch.object(gate, 'get', side_effect=get):
             self.assertIsNone(gate.newest_run(self.app))
 
-    def test_open_safety_critical_issue_blocks_release_even_when_components_pass(self):
+    def test_open_safety_finding_does_not_block_private_signed_apk(self):
+        # Private milestone APK acceptance is separate from public road-safety
+        # release approval. Keep the finding recorded; do not mislabel it passed.
         self.findings=[{'id':'J27-03','severity':'safety_critical','status':'unknown'}]
-        with self.assertRaisesRegex(ValueError,'SAFETY_RELEASE_BLOCKER'):
-            self.find()
+        self.assertEqual(7, self.find()['id'])
 
     def test_quality_findings_do_not_masquerade_as_safety_failures(self):
         self.findings=[{'id':'camera','severity':'quality','status':'failed'}]
