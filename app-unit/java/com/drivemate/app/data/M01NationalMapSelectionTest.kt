@@ -50,6 +50,8 @@ class M01NationalMapSelectionTest {
             assertEquals(MapReleaseSource.base + "/" + national.tag + "/drivemate-v1.pmtiles", choice.url)
             assertEquals(national.sha256, choice.asset.sha256)
             assertEquals(national.bytes, choice.asset.bytes)
+            assertEquals("The download worker must choose the same national map",
+                national.tag, MapData.nationalMapForDownload()?.snapshotTag)
         } finally {
             ukField.set(null, oldUk)
             activeField.set(null, oldRegion)
