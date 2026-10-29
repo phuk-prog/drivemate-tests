@@ -15,6 +15,28 @@ import java.io.File
 class M01NationalMapSelectionTest {
     @get:Rule val temp = TemporaryFolder()
 
+    @Test fun visibleOnlineUkMapDoesNotShrinkToAnInstalledScottishRegion() {
+        val regional = temp.newFile("installed-scotland.pmtiles")
+        val national = MapData.Download(
+            "https://github.com/phuk-prog/drivemate-map/releases/download/map-data-ukmap-r40883954274-a1/drivemate-v1.pmtiles",
+            MapData.Asset("b".repeat(64), 1_781_936_174L, "map-data-ukmap-r40883954274-a1"),
+            MapLayout.OWN, "map-data-ukmap-r40883954274-a1"
+        )
+        val scotlandTag = "map-data-region-scotland-r40828955970-a1"
+        val online = OwnMap.selectMap(national, regional, MapLayout.OWN, scotlandTag,
+            networkAvailable = true)
+        assertEquals("pmtiles://${national.url}", online.tiles)
+        assertEquals(national.snapshotTag, online.snapshotTag)
+        val offline = OwnMap.selectMap(national, regional, MapLayout.OWN, scotlandTag,
+            networkAvailable = false)
+        assertEquals("pmtiles://file://${regional.absolutePath}", offline.tiles)
+        assertEquals(scotlandTag, offline.snapshotTag)
+        val countryFile = temp.newFile("installed-whole-uk.pmtiles")
+        val localUk = OwnMap.selectMap(national, countryFile, MapLayout.OWN,
+            national.snapshotTag, networkAvailable = true)
+        assertEquals("pmtiles://file://${countryFile.absolutePath}", localUk.tiles)
+    }
+
     @Test fun publishedWholeUkWinsWhenScottishRegionIsLocallyInstalled() {
         val sha = "a".repeat(64)
         val regionTag = "map-data-region-scotland-r40828955970-a1"
