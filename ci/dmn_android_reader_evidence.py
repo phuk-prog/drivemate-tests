@@ -87,3 +87,46 @@ def verify_install_route(receipt_file, index_file, piece_file):
             or type(metres) not in (int, float) or not 100 < metres < 100000):
         raise ValueError("DMN_INSTALL_ROUTE_EMPTY_OR_UNBOUNDED")
     return record
+
+
+def verify_four_nation_routes(receipt_file, index_file, assets_dir):
+    """Require all four authentic assets and bounded Android graph-data routes."""
+    from dmn_live_bytes import sample_pieces, check_piece_bytes
+    path = Path(receipt_file)
+    if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= 8192:
+        raise ValueError("DMN_FOUR_NATION_RECEIPT_MISSING_OR_OVERSIZED")
+    record = json.loads(path.read_text())
+    index = json.loads(Path(index_file).read_text())
+    selected = sample_pieces(index)
+    expected = {"schema":1,
+        "scope":"four_nation_published_tile_tls_install_graph_route_smoke",
+        "published_release":index["release"],"download_calls":4,
+        "route_time_network_requests":0,"complete_uk_verified":False,
+        "independent_legal_truth_verified":False}
+    if any(type(record.get(k)) is not type(v) or record.get(k) != v for k,v in expected.items()):
+        raise ValueError("DMN_FOUR_NATION_SCOPE_MISMATCH")
+    samples = record.get("samples")
+    if not isinstance(samples, dict) or set(samples) != set(selected):
+        raise ValueError("DMN_FOUR_NATION_SAMPLES_INCOMPLETE")
+    for nation, piece in selected.items():
+        asset = Path(assets_dir) / ("m02-" + nation + ".dmnpack")
+        if asset.is_symlink() or not asset.is_file() or asset.stat().st_size != piece["bytes"]:
+            raise ValueError("DMN_FOUR_NATION_ASSET_MISMATCH")
+        check_piece_bytes(asset.read_bytes(), piece)
+        sample = samples[nation]
+        fields = {"square":piece["square"],"installed_sha256":piece["sha256"],
+                  "installed_bytes":piece["bytes"]}
+        if not isinstance(sample,dict) or any(type(sample.get(k)) is not type(v) or sample.get(k) != v
+                                             for k,v in fields.items()):
+            raise ValueError("DMN_FOUR_NATION_INSTALLED_BYTES_MISMATCH")
+        for key in ("node_count","edge_count","route_edges","start_osm_way","finish_osm_way"):
+            if type(sample.get(key)) is not int or sample[key] <= 0:
+                raise ValueError("DMN_FOUR_NATION_EMPTY_GRAPH_OR_ROUTE")
+        for key in ("start_edge","finish_edge"):
+            if type(sample.get(key)) is not int or not 0 <= sample[key] < sample["edge_count"]:
+                raise ValueError("DMN_FOUR_NATION_INVALID_ROUTE_ENDPOINT")
+        if (sample["start_edge"] == sample["finish_edge"] or
+                type(sample.get("route_metres")) not in (int,float) or
+                not 5 <= sample["route_metres"] < 100000):
+            raise ValueError("DMN_FOUR_NATION_EMPTY_OR_UNBOUNDED_ROUTE")
+    return record

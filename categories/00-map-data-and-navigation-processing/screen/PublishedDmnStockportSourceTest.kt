@@ -189,4 +189,116 @@ class PublishedDmnStockportSourceTest {
         }
     }
 
+
+    /** Representative graph-data smoke routes, not externally verified journeys or road law. */
+    @Test fun fourNationPublishedRoadPacksDownloadInstallSelectAndRouteOffline() {
+        val index = JSONObject(instrumentation.context.assets.open("cat1-dmn-stockport-index.json")
+            .bufferedReader().use { it.readText() })
+        val samples = JSONObject(instrumentation.context.assets.open("m02-four-nation-dmn-samples.json")
+            .bufferedReader().use { it.readText() })
+        val nations = listOf("england_manchester", "wales_cardiff",
+            "northern_ireland_belfast", "scotland_edinburgh")
+        assertEquals(nations.toSet(), samples.keys().asSequence().toSet())
+        val tiles = JSONObject()
+        val bodies = nations.associate { nation ->
+            val sample = samples.getJSONObject(nation)
+            val square = sample.getString("square")
+            tiles.put(square, index.getJSONObject("tiles").getJSONObject(square))
+            "/${sample.getString("file")}" to instrumentation.context.assets.open("m02-$nation.dmnpack")
+                .use { it.readBytes() }
+        }
+        val subset = JSONObject(index.toString()).apply {
+            put("tiles", tiles); remove("regions"); remove("main")
+        }.toString().toByteArray()
+        val dir = File(app.cacheDir, "m02-real-four-nation-install").apply {
+            deleteRecursively(); require(mkdirs())
+        }
+        val oldText = DmnTiles.getText
+        val oldDownload = DmnTiles.download
+        try {
+            DmnTiles.forget()
+            HttpServiceConsumerScreenTest().withServer({ path, socket ->
+                val body = if (path == "/index") subset else requireNotNull(bodies[path])
+                socket.outputStream.write(("HTTP/1.1 200 OK\r\nContent-Length: ${body.size}\r\n" +
+                    "Connection: close\r\n\r\n").toByteArray(Charsets.US_ASCII))
+                socket.outputStream.write(body); socket.outputStream.flush()
+            }) { server ->
+                val requestedPieces = mutableListOf<String>()
+                DmnTiles.getText = { Http.getBounded("${server.url}/index", 4 * 1024 * 1024) }
+                DmnTiles.download = { url, target, limit ->
+                    val name = url.substringAfterLast('/')
+                    assertTrue(url.endsWith("/${index.getString("release")}/$name"))
+                    requestedPieces += name
+                    Http.download("${server.url}/$name", target, limit)
+                }
+                DmnTiles.fetchAll(dir)
+                assertEquals(4, requestedPieces.size)
+                assertEquals(tiles.keys().asSequence().sorted().map {
+                    tiles.getJSONObject(it).getString("file") }.toList(), requestedPieces)
+                val beforeRoutes = server.paths.size
+                DmnTiles.getText = { throw AssertionError("Offline route must not request metadata") }
+                DmnTiles.download = { _, _, _ -> throw AssertionError("Offline route must not download") }
+                val receipts = JSONObject()
+                for (nation in nations) {
+                    val entry = samples.getJSONObject(nation)
+                    val file = File(dir, entry.getString("file"))
+                    assertEquals(entry.getLong("bytes"), file.length())
+                    assertEquals(entry.getString("sha256"), sha(file))
+                    assertEquals(entry.getString("sha256"), File(dir, file.name + ".sha256").readText())
+                    val square = entry.getString("square").split('_').map { it.toInt() }
+                    val centre = LatLon((square[0] + 0.5) / 4, (square[1] + 0.5) / 4)
+                    val points = listOf(centre, centre)
+                    assertEquals(DmnTiles.Offline.READY, DmnTiles.offline(dir, points))
+                    val router = requireNotNull(DmnTiles.router(dir, points))
+                    val graph = router.pack
+                    val sourceGraph = file.inputStream().use { DmnPack.read(it) }
+                    assertEquals(sourceGraph.nodeCount, graph.nodeCount)
+                    assertEquals(sourceGraph.edgeCount, graph.edgeCount)
+                    var chosenStart = -1
+                    var chosenFinish = -1
+                    var route: com.drivemate.app.dmn.DmnRouter.Plan? = null
+                    // Pick genuine adjacent open edges. No synthetic coordinates/roads and no
+                    // assertion that these are externally verified public legal journeys.
+                    for (start in 0 until graph.edgeCount) {
+                        if (graph.access[start].toInt() != 0 || graph.startAccess[start].toInt() == 2) continue
+                        val node = graph.to[start]
+                        for (k in graph.outStart[node] until graph.outStart[node + 1]) {
+                            val finish = graph.outEdges[k]
+                            if (graph.access[finish].toInt() != 0 || graph.finishAccess[finish].toInt() == 2 ||
+                                graph.reverse[start] == finish || graph.metres[finish] < 5f ||
+                                graph.banned(start, finish)) continue
+                            route = runCatching { router.plan(start, finish) }.getOrNull()
+                            if (route != null && route.edges.isNotEmpty() && route.metres >= 5) {
+                                chosenStart = start; chosenFinish = finish; break
+                            }
+                        }
+                        if (chosenStart >= 0) break
+                    }
+                    val plan = requireNotNull(route) { "No traversable real graph-data sample for $nation" }
+                    assertTrue(chosenStart >= 0 && chosenFinish >= 0)
+                    receipts.put(nation, JSONObject().put("square", entry.getString("square"))
+                        .put("installed_sha256", sha(file)).put("installed_bytes", file.length())
+                        .put("node_count", graph.nodeCount).put("edge_count", graph.edgeCount)
+                        .put("start_edge", chosenStart).put("finish_edge", chosenFinish)
+                        .put("start_osm_way", graph.wayId[graph.way[chosenStart]])
+                        .put("finish_osm_way", graph.wayId[graph.way[chosenFinish]])
+                        .put("route_edges", plan.edges.size).put("route_metres", plan.metres))
+                }
+                assertEquals(beforeRoutes, server.paths.size)
+                val receipt = JSONObject().put("schema", 1)
+                    .put("scope", "four_nation_published_tile_tls_install_graph_route_smoke")
+                    .put("published_release", index.getString("release"))
+                    .put("samples", receipts).put("download_calls", requestedPieces.size)
+                    .put("route_time_network_requests", server.paths.size - beforeRoutes)
+                    .put("complete_uk_verified", false).put("independent_legal_truth_verified", false)
+                val out = File(requireNotNull(app.externalMediaDirs.firstOrNull()), "additional_test_output")
+                    .apply { mkdirs() }
+                File(out, "m02-four-nation-dmn-install-route-receipt.json").writeText(receipt.toString())
+            }
+        } finally {
+            DmnTiles.getText = oldText; DmnTiles.download = oldDownload
+            DmnTiles.forget(); dir.deleteRecursively()
+        }
+    }
+
 }
