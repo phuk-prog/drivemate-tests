@@ -77,6 +77,32 @@ class DmnTilesStampTest {
         assertEquals(DmnTiles.Offline.MISSING, readiness())
     }
 
+    @Test fun fullUkFetchRechecksStampedBytesAndRepairsSameSizeCorruption() {
+        val good = requireNotNull(javaClass.classLoader!!.getResourceAsStream("dmn/dmn-test.dmnpack"))
+            .use { it.readBytes() }
+        installedPiece("CURRENT")
+        val existing = File(folder.root, fileName)
+        val damaged = good.clone().apply { this[lastIndex] = (this[lastIndex].toInt() xor 1).toByte() }
+        existing.writeBytes(damaged)
+        assertEquals(good.size.toLong(), existing.length())
+        val originalDownload = DmnTiles.download
+        val originalGetText = DmnTiles.getText
+        try {
+            DmnTiles.getText = { File(folder.root, indexName).readText() }
+            var repairs = 0
+            DmnTiles.download = { _, destination, _ ->
+                repairs++
+                destination.writeBytes(good)
+            }
+            DmnTiles.fetchAll(folder.root)
+            assertEquals("The matching stamp must not hide changed bytes", 1, repairs)
+            org.junit.Assert.assertArrayEquals(good, existing.readBytes())
+        } finally {
+            DmnTiles.download = originalDownload
+            DmnTiles.getText = originalGetText
+        }
+    }
+
     @Test fun parseableOldPackIsNotAssumedToBeMissing() {
         installedPiece("0".repeat(64))
         // Current API reports *potential offline availability*, not release freshness.
