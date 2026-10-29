@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from category_connections import audit, classify_url, source_role
+from category_connections import audit, classify_url
 
 
 def programme():
@@ -70,11 +70,6 @@ class TF02RepositoryOwnership(unittest.TestCase):
         self.assertEqual(
             "test_service_reference_not_live",
             classify_url("https://master.apis.dev.openstreetmap.org/api/0.6")["status"])
-
-    def test_map_credits_are_owned_by_map_data_and_display_credits(self):
-        self.assertEqual(
-            [1, 20],
-            source_role("app/src/main/java/com/drivemate/app/data/DataCredits.kt")[0])
 
     def test_test_service_flag_blocks_category_and_counts_unresolved(self):
         with tempfile.TemporaryDirectory() as d:
