@@ -72,7 +72,7 @@ def immutable(e):
             raise ValueError('INVALID_IMMUTABLE_ID:' + key)
 
 
-def independent_truth(truth):
+def independent_truth(truth, acceptance=None):
     if truth.get('status') != 'verified':
         raise ValueError('INDEPENDENT_TRUTH_REQUIRED')
     host = urlparse(truth.get('url','')).hostname or ''
@@ -87,6 +87,38 @@ def independent_truth(truth):
             raise ValueError()
     except (KeyError, TypeError, ValueError):
         raise ValueError('INDEPENDENT_TRUTH_REQUIRED:dated_evidence') from None
+    # Metadata validation is not authentication of the document or its legal
+    # interpretation. Bind it to the actual acceptance caller before allowing
+    # even an evidence-record claim about a particular movement.
+    if truth.get('schema') != 2 or any(
+            not isinstance(truth.get(k), str) or not truth[k].strip()
+            for k in ('document_id', 'document_version')):
+        raise ValueError('INDEPENDENT_TRUTH_REQUIRED:document_version')
+    binding = truth.get('binding')
+    keys = ('app_sha','test_sha','map_sha256','input_sha256',
+            'case_id','country','claim','action_id')
+    if not isinstance(binding, dict) or any(
+            not isinstance(binding.get(k),str) or not binding[k].strip() for k in keys):
+        raise ValueError('INDEPENDENT_TRUTH_REQUIRED:case_binding')
+    if acceptance is not None and any(binding[k] != acceptance.get(k) for k in keys):
+        raise ValueError('INDEPENDENT_TRUTH_REQUIRED:case_binding')
+    immutable(binding)
+    try:
+        def utc(key, record):
+            value = datetime.fromisoformat(record[key].replace('Z','+00:00'))
+            if value.tzinfo is None:
+                raise ValueError()
+            return value
+        start = utc('applicable_from_utc', truth)
+        end = utc('applicable_until_utc', truth)
+        if start >= end:
+            raise ValueError()
+        if acceptance is not None:
+            evaluated = utc('evaluated_utc', acceptance)
+            if not start <= evaluated < end or evaluated > datetime.now(timezone.utc):
+                raise ValueError()
+    except (KeyError, AttributeError, TypeError, ValueError):
+        raise ValueError('INDEPENDENT_TRUTH_REQUIRED:movement_applicability') from None
 
 
 def validate_offline_proof(e):
@@ -135,7 +167,7 @@ def validate_acceptance(e):
         validate_offline_proof(e)
         scope='offline_evidence_record_valid'
     if e.get('claim') in {'legal_lane_advice','legal_manoeuvre','speed_limit_legality'}:
-        independent_truth(e.get('legal_truth',{}))
+        independent_truth(e.get('legal_truth',{}), e)
         return {'scope':'dated_official_truth_attached','status':'evidence_record_valid'}
     return {'scope':scope,'status':'evidence_record_valid'}
 

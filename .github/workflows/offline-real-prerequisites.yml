@@ -1,11 +1,7 @@
 name: Diagnose real offline UK navigation prerequisites
 # Diagnostic-only: a blocked real release cannot be counted as offline accepted.
+# Live/source integration audits are opt-in; routine changes use basic-checks.yml.
 on:
-  pull_request:
-    paths:
-      - 'ci/real_offline_acceptance.py'
-      - 'ci/test_real_offline_acceptance.py'
-      - '.github/workflows/offline-real-prerequisites.yml'
   workflow_dispatch:
 permissions:
   contents: read

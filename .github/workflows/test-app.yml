@@ -1,12 +1,10 @@
 name: Test the app
+# Full app verification is opt-in; routine push/PR checks use basic-checks.yml.
+# Keep this workflow and its full artifact contract for explicit and signed-build dispatches.
 # Every DriveMate test runs here, in this public repository (REGISTER.md). The app's code is
 # fetched from the private drivemate-app with a read-only token and only built on the runner:
 # just the summary and the picture page are published, never app code or an APK.
 on:
-  # One run per change: on its pull request, and again once merged to main.
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
       app_ref:

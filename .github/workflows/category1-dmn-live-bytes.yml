@@ -1,11 +1,7 @@
 name: Category 1 four-nation actual DMN piece byte audit
 # Public diagnostic only: published compressed sample bytes, NOT on-device routing.
+# Live/source integration audits are opt-in; routine changes use basic-checks.yml.
 on:
-  pull_request:
-    paths:
-      - 'ci/dmn_live_bytes.py'
-      - 'ci/test_dmn_live_bytes.py'
-      - '.github/workflows/category1-dmn-live-bytes.yml'
   workflow_dispatch:
 permissions:
   contents: read

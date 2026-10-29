@@ -1,14 +1,8 @@
 name: Category 1 live UK catalogue audit
 # Read-only: checks actual published map-regions/catalog.json against GitHub
 # release digest. Region presence is not complete UK road or offline acceptance.
+# Live/source integration audits are opt-in; routine changes use basic-checks.yml.
 on:
-  pull_request:
-    paths:
-      - 'ci/category1_live_catalog.py'
-      - 'ci/test_category1_live_catalog.py'
-      - 'ci/test_category1_release_inventory.py'
-      - 'ci/test_category1_live_fail_closed.py'
-      - '.github/workflows/category1-live-catalog.yml'
   workflow_dispatch:
 permissions:
   contents: read

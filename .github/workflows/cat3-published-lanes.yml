@@ -1,17 +1,7 @@
 name: Category 3 published Manchester lane-source audit
 # Source-data pretest only; not a driving-screen, legal lane truth or signed APK gate.
+# Live/source integration audits are opt-in; routine changes use basic-checks.yml.
 on:
-  pull_request:
-    paths:
-      - 'ci/audit_published_manchester_lanes.py'
-      - '.github/workflows/cat3-published-lanes.yml'
-      - 'ci/verify_frozen_lanes.py'
-      - 'ci/test_frozen_provenance.py'
-      - 'provenance/manchester-lanes/**'
-      - 'app-unit/resources/cat3-published-manchester-lanes-3.json'
-      - 'categories/03-lane-guidance/decisions/PublishedManchesterLaneDbDecisionsTest.kt'
-      - 'categories/03-lane-guidance/screen/ManchesterLanePublicationScreenTest.kt'
-      - 'categories/03-lane-guidance/screen/PublishedLanePipelineScreenTest.kt'
   workflow_dispatch:
 permissions:
   contents: read

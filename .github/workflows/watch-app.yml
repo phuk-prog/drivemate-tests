@@ -1,9 +1,7 @@
 name: Watch the app for new commits
-# Every 30 minutes: if drivemate-app's main has a commit no test run has covered yet, start
-# "Test the app" for it. drivemate-app's APK build waits for that result.
+# Optional manual catch-up: start full verification for an untested app main commit.
+# No scheduled full-app loop; routine changes use basic-checks.yml.
 on:
-  schedule:
-    - cron: '7,37 * * * *'
   workflow_dispatch:
 permissions:
   contents: read

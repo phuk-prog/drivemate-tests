@@ -1,12 +1,7 @@
 name: Verify actual published UK regional file bytes
 # Only public immutable map releases. No app source, APK or large map archive is uploaded.
+# Live/source integration audits are opt-in; routine changes use basic-checks.yml.
 on:
-  pull_request:
-    paths:
-      - 'ci/download_published_region_files.py'
-      - 'ci/aggregate_published_region_bytes.py'
-      - 'ci/test_published_region_bytes.py'
-      - '.github/workflows/category1-published-bytes.yml'
   workflow_dispatch:
 permissions:
   contents: read

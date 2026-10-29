@@ -1,0 +1,39 @@
+name: Basic checks
+# Fast public-source checks only. Full Android/release verification remains test-app.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: basic-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+jobs:
+  basic:
+    name: Basic public-source checks (not release acceptance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run the basic offline Python checks
+        run: python3 ci/run_basic_checks.py --output results/basic.json
+      - name: Record the scope of this run
+        if: always()
+        run: |
+          echo '### BASIC public-source checks' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No Android app, emulator, live download or navigation acceptance was exercised. Full release evidence remains required.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish basic evidence only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: drivemate-basic-${{ github.sha }}
+          path: results/basic.json
+          if-no-files-found: error
+          retention-days: 14
