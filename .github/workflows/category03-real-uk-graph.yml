@@ -1,0 +1,52 @@
+name: Category 03.1 real Greater Manchester road graph
+
+# Dedicated product check for real OSM node directions, barriers and slip-road
+# links. No UK rebuild, Android change or publication.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/real_uk_graph_check.py
+      - .github/workflows/category03-real-uk-graph.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-road-graph:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install OSM graph reader
+        run: python3 -m pip install -q --disable-pip-version-check osmium==4.3.1
+      - name: Download and authenticate real UK map extract
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          base=https://download.geofabrik.de/europe/united-kingdom/england/greater-manchester-latest.osm.pbf
+          curl --fail --silent --show-error --location --retry 4 --retry-all-errors --max-time 900 -o work/gm.osm.pbf "$base"
+          curl --fail --silent --show-error --location --retry 4 --retry-all-errors --max-time 60 -o work/source.md5 "$base.md5"
+          want=$(awk '{print $1}' work/source.md5)
+          echo "$want  work/gm.osm.pbf" | md5sum --check --strict
+          sha256sum work/gm.osm.pbf | tee work/source.sha256
+      - name: Check actual OSM road edges and closed barrier through-moves
+        run: |
+          python3 -m tools.real_uk_graph_check --pbf work/gm.osm.pbf --report work/road-graph-03-1.json
+          cat work/road-graph-03-1.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain exact bounded evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: real-gm-road-graph-03-1
+          path: |
+            work/source.sha256
+            work/road-graph-03-1.json
+          retention-days: 30
+          if-no-files-found: warn
