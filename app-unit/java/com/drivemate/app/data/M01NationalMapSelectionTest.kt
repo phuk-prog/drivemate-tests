@@ -83,4 +83,15 @@ class M01NationalMapSelectionTest {
             rootField.set(null, oldRoot)
         }
     }
+    @Test fun installedWholeUkAlwaysWinsAheadOfRegionalOfflineFallback() {
+        val ukTag = "map-data-ukmap-r40883954274-a1"
+        val regionTag = "map-data-region-scotland-r40828955970-a1"
+        assertEquals(false, OwnMap.useRegionalFallback(ukTag, ukTag, "scotland", false))
+        assertEquals(false, OwnMap.useRegionalFallback(ukTag, ukTag, "scotland", true))
+        assertEquals(true, OwnMap.useRegionalFallback(ukTag, regionTag, "scotland", false))
+        assertEquals(false, OwnMap.useRegionalFallback(ukTag, regionTag, "scotland", true))
+        assertEquals(true, OwnMap.useRegionalFallback(regionTag, null, "scotland", true))
+        assertEquals(false, OwnMap.useRegionalFallback(regionTag, null, "wales", false))
+    }
+
 }
