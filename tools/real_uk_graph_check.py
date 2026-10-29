@@ -72,6 +72,7 @@ def audit_roundabouts(graph):
     entries_total = 0
     exits_total = 0
     samples = []
+    pyramid_candidates = []
     for component in connected:
         arcs = [(a, b, wi) for a, b, wi in ring if a in component]
         source_ways = {graph["ways"][wi][0] for _, _, wi in arcs}
@@ -90,6 +91,21 @@ def audit_roundabouts(graph):
             entry_exit_complete += bool(approaches and departures)
         else:
             unknown += 1
+        # Approximate Pyramid Roundabout/M60 J1 place coordinate, not an
+        # official OSM-node or exit identity; preserve this qualification.
+        near_pyramid_m = min(d.metres((graph["nodes"][n][0], graph["nodes"][n][1]),
+                                       (53.409176, -2.174289)) for n in component)
+        if near_pyramid_m <= 750:
+            pyramid_candidates.append({
+                "nearest_node_metres": round(near_pyramid_m, 1),
+                "ring_osm_way_ids": sorted(source_ways),
+                "ring_osm_node_ids": sorted(graph["nodes"][n][2] for n in component)[:20],
+                "ring_arcs": len(arcs),
+                "entry_arcs": len(approaches),
+                "exit_arcs": len(departures),
+                "topology": "closed_simple_directed" if simple else "unknown_open_or_complex",
+                "evidence_scope": "OSM ring candidate only, not verified exit order",
+            })
         if len(samples) < 12:
             samples.append({
                 "ring_osm_way_ids": sorted(source_ways)[:12],
@@ -111,6 +127,8 @@ def audit_roundabouts(graph):
         "entry_arcs": entries_total,
         "exit_arcs": exits_total,
         "examples": samples,
+        "pyramid_m60_j1_area_candidates": sorted(
+            pyramid_candidates, key=lambda candidate: candidate["nearest_node_metres"])[:12],
         "errors": [],
         "limits": [
             "Only mapped directed roundabout/circular arcs; mini-roundabout nodes are not rings.",
