@@ -1,6 +1,8 @@
 package com.drivemate.tests.cat00
 
 import android.app.Application
+import android.content.ContextWrapper
+import com.drivemate.app.dmn.Dmn
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.drivemate.app.data.Http
@@ -299,6 +301,69 @@ class PublishedDmnStockportSourceTest {
             DmnTiles.getText = oldText; DmnTiles.download = oldDownload
             DmnTiles.forget(); dir.deleteRecursively()
         }
+    }
+
+
+    private fun actualDmnRouteUsesInstalledOrBundledGraph(installed: Boolean) {
+        val root = File(app.cacheDir, "m02-dmn-route-selection-$installed").apply {
+            deleteRecursively(); require(mkdirs())
+        }
+        val dir = File(root, "dmn").apply { require(mkdirs()) }
+        val oldContext = Dmn.context
+        val oldSource = Dmn.source
+        val oldTestRouter = Dmn.testRouter
+        val oldText = DmnTiles.getText
+        val oldDownload = DmnTiles.download
+        var builtInOpens = 0
+        try {
+            Dmn.forget(); DmnTiles.forget(); Dmn.testRouter = null
+            Dmn.context = object : ContextWrapper(app) {
+                override fun getNoBackupFilesDir(): File = root
+            }
+            // A real usable fallback, rather than throwing and allowing old code to
+            // silently reach the installed graph after trying the stale bundle first.
+            Dmn.source = { builtInOpens++; app.assets.open(Dmn.ASSET) }
+            if (installed) {
+                val index = JSONObject(instrumentation.context.assets.open("cat1-dmn-stockport-index.json")
+                    .bufferedReader().use { it.readText() })
+                val piece = index.getJSONObject("tiles").getJSONObject("213_-9")
+                val name = piece.getString("file")
+                val file = File(dir, name)
+                instrumentation.context.assets.open("cat1-dmn-stockport-piece.dmnpack")
+                    .use { input -> file.outputStream().use { input.copyTo(it) } }
+                assertEquals(piece.getLong("bytes"), file.length())
+                assertEquals(piece.getString("sha256"), sha(file))
+                File(dir, "$name.sha256").writeText(piece.getString("sha256"))
+                File(dir, "dmn-uk.json").writeText(index.toString())
+            }
+            DmnTiles.getText = { throw java.io.IOException("Offline test: no metadata transport") }
+            DmnTiles.download = { _, _, _ -> throw AssertionError("Route selection must never download") }
+            val points = listOf(LatLon(53.4051, -2.1630), LatLon(53.4106, -2.1591))
+            val routes = Dmn.route(points, null)
+            val out = File(requireNotNull(app.externalMediaDirs.firstOrNull()), "additional_test_output")
+                .apply { mkdirs() }
+            File(out, "m02-actual-dmn-selection-$installed.json").writeText(JSONObject()
+                .put("schema", 1).put("installed_published_tile", installed)
+                .put("builtin_opener_calls", builtInOpens).put("routes", routes.size)
+                .put("route_metres", routes.firstOrNull()?.distance ?: 0.0).toString())
+            assertEquals(if (installed) "Current installed graph must supersede the old Manchester bundle"
+                else "Missing installed graph must preserve genuine bundled offline fallback",
+                if (installed) 0 else 1, builtInOpens)
+            assertFalse("Actual DMN routing must work with the selected genuine pack", routes.isEmpty())
+            assertTrue(routes.first().distance > 100.0)
+        } finally {
+            Dmn.context = oldContext; Dmn.source = oldSource; Dmn.testRouter = oldTestRouter
+            DmnTiles.getText = oldText; DmnTiles.download = oldDownload
+            Dmn.forget(); DmnTiles.forget(); root.deleteRecursively()
+        }
+    }
+
+    @Test fun actualDmnRoutePrefersCurrentInstalledPublishedGraphOverBundledManchester() {
+        actualDmnRouteUsesInstalledOrBundledGraph(true)
+    }
+
+    @Test fun actualDmnRouteRetainsGenuineBundledFallbackWhenInstalledGraphIsMissing() {
+        actualDmnRouteUsesInstalledOrBundledGraph(false)
     }
 
 }
