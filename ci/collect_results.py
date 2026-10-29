@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 from test_selection import selected
 from process_contract import validate_acceptance
 from dmn_android_reader_evidence import verify as verify_android_dmn_reader
+from dmn_regional_worker_evidence import verify as verify_regional_worker
 
 CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound", "cat03": "3 Lane guidance", "cat04": "4 Junction view", "cat05": "5 3D immersive navigation", "cat06": "6 Speed limits", "cat07": "7 Road alerts", "cat08": "8 Rerouting", "cat09": "9 Traffic", "cat10": "10 Position and GPS"}
 
@@ -222,6 +223,24 @@ def main():
         except (OSError,ValueError,KeyError,TypeError) as e:
             test["status"]="failed"
             test["failure"]="Published DMN reader evidence rejected: "+str(e)[:130]
+    # A real MapPack.Worker RED observation is only reportable with a matching
+    # Android-generated receipt; green JUnit must not mean offline UK acceptance.
+    for _, test in found:
+        if test["name"]!="actualRegionalMapPackWorkerCompletesWithoutInstallingPublishedDmn" or test["status"]!="passed":
+            continue
+        try:
+            evidence=list(Path(media_dir).rglob("cat1-regional-worker-red-receipt.json"))
+            if len(evidence)!=1:
+                raise ValueError("REGIONAL_WORKER_RECEIPT_MISSING_OR_DUPLICATED")
+            verified=verify_regional_worker(
+                evidence[0],
+                "app-src/app/src/androidTest/assets/stockport-live-region.json",
+                "app-src/app/src/androidTest/assets/cat1-dmn-stockport-index.json")
+            test["regional_worker_red_evidence"]=verified
+            doc.setdefault("regional_worker_red_evidence",[]).append(verified)
+        except (OSError,ValueError,KeyError,TypeError) as e:
+            test["status"]="failed"
+            test["failure"]="Regional worker RED evidence rejected: "+str(e)[:120]
     if not found:
         doc["checklist"]["drivemate-tests"] = {"tests": [{"class": "drivemate-tests", "name": "tests ran", "status": "failed",
                                                           "failure": "no results: the tests did not compile or run"}]}

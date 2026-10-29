@@ -70,6 +70,7 @@
     "categories/10-position-and-gps/screen/GpsAcceptanceScreenTest.kt": "63628e10412507de127e19edd1c3a8e00de1c08a",
     "categories/10-position-and-gps/screen/GpsFilterScreenTest.kt": "78d42bc5c438bbb9a1c5d2aa61fd59efc422c4f2",
     "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "1486daf8835e97012e7b98a63ed636f90d30ffb5",
-    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "165e029359c1b081a10c623ace10b9057d91f8d4"
+    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "165e029359c1b081a10c623ace10b9057d91f8d4",
+    "categories/00-map-data-and-navigation-processing/screen/RegionalMapPackWorkerPretest.kt": "b7052864e670c41c8ca491c31ca7a8ec03a753f9"
   }
 }
