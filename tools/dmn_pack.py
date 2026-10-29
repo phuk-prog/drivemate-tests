@@ -63,21 +63,35 @@ class NoEdges(Exception):
     pass
 
 
-def car_access(tags, highway):
-    """(access code, restricted) for one road, from its access tags."""
+def car_access(tags, highway, travel=None):
+    """(access code, restricted) for a car, with directional and conditional tags.
+
+    More specific vehicle classes take precedence over generic access rules.
+    Within the same class, forward/backward applies before the general tag.
+    Without a verified clock/date model, conditional restrictions are UNKNOWN:
+    they must not become an unrestricted through-road in the offline graph.
+    """
     for key in ACCESS_KEYS:
-        value = tags.get(key)
-        if value is None:
-            continue
-        value = value.split(";")[0].strip()
-        if value in OPEN:
-            return ALLOWED, False
-        if value in RESTRICTED:
-            return UNKNOWN, True
-        if value in CLOSED:
-            return PROHIBITED, False
+        scoped = (f"{key}:{travel}", key) if travel else (key,)
+        for rule in scoped:
+            # A conditional override of an unconditional same-scope tag can
+            # change the legal result at some time: never silently assume it.
+            if tags.get(f"{rule}:conditional"):
+                return UNKNOWN, True
+            value = tags.get(rule)
+            if value is None:
+                continue
+            value = value.split(";")[0].strip()
+            if value in OPEN:
+                return ALLOWED, False
+            if value in RESTRICTED:
+                return UNKNOWN, True
+            if value in CLOSED:
+                return PROHIBITED, False
     if highway in ("construction", "proposed"):
         return PROHIBITED, False
+    if travel and tags.get("oneway:conditional"):
+        return UNKNOWN, True
     return (UNKNOWN if highway in UNKNOWN_BY_DEFAULT else ALLOWED), False
 
 
@@ -231,7 +245,8 @@ def build(path, tile=None, main_only=False):
     keep_way = []
     for wid, tags, nodes in reader.ways:
         highway = tags["highway"]
-        access, restricted = car_access(tags, highway)
+        forward_access, forward_restricted = car_access(tags, highway, "forward")
+        backward_access, backward_restricted = car_access(tags, highway, "backward")
         kph = speed_kph(tags, highway)
         flags = (1 if tags.get("junction") in ("roundabout", "circular") else 0) | (2 if tags.get("toll") == "yes" else 0)
         w = len(ways)
@@ -247,9 +262,9 @@ def build(path, tile=None, main_only=False):
             dist = max(metres(a[1:], b[1:]), 0.01)
             piece = min(k, 32767)
             if go >= 0:
-                edges.append([ia, ib, dist, kph, access, restricted, w, piece, 0])
+                edges.append([ia, ib, dist, kph, forward_access, forward_restricted, w, piece, 0])
             if go <= 0:
-                edges.append([ib, ia, dist, kph, access, restricted, w, piece, 1])
+                edges.append([ib, ia, dist, kph, backward_access, backward_restricted, w, piece, 1])
     if not edges:
         raise NoEdges()
     gates = {node_ix[n]: g for n, g in reader.gates.items() if n in node_ix}

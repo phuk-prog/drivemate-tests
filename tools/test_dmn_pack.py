@@ -20,6 +20,57 @@ class DmnPackTests(unittest.TestCase):
         self.assertEqual((d.ALLOWED, False), d.car_access({'access': 'no', 'motorcar': 'yes'}, 'residential'),
                          "a car's own rule wins")
 
+    def test_directional_and_conditional_car_access_is_not_promoted_to_open(self):
+        self.assertEqual((d.PROHIBITED, False),
+                         d.car_access({'vehicle:forward': 'no'}, 'residential', 'forward'))
+        self.assertEqual((d.ALLOWED, False),
+                         d.car_access({'vehicle:forward': 'no'}, 'residential', 'backward'))
+        self.assertEqual((d.ALLOWED, False),
+                         d.car_access({'motorcar': 'yes', 'vehicle:forward': 'no'}, 'residential', 'forward'),
+                         'more specific motorcar allowance takes priority')
+        self.assertEqual((d.UNKNOWN, True),
+                         d.car_access({'motorcar:conditional': 'no @ (Mo-Fr 08:00-09:00)'}, 'residential', 'forward'))
+        self.assertEqual((d.UNKNOWN, True),
+                         d.car_access({'vehicle:backward:conditional': 'no @ (Mo-Fr)'}, 'residential', 'backward'))
+        self.assertEqual((d.ALLOWED, False),
+                         d.car_access({'vehicle:backward:conditional': 'no @ (Mo-Fr)'}, 'residential', 'forward'))
+        self.assertEqual((d.UNKNOWN, True),
+                         d.car_access({'oneway:conditional': 'yes @ (Mo-Fr)'}, 'residential', 'forward'))
+        self.assertEqual((d.PROHIBITED, False),
+                         d.car_access({'access': 'no', 'oneway:conditional': 'yes @ (Mo-Fr)'}, 'residential', 'forward'))
+        self.assertEqual((d.UNKNOWN, True),
+                         d.gate_access({'barrier': 'gate', 'access': 'yes',
+                                        'access:conditional': 'no @ (Su)'}))
+
+    def test_directional_and_conditional_access_is_saved_on_each_directed_edge(self):
+        xml = """<osm version="0.6">
+          <node id="1" version="1" lat="53.400" lon="-2.200"/>
+          <node id="2" version="1" lat="53.400" lon="-2.199"/>
+          <node id="3" version="1" lat="53.400" lon="-2.198"/>
+          <node id="4" version="1" lat="53.400" lon="-2.197"/>
+          <way id="100" version="1"><nd ref="1"/><nd ref="2"/>
+            <tag k="highway" v="residential"/>
+            <tag k="motor_vehicle:forward" v="no"/></way>
+          <way id="200" version="1"><nd ref="2"/><nd ref="3"/>
+            <tag k="highway" v="residential"/>
+            <tag k="motorcar:conditional" v="no @ (Mo-Fr 08:00-09:00)"/></way>
+          <way id="300" version="1"><nd ref="3"/><nd ref="4"/>
+            <tag k="highway" v="residential"/><tag k="oneway:conditional" v="yes @ (Sa)"/></way>
+        </osm>"""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "directional.osm"
+            source.write_text(xml)
+            graph = d.build(str(source))
+        arcs = {(graph["ways"][e[6]][0],
+                 graph["nodes"][e[0]][2], graph["nodes"][e[1]][2]): (e[4], e[5])
+                for e in graph["edges"]}
+        self.assertEqual((d.PROHIBITED, False), arcs[100, 1, 2])
+        self.assertEqual((d.ALLOWED, False), arcs[100, 2, 1])
+        self.assertEqual((d.UNKNOWN, True), arcs[200, 2, 3])
+        self.assertEqual((d.UNKNOWN, True), arcs[200, 3, 2])
+        self.assertEqual((d.UNKNOWN, True), arcs[300, 3, 4])
+        self.assertEqual((d.UNKNOWN, True), arcs[300, 4, 3])
+
     def test_speed_is_the_usual_speed_lowered_to_the_limit(self):
         self.assertEqual(95, d.speed_kph({}, 'motorway'))
         self.assertAlmostEqual(80.467, d.speed_kph({'maxspeed': '50 mph'}, 'motorway'), places=2)
