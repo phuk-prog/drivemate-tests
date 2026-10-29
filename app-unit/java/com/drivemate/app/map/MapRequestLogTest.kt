@@ -19,11 +19,18 @@ class MapRequestLogTest {
         assertFalse(log.failing(0))
     }
 
-    @Test fun nothingArrivingIsAFailure() {
+    @Test fun noRecentRequestsAreNotProofOfMissingMapDetail() {
         val log = MapRequestLog()
         log.record(true, file, 0)
-        assertTrue("no piece since 1 s", log.failing(1_000))
-        assertTrue("no downloads at all: the drawing itself stalled, as before", MapRequestLog().failing(0))
+        assertFalse("last successful piece is old, but cached files may work", log.failing(1_000))
+        assertFalse("an offline/local map may not make HTTP requests", MapRequestLog().failing(0))
+    }
+
+    @Test fun aRealFailedRequestWithoutSuccessIsAFailure() {
+        val log = MapRequestLog()
+        log.record(false, file, 2_000)
+        assertTrue(log.failing(1_000))
+        assertEquals(file, log.lastFailure(1_000))
     }
 
     @Test fun mostlyFailingIsAFailure() {
