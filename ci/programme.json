@@ -2,28 +2,28 @@
   "schema": 1,
   "execution_order": [
     1,
-    2,
-    3,
     4,
     5,
     6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
     17,
     18,
+    7,
+    10,
+    8,
+    12,
+    13,
+    11,
+    9,
+    14,
+    16,
+    15,
     19,
     20,
+    3,
     21,
     22,
-    23
+    23,
+    2
   ],
   "categories": [
     {
@@ -205,7 +205,7 @@
       ]
     }
   ],
-  "note": "Batching does not override register execution order or create acceptance coverage.",
+  "note": "Only the 23 original product categories are active; execution_order is the dependency-first master register order. Category IDs and legacy mappings remain stable. Historical batch metadata supports existing testing infrastructure only and is not an active enhancement programme. Licensing review deferred; preserve existing license notices and safeguards.",
   "component_category_map": {
     "com.drivemate.app.data.UkJoinTest": 1,
     "com.drivemate.app.data.PublishedRegionCatalogTest": 1
