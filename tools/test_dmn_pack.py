@@ -30,6 +30,26 @@ class DmnPackTests(unittest.TestCase):
         self.assertEqual('only_left_turn', specific.restrictions[0][0])
         self.assertFalse(parse({'restriction:bicycle': 'no_right_turn'}).restrictions)
 
+    def test_conditional_companions_and_schedule_semicolons_preserve_every_ban(self):
+        from types import SimpleNamespace
+        members = [SimpleNamespace(role=role, type=kind, ref=ref)
+                   for role, kind, ref in [('from', 'w', 100), ('via', 'n', 2), ('to', 'w', 200)]]
+        reader = d.Reader(False)
+        reader.relation(SimpleNamespace(tags={
+            'type': 'restriction', 'restriction': 'no_right_turn',
+            'restriction:conditional': 'only_straight_on @ (Mo-Fr 08:00-09:00; Sa 10:00-11:00); no_left_turn @ (Su)'
+        }, members=members))
+        self.assertEqual(['no_right_turn', 'only_straight_on', 'no_left_turn'],
+                         [r[0] for r in reader.restrictions])
+        self.assertEqual(0, reader.conditional_turns_unresolved)
+        malformed = d.Reader(False)
+        malformed.relation(SimpleNamespace(tags={
+            'type': 'restriction',
+            'restriction:conditional': 'no_right_turn @ (Mo-Fr); mystery @ (Su)'
+        }, members=members))
+        self.assertEqual(['no_right_turn'], [r[0] for r in malformed.restrictions])
+        self.assertEqual(1, malformed.conditional_turns_unresolved)
+
     def test_access_rules_match_the_app_packs(self):
         self.assertEqual((d.ALLOWED, False), d.car_access({}, 'residential'))
         self.assertEqual((d.UNKNOWN, False), d.car_access({}, 'service'), 'service roads: start or end only')
@@ -347,7 +367,8 @@ class DmnPackTests(unittest.TestCase):
     def test_conditional_only_turn_bans_are_conservative_and_approach_specific(self):
         # This fixture is not proof of legal clock/time interpretation.
         # Simple timed bans must not become an always-allowed illegal turn.
-        def build(kind, key="restriction:conditional"):
+        def build(kind, key="restriction:conditional", permanent="", condition=None):
+            conditional_value = condition or f"{kind} @ (Mo-Fr 08:00-09:00)"
             nodes = "".join(
                 f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
                 for i in range(1, 6))
@@ -360,7 +381,8 @@ class DmnPackTests(unittest.TestCase):
                    '<member type="node" ref="2" role="via"/>'
                    '<member type="way" ref="200" role="to"/>'
                    '<tag k="type" v="restriction"/>'
-                   f'<tag k="{key}" v="{kind} @ (Mo-Fr 08:00-09:00)"/>'
+                   f'<tag k="{key}" v="{conditional_value}"/>'
+                   f'<tag k="restriction" v="{permanent}"/>'
                    '</relation>')
             with tempfile.TemporaryDirectory() as tmp:
                 inp = Path(tmp) / "conditional.osm"
@@ -385,6 +407,15 @@ class DmnPackTests(unittest.TestCase):
         self.assertIn((e[100, 1, 2], e[300, 2, 4]), only["bans"])
         self.assertNotIn((e[100, 1, 2], e[200, 2, 3]), only["bans"])
         self.assertEqual(1, only["conditional_only_turns_conservatively_enforced"])
+        companion = build('only_straight_on', permanent='no_right_turn')
+        e = directed(companion)
+        self.assertIn((e[100, 1, 2], e[200, 2, 3]), companion['bans'], 'permanent ban retained')
+        self.assertIn((e[100, 1, 2], e[300, 2, 4]), companion['bans'], 'timed additional ban retained')
+        self.assertNotIn((e[400, 5, 2], e[300, 2, 4]), companion['bans'])
+        self.assertEqual(1, companion['conditional_turns_conservatively_enforced'])
+        multi = build('', condition='no_right_turn @ (Mo-Fr 08:00-09:00; Sa 10:00-11:00); only_straight_on @ (Su)')
+        self.assertEqual(companion['bans'], multi['bans'])
+        self.assertEqual(2, multi['conditional_turns_conservatively_enforced'])
         unsupported = build("none")
         self.assertFalse(unsupported["bans"])
         self.assertEqual(0, unsupported["conditional_only_turns_conservatively_enforced"])

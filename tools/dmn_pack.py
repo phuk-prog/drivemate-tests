@@ -151,6 +151,37 @@ def gate_access(tags):
     return (access if any(k in tags for k in ACCESS_KEYS) else UNKNOWN), restricted
 
 
+def conditional_turn_kinds(value):
+    """Known bans, conservatively at all hours; never interpret the schedule.
+
+    Semicolons within schedule parentheses are not clause separators. Unknown
+    values/syntax are counted explicitly, even when other clauses are usable.
+    `none` removes no conservative ban: a timed relaxation cannot open a road.
+    """
+    clauses, start, depth, unresolved = [], 0, 0, False
+    for pos, char in enumerate(value):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                unresolved = True
+                depth = 0
+        elif char == ";" and depth == 0:
+            clauses.append(value[start:pos])
+            start = pos + 1
+    clauses.append(value[start:])
+    unresolved |= depth != 0
+    kinds = []
+    for clause in clauses:
+        match = re.fullmatch(r"\s*(no_[a-z_]+|only_[a-z_]+|none)\s*@\s*(\S.*?)\s*", clause, re.S)
+        if not match:
+            unresolved = True
+        elif match.group(1) != "none" and match.group(1) not in kinds:
+            kinds.append(match.group(1))
+    return kinds, unresolved
+
+
 def metres(a, b):
     """Great-circle distance in metres between (lat, lon) points."""
     la1, la2 = math.radians(a[0]), math.radians(b[0])
@@ -170,6 +201,8 @@ class Reader(osmium.SimpleHandler):
         self.gates = {}         # node id -> (access, restricted) for the pieces either side
         self.restrictions = []  # (kind, from way, [via nodes], [via ways], to way)
         self.conditional_only_enforced = 0  # conservative all-hours restriction; not a time-aware legal claim
+        self.conditional_turns_enforced = 0
+        self.conditional_turns_unresolved = 0
 
     def node(self, n):
         tags = n.tags
@@ -209,21 +242,21 @@ class Reader(osmium.SimpleHandler):
         # Motor cars inherit motor-vehicle and vehicle restrictions. A more
         # specific car rule wins over these parent classes and the general rule.
         kind = next((tags.get(key) for key in TURN_KEYS if tags.get(key)), None)
-        # A timed companion never erases a permanent restriction. For a
-        # conditional-only, simple no_*/only_* rule, apply the stated ban at
-        # all hours until the offline router supports verified local schedules.
+        # A timed companion never erases a permanent restriction. Apply every
+        # recognisable no_*/only_* clause, including timed companions, at all
+        # hours until the offline router supports verified local schedules.
         # This may reject a legal off-hours shortcut, but cannot knowingly
         # recommend a turn prohibited during the schedule. Mixed/ambiguous
         # schedules remain unverified, never reported as legally resolved.
-        conservative_conditional = False
-        if not kind:
-            conditional = next((tags.get(key + ":conditional") for key in TURN_KEYS
-                                if tags.get(key + ":conditional")), "")
-            match = re.fullmatch(r"\s*(no_[a-z_]+|only_[a-z_]+)\s*@\s*\([^;@]+\)\s*", conditional)
-            if match:
-                kind = match.group(1)
-                conservative_conditional = True
-        if not kind or "motorcar" in tags.get("except", ""):
+        if "motorcar" in tags.get("except", ""):
+            return
+        conditional = next((tags.get(key + ":conditional") for key in TURN_KEYS
+                            if tags.get(key + ":conditional")), "")
+        timed_kinds, unresolved = conditional_turn_kinds(conditional) if conditional else ([], False)
+        if unresolved:
+            self.conditional_turns_unresolved += 1
+        kinds = list(dict.fromkeys(([kind] if kind else []) + timed_kinds))
+        if not kinds:
             return
         frm, to, via_n, via_w = None, None, [], []
         for m in r.members:
@@ -234,9 +267,12 @@ class Reader(osmium.SimpleHandler):
             elif m.role == "via":
                 (via_n if m.type == "n" else via_w).append(m.ref)
         if frm and to and frm > 0 and to > 0 and (via_n or via_w) and not (via_n and via_w):
-            self.restrictions.append((kind, frm, via_n, via_w, to))
-            if conservative_conditional:
-                self.conditional_only_enforced += 1
+            for rule in kinds:
+                self.restrictions.append((rule, frm, via_n, via_w, to))
+                if rule in timed_kinds:
+                    self.conditional_turns_enforced += 1
+                    if not kind:
+                        self.conditional_only_enforced += 1
 
 
 def build(path, tile=None, main_only=False):
@@ -486,6 +522,8 @@ def build(path, tile=None, main_only=False):
                    edges[i][5], new_way[edges[i][6]], edges[i][7], edges[i][8]) for i in kept_edges],
         "bans": bans, "seqs": seqs, "uturn": uturn,
         "conditional_only_turns_conservatively_enforced": reader.conditional_only_enforced,
+        "conditional_turns_conservatively_enforced": reader.conditional_turns_enforced,
+        "conditional_turn_relations_unresolved": reader.conditional_turns_unresolved,
     }
 
 
@@ -540,6 +578,10 @@ def main(argv=None):
         # restrictions. Only new affected packs need the explicit caveat.
         meta["conditional_only_turns_conservatively_enforced"] = graph["conditional_only_turns_conservatively_enforced"]
         meta["time_dependent_turn_legality_verified"] = False
+    for key in ("conditional_turns_conservatively_enforced", "conditional_turn_relations_unresolved"):
+        if graph.get(key, 0):
+            meta[key] = graph[key]
+            meta["time_dependent_turn_legality_verified"] = False
     if tile:
         meta["tile"] = tile
     if a.main:
