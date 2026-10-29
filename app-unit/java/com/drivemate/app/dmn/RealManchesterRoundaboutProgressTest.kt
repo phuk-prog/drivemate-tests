@@ -238,4 +238,63 @@ class RealManchesterRoundaboutProgressTest {
         }
     }
 
+
+    /** J27-03: a source-mapped exit must survive the real application's saved-trip JSON. */
+    @Test fun mappedExitRemainsCorrectAfterSavedTripJsonRoundTrip() {
+        val p = pack
+        val cases = realPassages(
+            p, minRingMetres = 315.0, focus = LatLon(53.40913, -2.17411), maxCases = 1
+        )
+        assertTrue("MISSING REAL STOCKPORT LONG-RING CASE", cases.isNotEmpty())
+        val c = cases.first()
+        val index = c.route.steps.indexOfFirst { it.isRoundabout }
+        assertTrue("Expected mapped roundabout step", index >= 0)
+        val originalExit = c.route.steps[index].roundaboutExitLocation
+        assertTrue("DMN has not supplied an explicit graph exit", originalExit != null)
+        val restored = com.drivemate.app.data.TripStore.route(
+            com.drivemate.app.data.TripStore.routeJson(c.route)
+        )
+        assertEquals("Saved-trip recovery lost the source-mapped ring exit",
+            originalExit, restored.steps[index].roundaboutExitLocation)
+        val eng = NavigationEngine(restored)
+        val graphExit = eng.alongOf(point(p, p.from[c.leaving]), 15.0)
+        assertTrue("Restored path no longer matches the real graph exit", graphExit != null)
+        assertTrue("Saved trip advanced to following turn while still circulating",
+            eng.maneuverEnd(index) >= graphExit!! - 10.0)
+    }
+
+    /** Unknown providers must not silently acquire a DMN-derived ring boundary. */
+    @Test fun missingMappedExitRemainsUnknownAfterSavedTripRecovery() {
+        val c = realPassages(pack).firstOrNull()
+        assertTrue("No source-backed roundabout available", c != null)
+        val unknown = c!!.route.copy(steps = c.route.steps.map { st ->
+            if (st.isRoundabout) st.copy(roundaboutExitLocation = null) else st
+        })
+        val restored = com.drivemate.app.data.TripStore.route(
+            com.drivemate.app.data.TripStore.routeJson(unknown)
+        )
+        assertTrue("Unknown graph exits must stay unknown after restore",
+            restored.steps.filter { it.isRoundabout }.all { it.roundaboutExitLocation == null })
+        val i = restored.steps.indexOfFirst { it.isRoundabout }
+        assertTrue("Restored route lost its roundabout", i >= 0)
+        assertTrue("Unknown-exit fallback produced no finite progress boundary",
+            NavigationEngine(restored).maneuverEnd(i).isFinite())
+    }
+
+    /** Incorrect off-route coordinates must not override the unknown-data fallback. */
+    @Test fun impossibleMappedExitIsRejectedInsteadOfChangingRoundaboutProgress() {
+        val c = realPassages(pack).firstOrNull()
+        assertTrue("No source-backed roundabout available", c != null)
+        val i = c!!.route.steps.indexOfFirst { it.isRoundabout }
+        assertTrue(i >= 0)
+        val without = c.route.copy(steps = c.route.steps.map { st ->
+            if (st.isRoundabout) st.copy(roundaboutExitLocation = null) else st
+        })
+        val impossible = c.route.copy(steps = c.route.steps.map { st ->
+            if (st.isRoundabout) st.copy(roundaboutExitLocation = LatLon(0.0, 0.0)) else st
+        })
+        assertEquals("Off-route false exit must not override unverified fallback",
+            NavigationEngine(without).maneuverEnd(i),
+            NavigationEngine(impossible).maneuverEnd(i), 0.001)
+    }
 }
