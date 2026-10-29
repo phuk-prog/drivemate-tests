@@ -50,9 +50,19 @@ jobs:
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           GH_TOKEN: ${{ github.token }}
-          # Push-triggered M01 build is pinned to the app revision already verified.
-          APP_REF: ${{ inputs.app_ref || '9673520e5b0f9003cb124a27536f7c13d158ca0c' }}
+          # On a push, use this commit's signed-checkpoint request rather than a stale M01 pin.
+          APP_REF: ${{ inputs.app_ref || '' }}
         run: |
+          if [ -z "$APP_REF" ]; then
+            # Read the request at the triggering test-repository commit, not mutable main.
+            request="$(gh api "repos/$GITHUB_REPOSITORY/contents/ci/apk-checkpoint-request.txt?ref=$GITHUB_SHA" --jq '.content' | base64 --decode)"
+            if [[ "$request" =~ ^(M0[1-9]|M1[0-5])[[:space:]]([0-9a-f]{40})$ ]]; then
+              APP_REF="${BASH_REMATCH[2]}"
+              echo "Signed checkpoint ${BASH_REMATCH[1]} for $APP_REF" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Checkpoint request must be Mxx followed by one exact app commit SHA"; exit 1
+            fi
+          fi
           if [[ "$APP_REF" =~ ^[0-9a-f]{40}$ ]]; then sha="$APP_REF"
           else
             url="https://x-access-token:${TOKEN}@github.com/phuk-prog/drivemate-app"
