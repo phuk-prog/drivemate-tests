@@ -9,6 +9,27 @@ HERE = Path(__file__).resolve().parent
 
 
 class DmnPackTests(unittest.TestCase):
+    def test_turn_restrictions_include_parent_vehicle_classes(self):
+        from types import SimpleNamespace
+        members = [SimpleNamespace(role=role, type=kind, ref=ref)
+                   for role, kind, ref in [('from', 'w', 100), ('via', 'n', 2), ('to', 'w', 200)]]
+        def parse(tags):
+            reader = d.Reader(False)
+            reader.relation(SimpleNamespace(tags={'type': 'restriction', **tags}, members=members))
+            return reader
+        for scope in ('motorcar', 'motor_vehicle', 'vehicle'):
+            with self.subTest(scope=scope):
+                reader = parse({f'restriction:{scope}': 'no_right_turn'})
+                self.assertEqual([('no_right_turn', 100, [2], [], 200)], reader.restrictions)
+                timed = parse({f'restriction:{scope}:conditional': 'no_right_turn @ (Mo-Fr)'})
+                self.assertEqual(reader.restrictions, timed.restrictions)
+                self.assertEqual(1, timed.conditional_only_enforced)
+        specific = parse({'restriction:motorcar': 'only_left_turn',
+                          'restriction:motor_vehicle': 'no_right_turn',
+                          'restriction': 'no_left_turn'})
+        self.assertEqual('only_left_turn', specific.restrictions[0][0])
+        self.assertFalse(parse({'restriction:bicycle': 'no_right_turn'}).restrictions)
+
     def test_access_rules_match_the_app_packs(self):
         self.assertEqual((d.ALLOWED, False), d.car_access({}, 'residential'))
         self.assertEqual((d.UNKNOWN, False), d.car_access({}, 'service'), 'service roads: start or end only')
@@ -326,7 +347,7 @@ class DmnPackTests(unittest.TestCase):
     def test_conditional_only_turn_bans_are_conservative_and_approach_specific(self):
         # This fixture is not proof of legal clock/time interpretation.
         # Simple timed bans must not become an always-allowed illegal turn.
-        def build(kind):
+        def build(kind, key="restriction:conditional"):
             nodes = "".join(
                 f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
                 for i in range(1, 6))
@@ -339,7 +360,7 @@ class DmnPackTests(unittest.TestCase):
                    '<member type="node" ref="2" role="via"/>'
                    '<member type="way" ref="200" role="to"/>'
                    '<tag k="type" v="restriction"/>'
-                   f'<tag k="restriction:conditional" v="{kind} @ (Mo-Fr 08:00-09:00)"/>'
+                   f'<tag k="{key}" v="{kind} @ (Mo-Fr 08:00-09:00)"/>'
                    '</relation>')
             with tempfile.TemporaryDirectory() as tmp:
                 inp = Path(tmp) / "conditional.osm"
@@ -353,6 +374,12 @@ class DmnPackTests(unittest.TestCase):
         self.assertIn((e[100, 1, 2], e[200, 2, 3]), no["bans"])
         self.assertNotIn((e[400, 5, 2], e[200, 2, 3]), no["bans"])
         self.assertEqual(1, no["conditional_only_turns_conservatively_enforced"])
+        for scope in ('motor_vehicle', 'vehicle'):
+            with self.subTest(conditional_scope=scope):
+                parent = build("no_right_turn", f"restriction:{scope}:conditional")
+                arcs = directed(parent)
+                self.assertIn((arcs[100, 1, 2], arcs[200, 2, 3]), parent["bans"])
+                self.assertNotIn((arcs[400, 5, 2], arcs[200, 2, 3]), parent["bans"])
         only = build("only_straight_on")
         e = directed(only)
         self.assertIn((e[100, 1, 2], e[300, 2, 4]), only["bans"])

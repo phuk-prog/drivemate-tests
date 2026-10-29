@@ -47,6 +47,7 @@ MAIN = {"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_
 UNKNOWN_BY_DEFAULT = {"service", "track"}
 # Most specific first: a car's own rule beats the general one.
 ACCESS_KEYS = ("motorcar", "motor_vehicle", "vehicle", "access")
+TURN_KEYS = ("restriction:motorcar", "restriction:motor_vehicle", "restriction:vehicle", "restriction")
 CLOSED = {"no", "agricultural", "forestry", "emergency", "bus", "psv", "military", "disabled", "use_sidepath"}
 RESTRICTED = {"private", "destination", "customers", "delivery", "permit", "residents", "discouraged", "permissive_private"}
 OPEN = {"yes", "permissive", "designated", "official", "public"}
@@ -205,7 +206,9 @@ class Reader(osmium.SimpleHandler):
         tags = r.tags
         if tags.get("type") not in ("restriction", "restriction:motorcar"):
             return
-        kind = tags.get("restriction:motorcar") or tags.get("restriction")
+        # Motor cars inherit motor-vehicle and vehicle restrictions. A more
+        # specific car rule wins over these parent classes and the general rule.
+        kind = next((tags.get(key) for key in TURN_KEYS if tags.get(key)), None)
         # A timed companion never erases a permanent restriction. For a
         # conditional-only, simple no_*/only_* rule, apply the stated ban at
         # all hours until the offline router supports verified local schedules.
@@ -214,8 +217,8 @@ class Reader(osmium.SimpleHandler):
         # schedules remain unverified, never reported as legally resolved.
         conservative_conditional = False
         if not kind:
-            conditional = (tags.get("restriction:motorcar:conditional") or
-                           tags.get("restriction:conditional") or "")
+            conditional = next((tags.get(key + ":conditional") for key in TURN_KEYS
+                                if tags.get(key + ":conditional")), "")
             match = re.fullmatch(r"\s*(no_[a-z_]+|only_[a-z_]+)\s*@\s*\([^;@]+\)\s*", conditional)
             if match:
                 kind = match.group(1)
