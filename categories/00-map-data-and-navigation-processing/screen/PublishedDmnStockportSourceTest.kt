@@ -315,6 +315,7 @@ class PublishedDmnStockportSourceTest {
         val oldText = DmnTiles.getText
         val oldDownload = DmnTiles.download
         var builtInOpens = 0
+        var metadataRequests = 0
         try {
             Dmn.forget(); DmnTiles.forget(); Dmn.testRouter = null
             Dmn.context = object : ContextWrapper(app) {
@@ -336,7 +337,10 @@ class PublishedDmnStockportSourceTest {
                 File(dir, "$name.sha256").writeText(piece.getString("sha256"))
                 File(dir, "dmn-uk.json").writeText(index.toString())
             }
-            DmnTiles.getText = { throw java.io.IOException("Offline test: no metadata transport") }
+            DmnTiles.getText = {
+                metadataRequests++
+                throw java.io.IOException("Offline test: no metadata transport")
+            }
             DmnTiles.download = { _, _, _ -> throw AssertionError("Route selection must never download") }
             val points = listOf(LatLon(53.4051, -2.1630), LatLon(53.4106, -2.1591))
             val routes = Dmn.route(points, null)
@@ -344,11 +348,14 @@ class PublishedDmnStockportSourceTest {
                 .apply { mkdirs() }
             File(out, "m02-actual-dmn-selection-$installed.json").writeText(JSONObject()
                 .put("schema", 1).put("installed_published_tile", installed)
-                .put("builtin_opener_calls", builtInOpens).put("routes", routes.size)
+                .put("builtin_opener_calls", builtInOpens).put("metadata_requests", metadataRequests)
+                .put("routes", routes.size)
                 .put("route_metres", routes.firstOrNull()?.distance ?: 0.0).toString())
             assertEquals(if (installed) "Current installed graph must supersede the old Manchester bundle"
                 else "Missing installed graph must preserve genuine bundled offline fallback",
                 if (installed) 0 else 1, builtInOpens)
+            assertEquals("Manchester installed selection/bundled fallback must not request metadata",
+                0, metadataRequests)
             assertFalse("Actual DMN routing must work with the selected genuine pack", routes.isEmpty())
             assertTrue(routes.first().distance > 100.0)
         } finally {

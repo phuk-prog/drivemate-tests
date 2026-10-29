@@ -73,6 +73,6 @@
     "categories/10-position-and-gps/screen/GpsFilterScreenTest.kt": "78d42bc5c438bbb9a1c5d2aa61fd59efc422c4f2",
     "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "7d4d46312a12175c7f64eb23c3f093917709a569",
     "categories/00-map-data-and-navigation-processing/screen/M01NationalMapRenderingScreenTest.kt": "55e334220cb4cb31cb16b7de6179a0bb57e02a69",
-    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "56e011b5081dc090223142afab81e7d7352228a0"
+    "categories/00-map-data-and-navigation-processing/screen/PublishedDmnStockportSourceTest.kt": "222ee6b4a957164ae5763343039a9338cc3722e7"
   }
 }
