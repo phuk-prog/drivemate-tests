@@ -89,7 +89,7 @@ def verify_real_offline_component_receipt(test_name, path, source_file):
                 "published_catalog_sha256":catalog_sha,
                 "offline_navigation_accepted":False}
     if test_name=="bundledManchesterRouterActuallyComputesWithoutNetwork":
-        if (record.get("scope")!="bundled_greater_manchester_offline_route_only"
+        if (record.get("scope")!="bundled_dmn_greater_manchester_offline_route_only"
             or record.get("graph_source")!="bundled_app_asset_not_published_whole_uk"
             or record.get("published_whole_uk_graph_verified") is not False
             or record.get("production_guidance_screen_verified") is not False
@@ -102,7 +102,7 @@ def verify_real_offline_component_receipt(test_name, path, source_file):
         if (type(record.get("route_points")) is not int or record["route_points"]<2
             or type(record.get("route_steps")) is not int or record["route_steps"]<1):
             raise ValueError("OFFLINE_COMPONENT_ROUTE_UNVERIFIED")
-        return {"scope":"bundled_greater_manchester_offline_route_only",
+        return {"scope":"bundled_dmn_greater_manchester_offline_route_only",
                 "route_points":record["route_points"],
                 "route_steps":record["route_steps"],
                 "network_isolation_reported":True,
