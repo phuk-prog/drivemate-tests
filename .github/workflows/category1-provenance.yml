@@ -1,5 +1,5 @@
 name: Category 1 UK graph join and scope checks
-# Fast Python-only UK graph processing tests; licensing reviews are deferred from active categories.
+# Fast Python-only UK graph processing checks.
 on:
   pull_request:
     paths:

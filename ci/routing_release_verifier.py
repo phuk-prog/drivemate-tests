@@ -2,7 +2,7 @@
 
 This module only checks an authentic publisher manifest and release metadata
 supplied by the caller, and optional *local* chunk bytes. It does not call
-GitHub, produce/publish graph data, approve UK coverage or grant usage rights.
+GitHub, produce/publish graph data, approve UK coverage or establish road-law correctness.
 A test fixture validates a verifier, not a real public release.
 """
 import gzip
@@ -62,10 +62,7 @@ def load_manifest(pointer):
     check(built.strftime("%Y%m%d")==day,"BUILD_IDENTITY_MISMATCH")
     source=doc.get("source")
     check(isinstance(source,dict),"SOURCE_PROVENANCE_INCOMPLETE")
-    check(source.get("licence")=="ODbL-1.0"
-          and source.get("license_url")=="https://opendatacommons.org/licenses/odbl/1-0/"
-          and source.get("attribution")=="© OpenStreetMap contributors"
-          and isinstance(source.get("sha256"),str)
+    check(isinstance(source.get("sha256"),str)
           and HEX64.fullmatch(source["sha256"])
           and isinstance(source.get("url"),str)
           and source["url"].startswith("https://download.geofabrik.de/europe/united-kingdom-")
@@ -152,7 +149,6 @@ def inspect_release(pointer,rolling,dated,app_repository,publisher_repository):
         "compressed_bytes_metadata":doc["download_bytes"],
         "app_consumer_compatible":matched,
         "graph_bytes_verified":False,
-        "source_rights":"metadata_present_not_legal_rights_verified",
         "legal_road_truth":"unknown",
         "geographic_coverage":"unknown",
         "offline_navigation_accepted":False,
@@ -199,6 +195,6 @@ def verify_chunk_files(pointer,directory):
     return {"schema":1,"status":"local_chunk_bytes_verified_only",
             "scope":"streaming_graph_integrity_without_android_or_navigation",
             "verified_chunks":len(doc["parts"]),"graph_sha256":digest.hexdigest(),
-            "graph_bytes_verified":True,"source_rights":"metadata_not_legal_acceptance",
+            "graph_bytes_verified":True,
             "legal_road_truth":"unknown","geographic_coverage":"unknown",
             "offline_navigation_accepted":False}

@@ -117,7 +117,6 @@ def audit_live():
             "android_parser_verified": False,
             "offline_navigation_accepted": False,
             "independent_legal_truth": "unknown",
-            "source_rights": "unknown",
         }
 
 

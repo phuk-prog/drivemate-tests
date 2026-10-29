@@ -25,7 +25,7 @@ def programme():
 class TF02RepositoryOwnership(unittest.TestCase):
     def test_old_github_blob_link_is_reported_not_just_release_downloads(self):
         for url in (
-            "https://github.com/phuk-prog/DriveMate/blob/main/LICENSE",
+            "https://github.com/phuk-prog/DriveMate/blob/main/README.md",
             "https://github.com/phuk-prog/drivemate-data",
             "https://www.github.com/phuk-prog/DriveMate-Navigation/tree/main",
             "https://github.com/phuk-prog/drivemate-data.git",
@@ -49,9 +49,9 @@ class TF02RepositoryOwnership(unittest.TestCase):
 
     def test_current_map_publisher_and_nearby_names_not_falsely_old(self):
         for url in (
-            "https://github.com/phuk-prog/drivemate-map/blob/main/licenses/NOTICE.md",
+            "https://github.com/phuk-prog/drivemate-map/blob/main/README.md",
             "https://github.com/phuk-prog/DriveMateX/blob/main/README.md",
-            "https://raw.githubusercontent.com/phuk-prog/drivemate-map/main/LICENSE",
+            "https://raw.githubusercontent.com/phuk-prog/drivemate-map/main/README.md",
             "https://api.github.com/repos/phuk-prog/drivemate-app",
         ):
             with self.subTest(url=url):

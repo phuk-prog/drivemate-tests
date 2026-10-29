@@ -16,7 +16,7 @@ class UkJoinTest {
         """{"schema":1,"kind":"$kind","regions":{"cheshire":"x"},"files":{
            "lanes-106_-5.json":{"sha256":"$sha","bytes":10,"tag":"$tag","sources":"s"},
            "road-details-106_-5.json.gz":{"sha256":"$sha","bytes":11,"tag":"$tag-part002"},
-           "LICENSE-ODbL.txt":{"sha256":"$sha","bytes":12,"tag":"$tag"}}}"""
+           "unrelated-info.txt":{"sha256":"$sha","bytes":12,"tag":"$tag"}}}"""
     private fun pointerFor(text: String, tag: String = "map-data-ukjoin-r7-a1") =
         """{"schema":1,"built_utc":"2026-10-27T00:10:00+00:00","regions":{},"manifest":{"tag":"$tag",
            "sha256":"${MapData.sha256(text.toByteArray())}","bytes":${text.toByteArray().size}}}"""
@@ -25,7 +25,7 @@ class UkJoinTest {
         for (name in listOf("lanes-106_-5.json", "limits-106_-5.json", "roadinfo-105_-6.json",
                 "road-details-106_-5.json.gz", "places-211_-10.json.gz", "cameras-uk.json", "charge-zones-uk.json"))
             assertTrue(name, UkJoin.joinable(name))
-        for (name in listOf("drivemate-v1.pmtiles", "manifest.json", "feature-packs-105_-5.jsonl.gz", "LICENSE-ODbL.txt"))
+        for (name in listOf("drivemate-v1.pmtiles", "manifest.json", "feature-packs-105_-5.jsonl.gz", "unrelated-info.txt"))
             assertFalse(name, UkJoin.joinable(name))
     }
 

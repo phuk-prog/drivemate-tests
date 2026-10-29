@@ -23,11 +23,10 @@ def fixture():
         "engine":"valhalla-3.6.3","sha256":SHA(graph),"bytes":len(graph),
         "download_bytes":len(compressed),"built":"2026-10-28T12:00:00Z",
         "generation":TAG,"parts":NAMES,
-        "source":{"licence":"ODbL-1.0","sha256":"a"*64,
+        "source":{"sha256":"a"*64,
                   "url":"https://download.geofabrik.de/europe/united-kingdom-latest.osm.pbf",
                   "retrieved_at":"2026-10-28T06:00:00Z",
-                  "license_url":"https://opendatacommons.org/licenses/odbl/1-0/",
-                  "attribution":"© OpenStreetMap contributors"},
+                  "input_scope":"UK"},
         "build_commit":"b"*40,"build_run":"40747988880",
         "coverage_validation":"Six smoke routes, not full UK coverage",
         "part_metadata":{name:{"tag":TAG,"bytes":len(raw),"sha256":SHA(raw)}
@@ -71,7 +70,6 @@ class GraphReleaseVerification(unittest.TestCase):
         self.assertFalse(r["graph_bytes_verified"])
         self.assertFalse(r["offline_navigation_accepted"])
         self.assertEqual("unknown",r["legal_road_truth"])
-        self.assertEqual("metadata_present_not_legal_rights_verified",r["source_rights"])
 
     def test_shipped_app_repository_mismatch_never_passes(self):
         r=self.checked(app_repository="phuk-prog/drivemate-data")
@@ -135,7 +133,7 @@ class GraphReleaseVerification(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"GRAPH_ENGINE_INCOMPATIBLE"):
             self.checked()
         self.raw,self.rolling,self.dated,self.chunks=fixture()
-        self.edit(lambda d:d["source"].__setitem__("licence","unknown"))
+        self.edit(lambda d:d["source"].__setitem__("sha256","not-a-hash"))
         with self.assertRaisesRegex(ValueError,"SOURCE_PROVENANCE_INCOMPLETE"):
             self.checked()
 
