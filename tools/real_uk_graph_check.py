@@ -6,7 +6,7 @@ closed physical barriers prohibit passage. It does not infer real road
 legality, crossing elevation, routing suitability or national completeness.
 """
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 import hashlib
 import json
 from pathlib import Path
@@ -27,6 +27,97 @@ class Source(d.Reader):
             if tags.get("highway") in d.TURNING:
                 self.turning_and_closed.add(n.id)
         super().node(n)
+
+
+
+def audit_roundabouts(graph):
+    """Audit directed ring topology *as emitted*, never infer a legal exit.
+
+    A simple closed ring has exactly one tagged incoming/outgoing ring arc
+    at each node. Split OSM ways are allowed. Anything with open ends or
+    several ring branches is UNKNOWN, not automatically a broken road.
+    """
+    ring = [(a, b, wi) for a, b, *rest in graph["edges"]
+            for wi in [rest[4]] if graph["ways"][wi][1] & 1]
+    neighbours = defaultdict(set)
+    in_count = defaultdict(int)
+    out_count = defaultdict(int)
+    successors = {}
+    for a, b, wi in ring:
+        neighbours[a].add(b)
+        neighbours[b].add(a)
+        in_count[b] += 1
+        out_count[a] += 1
+        successors[a] = b
+
+    connected = []
+    unseen = set(neighbours)
+    while unseen:
+        start = min(unseen)
+        component = {start}
+        stack = [start]
+        unseen.remove(start)
+        while stack:
+            for next_node in neighbours[stack.pop()]:
+                if next_node in unseen:
+                    unseen.remove(next_node)
+                    component.add(next_node)
+                    stack.append(next_node)
+        connected.append(component)
+
+    complete = 0
+    multiway = 0
+    entry_exit_complete = 0
+    unknown = 0
+    entries_total = 0
+    exits_total = 0
+    samples = []
+    for component in connected:
+        arcs = [(a, b, wi) for a, b, wi in ring if a in component]
+        source_ways = {graph["ways"][wi][0] for _, _, wi in arcs}
+        approaches = [e for e in graph["edges"] if e[1] in component and
+                      e[0] not in component and not (graph["ways"][e[6]][1] & 1)]
+        departures = [e for e in graph["edges"] if e[0] in component and
+                      e[1] not in component and not (graph["ways"][e[6]][1] & 1)]
+        entries_total += len(approaches)
+        exits_total += len(departures)
+        simple = (len(component) >= 3 and len(arcs) == len(component) and
+                  all(in_count[n] == 1 and out_count[n] == 1 for n in component))
+        # Topology alone does not imply access permission or a lawful turn.
+        if simple:
+            complete += 1
+            multiway += len(source_ways) > 1
+            entry_exit_complete += bool(approaches and departures)
+        else:
+            unknown += 1
+        if len(samples) < 12:
+            samples.append({
+                "ring_osm_way_ids": sorted(source_ways)[:12],
+                "ring_osm_node_ids": sorted(graph["nodes"][n][2] for n in component)[:12],
+                "ring_arc_count": len(arcs),
+                "ring_nodes": len(component),
+                "entry_arcs": len(approaches),
+                "exit_arcs": len(departures),
+                "source_topology": "closed_simple_directed" if simple else "unknown_open_or_complex",
+                "exit_osm_node_ids_unordered": sorted({graph["nodes"][e[0]][2] for e in departures})[:12],
+            })
+    return {
+        "tagged_ring_directed_edges": len(ring),
+        "connected_ring_components": len(connected),
+        "complete_simple_rings": complete,
+        "multi_way_complete_rings": multiway,
+        "complete_rings_with_entries_and_exits": entry_exit_complete,
+        "incomplete_or_complex_components": unknown,
+        "entry_arcs": entries_total,
+        "exit_arcs": exits_total,
+        "examples": samples,
+        "errors": [],
+        "limits": [
+            "Only mapped directed roundabout/circular arcs; mini-roundabout nodes are not rings.",
+            "Incomplete or complex topology is UNKNOWN, not evidence of a defective roundabout.",
+            "App maneuver timing, turn legality, lane choice and physical exit numbers are not established.",
+        ],
+    }
 
 
 def verify(path):
@@ -111,7 +202,7 @@ def verify(path):
     return {
         "scope": "Actual Greater Manchester OSM extract; graph edges, directions, shared-node links and barrier through-bans only",
         "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        "road_ways": len(source.ways),
+        "road_ways": len(source.ways),\n        "roundabouts": roundabouts,\n        "mapped_roundabout_source_arcs": sum(ring_expected.values()),\n        "mapped_roundabout_graph_arcs": sum(ring_actual.values()),
         "graph_nodes": len(graph_nodes),
         "graph_edges": len(graph["edges"]),
         "oneway_directed_edges_checked": one_way_edges,
@@ -143,9 +234,9 @@ def main():
     a.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     for key in ("road_ways", "graph_nodes", "graph_edges", "oneway_directed_edges_checked",
                 "motorway_and_slip_edges_checked", "motorway_link_shared_node_count",
-                "closed_barrier_nodes_on_graph", "blocked_barrier_through_moves_checked"):
+                "closed_barrier_nodes_on_graph", "blocked_barrier_through_moves_checked"):\n        print(f"{key}: {report[key]}")
         print(f"{key}: {report[key]}")
-    print("Real UK road graph check:", report["result"])
+    print("Roundabouts:", json.dumps(report["roundabouts"], sort_keys=True))\n    print("Real UK road graph check:", report["result"])
     for error in report["bad_edges_or_transitions"]:
         print("::error::" + error)
     return 0 if report["result"] == "PASS" else 1
