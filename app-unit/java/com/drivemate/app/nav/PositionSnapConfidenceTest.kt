@@ -47,4 +47,12 @@ class PositionSnapConfidenceTest {
         assertEquals(PositionSnap.Target.ROUTE, choose(10.0, 2.0, 0.99))
         assertEquals(PositionSnap.Target.RAW, choose(Double.NaN, null, 0.9))
     }
+
+    @Test fun corruptRouteDistanceOrAccuracyCannotCauseAnotherRoadSnap() {
+        assertEquals(PositionSnap.Target.RAW, choose(Double.NaN, 2.0, 0.99))
+        assertEquals(PositionSnap.Target.RAW, choose(Double.POSITIVE_INFINITY, 2.0, 0.99))
+        assertEquals(PositionSnap.Target.RAW, choose(-1.0, 2.0, 0.99))
+        assertEquals(PositionSnap.Target.RAW, choose(50.0, 2.0, 0.99, accuracy = Double.NaN))
+        assertEquals(PositionSnap.Target.RAW, choose(50.0, 2.0, 0.99, accuracy = -2.0))
+    }
 }
