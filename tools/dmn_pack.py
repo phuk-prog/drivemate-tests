@@ -532,7 +532,7 @@ def main(argv=None):
             "nodes": len(graph["nodes"]), "ways": len(graph["ways"]), "edges": len(graph["edges"]),
             "banned_pairs": len(graph["bans"]), "sequences": len(graph["seqs"]), "uturn_nodes": len(graph["uturn"]),
             "writer": "drivemate-tests tools/dmn_pack.py"}
-    if graph["conditional_only_turns_conservatively_enforced"]:
+    if graph.get("conditional_only_turns_conservatively_enforced", 0):
         # Preserve binary identity of already-frozen packs with no such
         # restrictions. Only new affected packs need the explicit caveat.
         meta["conditional_only_turns_conservatively_enforced"] = graph["conditional_only_turns_conservatively_enforced"]
