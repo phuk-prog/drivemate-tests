@@ -5,7 +5,7 @@ import re
 from process_contract import manifest
 
 COMPONENTS = {
-    1:'LaneDb MapData UkJoin RoadGraphManifest VerifiedGraphAssembler Route RouteStep',
+    1:'LaneDb MapData UkJoin DmnPack DmnRouter Route RouteStep',
     2:'SessionTasks ApplicationContainer OperationStatus',
     3:'BackupManager BackupSchema SettingsRepository',
     4:'OfflineStorage RegionalMapDownloader MapPack',
@@ -22,7 +22,7 @@ COMPONENTS = {
     15:'RoadAlerts RoadAlertPolicy',
     16:'TrafficPolicies TrafficDetails NationalHighways',
     17:'Geocoder OfflineSearch',
-    18:'Router OfflineRouter RouteChoices',
+    18:'Router Dmn RouteChoices',
     19:'ArrivalPolicy ArrivalApproachInstruction',
     20:'SettingsSections',
     21:'PostDriveReview PostDriveController TripStore',
