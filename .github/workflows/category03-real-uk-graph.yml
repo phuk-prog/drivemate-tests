@@ -1,4 +1,4 @@
-name: Category 03.1 real Greater Manchester road graph
+name: Category 03 real Greater Manchester graph topology
 
 # Dedicated product check for real OSM node directions, barriers and slip-road
 # links. No UK rebuild, Android change or publication.
@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
     paths:
+      - tools/real_uk_graph_check.py
+      - .github/workflows/category03-real-uk-graph.yml
+  pull_request:
+    paths:
+      - tools/test_real_uk_graph_check.py
       - tools/real_uk_graph_check.py
       - .github/workflows/category03-real-uk-graph.yml
   workflow_dispatch:
@@ -26,6 +31,8 @@ jobs:
           python-version: '3.12'
       - name: Install OSM graph reader
         run: python3 -m pip install -q --disable-pip-version-check osmium==4.3.1
+      - name: Verify roundabout analyzer against real graph-shaped examples
+        run: python3 -m unittest tools.test_real_uk_graph_check -v
       - name: Download and authenticate real UK map extract
         run: |
           set -euo pipefail
