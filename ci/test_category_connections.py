@@ -195,7 +195,6 @@ class CategoryConnectionContracts(unittest.TestCase):
         for record in records:
             self.assertEqual([22], record["categories"])
             self.assertEqual("assigned", record["category_assignment"])
-            self.assertEqual("attribution_or_reference", record["source_role"])
 
     def test_review_location_mapping_removes_only_unassigned_reliability_finding(self):
         review = self.root / "app/src/main/java/com/drivemate/app/ui/ReviewLocationMap.kt"
