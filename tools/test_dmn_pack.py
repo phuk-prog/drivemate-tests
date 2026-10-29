@@ -151,6 +151,49 @@ class DmnPackTests(unittest.TestCase):
         reader.way(Way())
         self.assertEqual([], reader.ways, "no link between nodes 1 and 3 may be invented")
 
+    def test_via_way_only_and_no_restrictions_preserve_approach_context(self):
+        # A parser/writer fixture, not an assertion of actual UK traffic law.
+        def make_graph(kind):
+            nodes = "".join(
+                f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
+                for i in range(1, 10))
+            ways = [(100, [1, 2]), (200, [2, 3, 4]), (300, [4, 5]),
+                    (400, [2, 6]), (500, [3, 7]), (600, [4, 8]), (700, [9, 3])]
+            def way(wid, points):
+                refs = "".join(f'<nd ref="{n}"/>' for n in points)
+                oneway = '<tag k="oneway" v="yes"/>' if wid == 200 else ''
+                return f'<way id="{wid}" version="1">{refs}<tag k="highway" v="residential"/>{oneway}</way>'
+            rel = (f'<relation id="900" version="1">'
+                   '<member type="way" ref="100" role="from"/>'
+                   '<member type="way" ref="200" role="via"/>'
+                   '<member type="way" ref="300" role="to"/>'
+                   f'<tag k="type" v="restriction"/><tag k="restriction" v="{kind}"/></relation>')
+            xml = '<osm version="0.6">' + nodes + ''.join(way(*w) for w in ways) + rel + '</osm>'
+            with tempfile.TemporaryDirectory() as tmp:
+                source = Path(tmp) / 'via.osm'
+                source.write_text(xml)
+                return d.build(str(source))
+
+        def arcs(g):
+            return {(g["ways"][e[6]][0], g["nodes"][e[0]][2], g["nodes"][e[1]][2]): i
+                    for i, e in enumerate(g["edges"])}
+
+        only = make_graph("only_straight_on")
+        e = arcs(only)
+        a, v1, v2 = e[100, 1, 2], e[200, 2, 3], e[200, 3, 4]
+        self.assertIn((a, e[400, 2, 6]), only["bans"])
+        self.assertIn((a, v1, e[500, 3, 7]), only["seqs"])
+        self.assertIn((a, v1, v2, e[600, 4, 8]), only["seqs"])
+        self.assertNotIn((v1, e[500, 3, 7]), only["bans"],
+                         "other approaches must not inherit the restriction")
+        self.assertNotIn((e[700, 9, 3], e[500, 3, 7]), only["bans"])
+        self.assertNotIn((a, v1, v2, e[300, 4, 5]), only["seqs"])
+        no = make_graph("no_right_turn")
+        n = arcs(no)
+        self.assertIn((n[100, 1, 2], n[200, 2, 3], n[200, 3, 4], n[300, 4, 5]),
+                      no["seqs"])
+        self.assertNotIn((n[100, 1, 2], n[400, 2, 6]), no["bans"])
+
     def test_fixture_is_what_the_tool_writes_today(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'dmn-test.dmnpack'

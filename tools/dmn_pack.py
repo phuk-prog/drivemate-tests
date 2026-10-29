@@ -323,6 +323,45 @@ def build(path, tile=None, main_only=False):
                     if len(path) > 250:
                         break
 
+    # A single-via-road only_* restriction depends on its specified approach.
+    # Use context-prefixed forbidden sequences, not globally forbidden exits.
+    # Unresolved forks and chains too long for DMNPACK2 are not asserted.
+    for kind, frm, via_n, via_w, to in reader.restrictions:
+        if not (kind.startswith("only_") and not via_n and len(via_w) == 1):
+            continue
+        via = way_ix.get(via_w[0])
+        start_way = way_ix.get(frm)
+        if via is None or start_way is None or way_ix.get(to) is None:
+            continue
+        via_edges = set(way_edges.get(via, []))
+        for incoming in way_edges.get(start_way, []):
+            entry = edges[incoming][1]
+            at = entry
+            seen = {edges[incoming][0]}
+            path = [incoming]
+            for _ in range(253):
+                next_edges = [e for e in out_edges.get(at, [])
+                              if e in via_edges and edges[e][1] not in seen]
+                if len(next_edges) != 1:
+                    break
+                chosen = next_edges[0]
+                path.append(chosen)
+                seen.add(at)
+                at = edges[chosen][1]
+                allowed = leaving(to, at)
+                if not allowed:
+                    continue
+                if len(allowed) != 1 or len(path) + 1 > 255:
+                    break
+                bans.update((incoming, e) for e in out_edges.get(entry, []) if e != path[1])
+                for pos in range(1, len(path)):
+                    prefix = path[:pos + 1]
+                    keep = {path[pos + 1]} if pos + 1 < len(path) else set(allowed)
+                    for e in out_edges.get(edges[path[pos]][1], []):
+                        if e not in keep:
+                            seqs.add(tuple(prefix + [e]))
+                break
+
     # Only roads touching the tile are written; renumber what is kept.
     kept_edges = [i for i, e in enumerate(edges) if keep_way[e[6]]]
     if not kept_edges:
