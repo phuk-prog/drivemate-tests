@@ -4,6 +4,12 @@ name: Build signed APK
 # which waits for the owner's approval and only serves main. The APK is saved only inside an
 # AES-256 password-protected zip (password in the same environment). No debug APK is built.
 on:
+  # Explicit signed checkpoint request from main; this public repository never
+  # stores the keystore or an unencrypted downloadable APK.
+  push:
+    branches: [main]
+    paths:
+      - 'ci/apk-checkpoint-request.txt'
   workflow_dispatch:
     inputs:
       app_ref:
@@ -44,7 +50,8 @@ jobs:
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           GH_TOKEN: ${{ github.token }}
-          APP_REF: ${{ inputs.app_ref }}
+          # Push-triggered M01 build is pinned to the app revision already verified.
+          APP_REF: ${{ inputs.app_ref || '9673520e5b0f9003cb124a27536f7c13d158ca0c' }}
         run: |
           if [[ "$APP_REF" =~ ^[0-9a-f]{40}$ ]]; then sha="$APP_REF"
           else
