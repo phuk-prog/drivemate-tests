@@ -200,9 +200,12 @@ def verify(path):
         errors.append("no closed physical barrier nodes included in sampled road graph")
 
     return {
-        "scope": "Actual Greater Manchester OSM extract; graph edges, directions, shared-node links and barrier through-bans only",
+        "scope": "Actual Greater Manchester OSM extract; graph edges, directed roundabout rings, approaches/exits and barrier bans; source-based only",
         "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        "road_ways": len(source.ways),\n        "roundabouts": roundabouts,\n        "mapped_roundabout_source_arcs": sum(ring_expected.values()),\n        "mapped_roundabout_graph_arcs": sum(ring_actual.values()),
+        "road_ways": len(source.ways),
+        "roundabouts": roundabouts,
+        "mapped_roundabout_source_arcs": sum(ring_expected.values()),
+        "mapped_roundabout_graph_arcs": sum(ring_actual.values()),
         "graph_nodes": len(graph_nodes),
         "graph_edges": len(graph["edges"]),
         "oneway_directed_edges_checked": one_way_edges,
@@ -234,9 +237,11 @@ def main():
     a.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     for key in ("road_ways", "graph_nodes", "graph_edges", "oneway_directed_edges_checked",
                 "motorway_and_slip_edges_checked", "motorway_link_shared_node_count",
-                "closed_barrier_nodes_on_graph", "blocked_barrier_through_moves_checked"):\n        print(f"{key}: {report[key]}")
+                "closed_barrier_nodes_on_graph", "blocked_barrier_through_moves_checked"):
         print(f"{key}: {report[key]}")
-    print("Roundabouts:", json.dumps(report["roundabouts"], sort_keys=True))\n    print("Real UK road graph check:", report["result"])
+        print(f"{key}: {report[key]}")
+    print("Roundabouts:", json.dumps(report["roundabouts"], sort_keys=True))
+    print("Real UK road graph check:", report["result"])
     for error in report["bad_edges_or_transitions"]:
         print("::error::" + error)
     return 0 if report["result"] == "PASS" else 1
