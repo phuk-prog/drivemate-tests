@@ -365,6 +365,72 @@ def build(path, tile=None, main_only=False):
                             seqs.add(tuple(prefix + [e]))
                 break
 
+    # Ordered multiple-via-way turn relations. DMNPACK2 supports banned sequences
+    # but not a relation object or a clock, so encode only a UNIQUE directed
+    # from -> via[0] -> ... -> via[n] -> to chain. Never turn a restriction
+    # into a global exit ban: it applies to the specified approach alone.
+    # Ambiguous, disconnected, looping, or overlong chains remain UNKNOWN.
+    def multi_via_chains(frm, via_way_ids, to):
+        from_way = way_ix.get(frm)
+        via_ways = [way_ix.get(w) for w in via_way_ids]
+        if from_way is None or any(w is None for w in via_ways) or way_ix.get(to) is None:
+            return
+        for approach in way_edges.get(from_way, []):
+            complete = []
+            visits = 0
+            exceeded = False
+
+            def follow(path, stage, entered, seen):
+                nonlocal visits, exceeded
+                visits += 1
+                if visits > 8192:
+                    exceeded = True
+                    return
+                at = edges[path[-1]][1]
+                if entered and stage == len(via_ways) - 1:
+                    for finish in leaving(to, at):
+                        if len(path) < 255 and edges[finish][1] not in seen:
+                            complete.append(tuple(path + [finish]))
+                            if len(complete) > 1:
+                                return
+                if len(path) >= 254 or len(complete) > 1:
+                    return
+                for nxt in out_edges.get(at, []):
+                    endpoint = edges[nxt][1]
+                    if endpoint in seen:
+                        continue
+                    w = edges[nxt][6]
+                    if w == via_ways[stage]:
+                        follow(path + [nxt], stage, True, seen | {endpoint})
+                    elif entered and stage + 1 < len(via_ways) and w == via_ways[stage + 1]:
+                        follow(path + [nxt], stage + 1, True, seen | {endpoint})
+                    if exceeded or len(complete) > 1:
+                        return
+
+            follow([approach], 0, False, {edges[approach][0], edges[approach][1]})
+            if not exceeded and len(complete) == 1:
+                yield complete[0]
+
+    for kind, frm, via_n, via_w, to in reader.restrictions:
+        if via_n or len(via_w) < 2 or not (kind.startswith("no_") or kind.startswith("only_")):
+            continue
+        for chain in multi_via_chains(frm, via_w, to):
+            if kind.startswith("no_"):
+                seqs.add(chain)
+                continue
+            # "Only" forbids deviations after the specified incoming road;
+            # prefix every later ban with that approach and the via pieces.
+            first, second = chain[:2]
+            at = edges[first][1]
+            bans.update((first, e) for e in out_edges.get(at, []) if e != second)
+            for pos in range(1, len(chain) - 1):
+                prefix = chain[:pos + 1]
+                keep = chain[pos + 1]
+                at = edges[chain[pos]][1]
+                for e in out_edges.get(at, []):
+                    if e != keep:
+                        seqs.add(tuple(prefix + (e,)))
+
     # Only roads touching the tile are written; renumber what is kept.
     kept_edges = [i for i, e in enumerate(edges) if keep_way[e[6]]]
     if not kept_edges:

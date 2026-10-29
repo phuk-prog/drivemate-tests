@@ -207,6 +207,68 @@ class DmnPackTests(unittest.TestCase):
         self.assertFalse(time_only["seqs"])
 
 
+    def test_multi_via_way_restrictions_are_approach_specific(self):
+        # The ways are a connected two-via-road chain. Deviations are real
+        # directed side branches; a second approach joins at the middle.
+        def graph(kind, break_join=False):
+            nodes = "".join(
+                f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
+                for i in range(1, 15))
+            ways = [
+                (100, [1, 2]), (200, [2, 3, 4]),
+                (201, [14, 5, 6] if break_join else [4, 5, 6]),
+                (300, [6, 7]), (400, [2, 8]), (401, [3, 9]),
+                (402, [4, 10]), (403, [5, 11]), (404, [6, 12]),
+                (700, [13, 5]),
+            ]
+            def way(wid, refs):
+                nd = "".join(f'<nd ref="{n}"/>' for n in refs)
+                return (f'<way id="{wid}" version="1">{nd}'
+                        '<tag k="highway" v="residential"/><tag k="oneway" v="yes"/></way>')
+            relation = (
+                '<relation id="900" version="1">'
+                '<member type="way" ref="100" role="from"/>'
+                '<member type="way" ref="200" role="via"/>'
+                '<member type="way" ref="201" role="via"/>'
+                '<member type="way" ref="300" role="to"/>'
+                f'<tag k="type" v="restriction"/><tag k="restriction" v="{kind}"/>'
+                '</relation>')
+            with tempfile.TemporaryDirectory() as tmp:
+                src = Path(tmp) / "multi-via.osm"
+                src.write_text('<osm version="0.6">' + nodes +
+                               "".join(way(*w) for w in ways) + relation + '</osm>')
+                return d.build(str(src))
+
+        def arcs(g):
+            return {(g["ways"][e[6]][0], g["nodes"][e[0]][2], g["nodes"][e[1]][2]): i
+                    for i, e in enumerate(g["edges"])}
+
+        prohibited = graph("no_right_turn")
+        n = arcs(prohibited)
+        route = (n[100, 1, 2], n[200, 2, 3], n[200, 3, 4],
+                 n[201, 4, 5], n[201, 5, 6], n[300, 6, 7])
+        self.assertIn(route, prohibited["seqs"])
+        self.assertNotIn((n[100, 1, 2], n[400, 2, 8]), prohibited["bans"],
+                         "no_* through the full via chain must not ban other exits")
+
+        mandatory = graph("only_straight_on")
+        e = arcs(mandatory)
+        a, v1, v2, v3, v4, tail = (
+            e[100, 1, 2], e[200, 2, 3], e[200, 3, 4],
+            e[201, 4, 5], e[201, 5, 6], e[300, 6, 7])
+        self.assertIn((a, e[400, 2, 8]), mandatory["bans"])
+        self.assertIn((a, v1, e[401, 3, 9]), mandatory["seqs"])
+        self.assertIn((a, v1, v2, e[402, 4, 10]), mandatory["seqs"])
+        self.assertIn((a, v1, v2, v3, e[403, 5, 11]), mandatory["seqs"])
+        self.assertIn((a, v1, v2, v3, v4, e[404, 6, 12]), mandatory["seqs"])
+        self.assertNotIn((a, v1, v2, v3, v4, tail), mandatory["seqs"])
+        self.assertNotIn((e[700, 13, 5], e[403, 5, 11]), mandatory["bans"],
+                         "only_* is not a global prohibition on unrelated approaches")
+        self.assertTrue(all(q[0] == a for q in mandatory["seqs"]))
+        disconnected = graph("no_right_turn", break_join=True)
+        self.assertFalse(disconnected["seqs"], "missing join must remain unknown")
+        self.assertFalse(disconnected["bans"])
+
     def test_fixture_is_what_the_tool_writes_today(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'dmn-test.dmnpack'
