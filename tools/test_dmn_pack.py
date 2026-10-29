@@ -323,6 +323,45 @@ class DmnPackTests(unittest.TestCase):
         self.assertFalse(disconnected["seqs"], "missing join must remain unknown")
         self.assertFalse(disconnected["bans"])
 
+    def test_conditional_only_turn_bans_are_conservative_and_approach_specific(self):
+        # This fixture is not proof of legal clock/time interpretation.
+        # Simple timed bans must not become an always-allowed illegal turn.
+        def build(kind):
+            nodes = "".join(
+                f'<node id="{i}" version="1" lat="53.4" lon="{-2.2 + i * 0.001:.3f}"/>'
+                for i in range(1, 6))
+            ways = "".join(
+                f'<way id="{wid}" version="1"><nd ref="{a}"/><nd ref="{b}"/>'
+                '<tag k="highway" v="residential"/></way>'
+                for wid, a, b in [(100, 1, 2), (200, 2, 3), (300, 2, 4), (400, 5, 2)])
+            rel = ('<relation id="700" version="1">'
+                   '<member type="way" ref="100" role="from"/>'
+                   '<member type="node" ref="2" role="via"/>'
+                   '<member type="way" ref="200" role="to"/>'
+                   '<tag k="type" v="restriction"/>'
+                   f'<tag k="restriction:conditional" v="{kind} @ (Mo-Fr 08:00-09:00)"/>'
+                   '</relation>')
+            with tempfile.TemporaryDirectory() as tmp:
+                inp = Path(tmp) / "conditional.osm"
+                inp.write_text('<osm version="0.6">' + nodes + ways + rel + '</osm>')
+                return d.build(str(inp))
+        def directed(g):
+            return {(g["ways"][e[6]][0], g["nodes"][e[0]][2], g["nodes"][e[1]][2]): i
+                    for i, e in enumerate(g["edges"])}
+        no = build("no_right_turn")
+        e = directed(no)
+        self.assertIn((e[100, 1, 2], e[200, 2, 3]), no["bans"])
+        self.assertNotIn((e[400, 5, 2], e[200, 2, 3]), no["bans"])
+        self.assertEqual(1, no["conditional_only_turns_conservatively_enforced"])
+        only = build("only_straight_on")
+        e = directed(only)
+        self.assertIn((e[100, 1, 2], e[300, 2, 4]), only["bans"])
+        self.assertNotIn((e[100, 1, 2], e[200, 2, 3]), only["bans"])
+        self.assertEqual(1, only["conditional_only_turns_conservatively_enforced"])
+        unsupported = build("none")
+        self.assertFalse(unsupported["bans"])
+        self.assertEqual(0, unsupported["conditional_only_turns_conservatively_enforced"])
+
     def test_fixture_is_what_the_tool_writes_today(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'dmn-test.dmnpack'

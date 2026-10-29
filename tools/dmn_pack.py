@@ -168,6 +168,7 @@ class Reader(osmium.SimpleHandler):
         self.special = {}       # node id -> "barrier" | "turning"
         self.gates = {}         # node id -> (access, restricted) for the pieces either side
         self.restrictions = []  # (kind, from way, [via nodes], [via ways], to way)
+        self.conditional_only_enforced = 0  # conservative all-hours restriction; not a time-aware legal claim
 
     def node(self, n):
         tags = n.tags
@@ -205,9 +206,20 @@ class Reader(osmium.SimpleHandler):
         if tags.get("type") not in ("restriction", "restriction:motorcar"):
             return
         kind = tags.get("restriction:motorcar") or tags.get("restriction")
-        # A timed companion tag does not erase an unconditional restriction.
-        # Preserve the unconditional ban/only rule conservatively; interpreting
-        # conditional-only or time-specific exceptions needs verified time rules.
+        # A timed companion never erases a permanent restriction. For a
+        # conditional-only, simple no_*/only_* rule, apply the stated ban at
+        # all hours until the offline router supports verified local schedules.
+        # This may reject a legal off-hours shortcut, but cannot knowingly
+        # recommend a turn prohibited during the schedule. Mixed/ambiguous
+        # schedules remain unverified, never reported as legally resolved.
+        conservative_conditional = False
+        if not kind:
+            conditional = (tags.get("restriction:motorcar:conditional") or
+                           tags.get("restriction:conditional") or "")
+            match = re.fullmatch(r"\\s*(no_[a-z_]+|only_[a-z_]+)\\s*@\\s*\\([^;@]+\\)\\s*", conditional)
+            if match:
+                kind = match.group(1)
+                conservative_conditional = True
         if not kind or "motorcar" in tags.get("except", ""):
             return
         frm, to, via_n, via_w = None, None, [], []
@@ -220,6 +232,8 @@ class Reader(osmium.SimpleHandler):
                 (via_n if m.type == "n" else via_w).append(m.ref)
         if frm and to and frm > 0 and to > 0 and (via_n or via_w) and not (via_n and via_w):
             self.restrictions.append((kind, frm, via_n, via_w, to))
+            if conservative_conditional:
+                self.conditional_only_enforced += 1
 
 
 def build(path, tile=None, main_only=False):
@@ -468,6 +482,7 @@ def build(path, tile=None, main_only=False):
         "edges": [(new_node[edges[i][0]], new_node[edges[i][1]], edges[i][2], edges[i][3], edges[i][4],
                    edges[i][5], new_way[edges[i][6]], edges[i][7], edges[i][8]) for i in kept_edges],
         "bans": bans, "seqs": seqs, "uturn": uturn,
+        "conditional_only_turns_conservatively_enforced": reader.conditional_only_enforced,
     }
 
 
@@ -516,6 +531,8 @@ def main(argv=None):
     meta = {"format": FORMAT, "attribution": ATTRIBUTION, "source": a.source,
             "nodes": len(graph["nodes"]), "ways": len(graph["ways"]), "edges": len(graph["edges"]),
             "banned_pairs": len(graph["bans"]), "sequences": len(graph["seqs"]), "uturn_nodes": len(graph["uturn"]),
+            "conditional_only_turns_conservatively_enforced": graph["conditional_only_turns_conservatively_enforced"],
+            "time_dependent_turn_legality_verified": False,
             "writer": "drivemate-tests tools/dmn_pack.py"}
     if tile:
         meta["tile"] = tile
