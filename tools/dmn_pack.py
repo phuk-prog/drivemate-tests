@@ -153,16 +153,17 @@ class Reader(osmium.SimpleHandler):
 
     def node(self, n):
         tags = n.tags
+        # A closed physical barrier must win over a turning-circle tag on
+        # the same OSM node: a turning place never opens a blocked road.
+        plain = {t.k: t.v for t in tags} if "barrier" in tags else {}
+        if barrier_closed(plain):
+            self.special[n.id] = "barrier"
+            return
         if tags.get("highway") in TURNING:
             self.special[n.id] = "turning"
-        elif "barrier" in tags:
-            plain = {t.k: t.v for t in tags}
-            if barrier_closed(plain):
-                self.special[n.id] = "barrier"
-            else:
-                gate = gate_access(plain)
-                if gate:
-                    self.gates[n.id] = gate
+        gate = gate_access(plain)
+        if gate:
+            self.gates[n.id] = gate
 
     def way(self, w):
         highway = w.tags.get("highway")
@@ -170,7 +171,14 @@ class Reader(osmium.SimpleHandler):
             return
         if self.main_only and highway not in MAIN:
             return
-        nodes = [(n.ref, n.location.lat, n.location.lon) for n in w.nodes if n.location.valid()]
+        # Never join two valid points *across* a missing OSM node. Dropping
+        # just the missing ref would invent a road segment and possibly a
+        # false junction. Keep the incomplete way out of this graph.
+        nodes = []
+        for n in w.nodes:
+            if not n.location.valid():
+                return
+            nodes.append((n.ref, n.location.lat, n.location.lon))
         if len(nodes) >= 2:
             self.ways.append((w.id, {t.k: t.v for t in w.tags}, nodes))
 

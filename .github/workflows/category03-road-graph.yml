@@ -1,0 +1,30 @@
+name: Category 03.1 road graph safety checks
+
+# Runs only the existing DMN road-graph writer unit suite when graph behavior changes.
+# These cases test code behavior, not real-world legal road truth or Android acceptance.
+on:
+  pull_request:
+    paths:
+      - tools/dmn_pack.py
+      - tools/test_dmn_pack.py
+      - .github/workflows/category03-road-graph.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  road-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install road-pack OSM reader
+        run: python3 -m pip install --disable-pip-version-check -q osmium==4.3.1
+      - name: Check barriers, road directions, slip connections and grade crossings
+        run: python3 -m unittest tools.test_dmn_pack -v
