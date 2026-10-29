@@ -44,6 +44,113 @@ class DmnPackTests(unittest.TestCase):
         self.assertEqual((d.PROHIBITED, False), d.gate_access({'barrier': 'lift_gate', 'motor_vehicle': 'no'}))
         self.assertIsNone(d.gate_access({'barrier': 'gate', 'access': 'yes'}))
 
+    def test_closed_bollard_overrides_turning_circle_in_emitted_road_graph(self):
+        # A real DMNPACK graph must not let cars continue through a bollard,
+        # even if OSM also labels its node as a turning circle.
+        xml = """<?xml version="1.0"?>
+<osm version="0.6" generator="drivemate-test">
+  <node id="1" version="1" lat="53.400" lon="-2.200"/>
+  <node id="2" version="1" lat="53.400" lon="-2.199">
+    <tag k="highway" v="turning_circle"/><tag k="barrier" v="bollard"/>
+  </node>
+  <node id="3" version="1" lat="53.400" lon="-2.198"/>
+  <way id="101" version="1"><nd ref="1"/><nd ref="2"/><nd ref="3"/>
+    <tag k="highway" v="residential"/></way>
+</osm>
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "closed-barrier.osm"
+            source.write_text(xml)
+            graph = d.build(str(source))
+        nodes = {n[2]: i for i, n in enumerate(graph["nodes"])}
+        edges = graph["edges"]
+        mid = nodes[2]
+        approach = next(i for i, e in enumerate(edges) if e[0] == nodes[1] and e[1] == mid)
+        continuation = next(i for i, e in enumerate(edges) if e[0] == mid and e[1] == nodes[3])
+        self.assertIn((approach, continuation), graph["bans"])
+        self.assertIn(mid, graph["uturn"], "turning back before a bollard remains possible")
+
+    def test_motorway_links_and_reverse_oneway_join_only_by_shared_osm_node(self):
+        # Verify graph serialization input, not just the direction() helper:
+        # motorway and its slip road connect at node 2; reverse one-way is 5 -> 4.
+        xml = """<?xml version="1.0"?>
+<osm version="0.6" generator="drivemate-test">
+  <node id="1" version="1" lat="53.400" lon="-2.200"/>
+  <node id="2" version="1" lat="53.400" lon="-2.199"/>
+  <node id="3" version="1" lat="53.401" lon="-2.198"/>
+  <node id="4" version="1" lat="53.402" lon="-2.198"/>
+  <node id="5" version="1" lat="53.403" lon="-2.198"/>
+  <way id="101" version="1"><nd ref="1"/><nd ref="2"/><tag k="highway" v="motorway"/></way>
+  <way id="102" version="1"><nd ref="2"/><nd ref="3"/><tag k="highway" v="motorway_link"/></way>
+  <way id="103" version="1"><nd ref="3"/><nd ref="4"/><tag k="highway" v="primary"/></way>
+  <way id="104" version="1"><nd ref="4"/><nd ref="5"/>
+    <tag k="highway" v="primary"/><tag k="oneway" v="-1"/></way>
+</osm>
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "motorway.osm"
+            source.write_text(xml)
+            graph = d.build(str(source))
+        nodes = {n[2]: i for i, n in enumerate(graph["nodes"])}
+        ways = {w[0]: i for i, w in enumerate(graph["ways"])}
+        segments = {(graph["ways"][e[6]][0], graph["nodes"][e[0]][2],
+                     graph["nodes"][e[1]][2]) for e in graph["edges"]}
+        self.assertIn((101, 1, 2), segments)
+        self.assertIn((102, 2, 3), segments)
+        self.assertIn((103, 3, 4), segments)
+        self.assertIn((103, 4, 3), segments)
+        self.assertIn((104, 5, 4), segments)
+        self.assertNotIn((101, 2, 1), segments)
+        self.assertNotIn((102, 3, 2), segments)
+        self.assertNotIn((104, 4, 5), segments)
+        self.assertEqual({1, 2, 3, 4, 5}, set(nodes))
+        self.assertEqual({101, 102, 103, 104}, set(ways))
+
+    def test_grade_separated_crossing_with_distinct_ids_does_not_connect(self):
+        # Coordinate overlap is not a node connection: bridges and underpasses
+        # remain disconnected unless they actually share a referenced OSM node.
+        xml = """<?xml version="1.0"?>
+<osm version="0.6" generator="drivemate-test">
+  <node id="1" version="1" lat="53.400" lon="-2.200"/>
+  <node id="2" version="1" lat="53.401" lon="-2.199"/>
+  <node id="3" version="1" lat="53.401" lon="-2.199"/>
+  <node id="4" version="1" lat="53.402" lon="-2.198"/>
+  <way id="201" version="1"><nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="primary"/><tag k="bridge" v="yes"/><tag k="layer" v="1"/></way>
+  <way id="202" version="1"><nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="secondary"/><tag k="tunnel" v="yes"/><tag k="layer" v="-1"/></way>
+</osm>
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "crossing.osm"
+            source.write_text(xml)
+            graph = d.build(str(source))
+        self.assertEqual({1, 2, 3, 4}, {n[2] for n in graph["nodes"]})
+        self.assertEqual(4, len(graph["edges"]))
+        self.assertFalse(any(graph["ways"][a[6]][0] != graph["ways"][b[6]][0]
+                             and a[1] == b[0] for a in graph["edges"] for b in graph["edges"]))
+
+    def test_missing_way_node_does_not_create_teleporting_road_segment(self):
+        class Location:
+            def __init__(self, ok, lat=53.400, lon=-2.200):
+                self.ok, self.lat, self.lon = ok, lat, lon
+
+            def valid(self):
+                return self.ok
+
+        class Ref:
+            def __init__(self, ident, ok):
+                self.ref, self.location = ident, Location(ok)
+
+        class Way:
+            id = 301
+            tags = {"highway": "residential"}
+            nodes = [Ref(1, True), Ref(2, False), Ref(3, True)]
+
+        reader = d.Reader(False)
+        reader.way(Way())
+        self.assertEqual([], reader.ways, "no link between nodes 1 and 3 may be invented")
+
     def test_fixture_is_what_the_tool_writes_today(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'dmn-test.dmnpack'
