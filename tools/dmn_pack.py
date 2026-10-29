@@ -216,7 +216,7 @@ class Reader(osmium.SimpleHandler):
         if not kind:
             conditional = (tags.get("restriction:motorcar:conditional") or
                            tags.get("restriction:conditional") or "")
-            match = re.fullmatch(r"\\s*(no_[a-z_]+|only_[a-z_]+)\\s*@\\s*\\([^;@]+\\)\\s*", conditional)
+            match = re.fullmatch(r"\s*(no_[a-z_]+|only_[a-z_]+)\s*@\s*\([^;@]+\)\s*", conditional)
             if match:
                 kind = match.group(1)
                 conservative_conditional = True
