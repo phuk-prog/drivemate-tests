@@ -108,6 +108,16 @@ jobs:
             python3 ci/prepare_stockport_live_test.py \
               --output app-src/app/src/androidTest/assets/stockport-live-region.json
           fi
+      - name: Stage SHA-verified public world overview candidate for six-continent MapLibre test
+        # Exact real PMTiles from upstream map CI: no production world map is claimed.
+        if: steps.install.outputs.has_screen == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if find app-src/app/src/androidTest/java -name WorldOverviewCandidateScreenTest.kt | grep -q .; then
+            python3 ci/prepare_world_overview_candidate.py app-src
+          fi
       - name: Stage authentic four-nation DMN road pieces for Android install/route checks
         # Four authentic tiles; controlled TLS installer/route smoke, not whole-UK or speech proof.
         if: steps.install.outputs.has_screen == 'true'
