@@ -32,7 +32,8 @@ class M03ArrowJunctionCapTest {
         val arrow = ArrowPredictor()
         arrow.onFix(1_000_000_000L, 90.0, 10.0, -4.0, true, maxAlong = 105.0)
         assertEquals(102.0, arrow.alongAt(3_000_000_000L)!!, 0.001)
-        assertEquals(102.5, arrow.alongAt(3_500_000_000L)!!, 0.001)
+        // MAX_SECONDS is two seconds: braking never extends extrapolation past that boundary.
+        assertEquals(102.0, arrow.alongAt(3_500_000_000L)!!, 0.001)
     }
 
     @Test fun invalidBoundaryFailsClosedAndUnusableSpeedCannotMoveArrow() {

@@ -373,4 +373,81 @@ class PublishedDmnStockportSourceTest {
         actualDmnRouteUsesInstalledOrBundledGraph(false)
     }
 
+
+    /**
+     * M03 real-geometry replay. Positions and adjacent ways are read from the actual
+     * published Stockport DMNPACK2 bytes, not hand-drawn or asserted road-law facts.
+     * An intersection shared by two allowed ways is ambiguous without travel heading.
+     * Slip-road midpoints must never be confidently reported as a *different* way.
+     */
+    @Test fun publishedStockportGraphRefusesAmbiguousRoadAndWrongSlipWay() {
+        val index = JSONObject(instrumentation.context.assets.open("cat1-dmn-stockport-index.json")
+            .bufferedReader().use { it.readText() })
+        val piece = index.getJSONObject("tiles").getJSONObject("213_-9")
+        val bytes = instrumentation.context.assets.open("cat1-dmn-stockport-piece.dmnpack")
+            .use { it.readBytes() }
+        assertEquals(piece.getLong("bytes"), bytes.size.toLong())
+        assertEquals(piece.getString("sha256"), MessageDigest.getInstance("SHA-256")
+            .digest(bytes).joinToString("") { "%02x".format(it) })
+        val graph = bytes.inputStream().use { DmnPack.read(it) }
+        val router = com.drivemate.app.dmn.DmnRouter(graph)
+
+        var junction = -1
+        for (node in 0 until graph.nodeCount) {
+            var firstWay = -1
+            for (i in graph.outStart[node] until graph.outStart[node + 1]) {
+                val edge = graph.outEdges[i]
+                if (graph.access[edge].toInt() != 0) continue
+                val way = graph.way[edge]
+                if (firstWay == -1) firstWay = way
+                else if (firstWay != way) { junction = node; break }
+            }
+            if (junction >= 0) break
+        }
+        assertTrue("Published Stockport graph has no shared traversable junction", junction >= 0)
+        val junctionFix = LatLon(graph.lat[junction], graph.lon[junction])
+        val started = android.os.SystemClock.elapsedRealtimeNanos()
+        assertNull("Two genuine adjacent ways must remain unknown without bearing",
+            router.snapForMatch(junctionFix, null, 10.0))
+        assertNotNull("Observational uncertainty must not disable endpoint planning",
+            router.snap(junctionFix, null))
+        assertNull("Malformed GPS accuracy must never assert a real road",
+            router.snapForMatch(junctionFix, null, Double.NaN))
+
+        val slips = (0 until graph.edgeCount).asSequence().filter { e ->
+            graph.access[e].toInt() == 0 && graph.metres[e] >= 6f &&
+                graph.wayHighway[graph.way[e]].endsWith("_link")
+        }.take(5).toList()
+        var confidentlyMatchedLinks = 0
+        for (edge in slips) {
+            val from = graph.from[edge]
+            val to = graph.to[edge]
+            val a = LatLon(graph.lat[from], graph.lon[from])
+            val b = LatLon(graph.lat[to], graph.lon[to])
+            val midpoint = LatLon((a.lat + b.lat) / 2, (a.lon + b.lon) / 2)
+            val heading = com.drivemate.app.nav.Geo.bearing(a, b).toFloat()
+            val observed = router.snapForMatch(midpoint, heading, 5.0)
+            if (observed != null) {
+                assertEquals("A real published slip must not be matched to a different OSM way",
+                    graph.wayId[graph.way[edge]], graph.wayId[graph.way[observed]])
+                confidentlyMatchedLinks++
+            }
+        }
+        val elapsedMs = (android.os.SystemClock.elapsedRealtimeNanos() - started) / 1_000_000
+        val receipt = JSONObject().put("schema", 1)
+            .put("scope", "m03_stockport_published_graph_junction_and_slip_samples")
+            .put("published_release", index.optString("release"))
+            .put("source_sha256", piece.getString("sha256"))
+            .put("graph_edges", graph.edgeCount)
+            .put("real_junction_node", graph.nodeId[junction])
+            .put("real_junction_unknown", true)
+            .put("sampled_slip_edges", slips.size)
+            .put("confident_slip_matches", confidentlyMatchedLinks)
+            .put("sample_elapsed_ms", elapsedMs)
+            .put("independent_legal_truth_verified", false)
+            .put("physical_gps_replay_verified", false)
+        File(File(requireNotNull(app.externalMediaDirs.firstOrNull()), "additional_test_output")
+            .apply { mkdirs() }, "m03-published-stockport-gps-match.json").writeText(receipt.toString())
+    }
+
 }
