@@ -64,6 +64,22 @@ class LaneGuidanceDecisionsTest {
         assertEquals(LanePresentationStatus.SOURCE_UNKNOWN, status.of(false, true, true, true))
     }
 
+    @Test fun m05_liveClosureMustNotRecommendAnUnusableLane() {
+        val layout = listOf(
+            Lane(listOf("left"), true),
+            Lane(listOf("straight"), true),
+        )
+        val oneClosed = requireNotNull(LanePolicy.afterLiveClosures(layout, setOf(0)))
+        assertTrue(oneClosed[0].closed)
+        assertEquals(listOf(1), LanePolicy.usable(oneClosed))
+        assertNull("No usable lanes means no recommended lane strip",
+            LanePolicy.afterLiveClosures(layout, setOf(0, 1)))
+        assertNull("Out-of-range source closure count must not invent advice",
+            LanePolicy.afterLiveClosures(layout, setOf(5)))
+        assertEquals(LanePresentationStatus.RESTRICTIONS_BLOCKED,
+            LanePresentationStatus.of(true, true, true, true, false))
+    }
+
     @Test fun q3_2_3_10_allUsableLanesRemainWithDistinctPreference() {
         val lanes = listOf(lane(false), lane(preferred = false), lane(preferred = true))
         assertEquals(listOf(1, 2), LanePolicy.usable(lanes))
