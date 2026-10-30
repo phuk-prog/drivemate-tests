@@ -129,10 +129,10 @@ class PublishedLanePipelineScreenTest {
         val geo = source.getJSONArray("g")
         val start = geo.getJSONArray(1).let { LatLon(it.getDouble(1), it.getDouble(0)) }
         val decision = geo.getJSONArray(2).let { LatLon(it.getDouble(1), it.getDouble(0)) }
-        val bearing = Geo.bearing(start, decision)
+        val approachBearing = Geo.bearing(start, decision)
         val length = Geo.distance(start, decision)
         assertTrue("Source approach must provide enough actual geometry for pre-turn lookup", length > 40.0)
-        val destination = Geo.offset(decision, (bearing + 270.0) % 360.0, 125.0)
+        val destination = Geo.offset(decision, (approachBearing + 270.0) % 360.0, 125.0)
         val route = Route(
             listOf(start, decision, destination), length + 125.0, 45.0,
             listOf(
@@ -172,7 +172,7 @@ class PublishedLanePipelineScreenTest {
                 val at = Geo.interpolate(start, decision, 0.35)
                 val gps = Location("gps").apply {
                     latitude = at.lat; longitude = at.lon
-                    accuracy = 3f; speed = 5f; bearing = bearing.toFloat()
+                    accuracy = 3f; speed = 5f; bearing = approachBearing.toFloat()
                     time = System.currentTimeMillis()
                     elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
                 }
