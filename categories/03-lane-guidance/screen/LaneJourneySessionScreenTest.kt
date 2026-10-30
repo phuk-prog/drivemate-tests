@@ -142,10 +142,18 @@ class LaneJourneySessionScreenTest {
                     List(third.route.points.size - 1) { 30.0 * 1.609344 }
                 call(session, "setPositionReliable", true)
                 assertStrip(session, third.start, emptyList(), "outside new route onset")
-                call(session, "setPositionReliable", false)
-                assertEquals("Lost measured location must immediately invalidate lane visibility diagnostics",
+                assertStrip(session, Geo.offset(third.start, 0.0, 290.0), listOf(0, 1),
+                    "new-route eligible lane approach before location loss")
+                // Exercise the REAL reliability update, not Kotlin's reflective
+                // setPositionReliable property setter which does not run the UI invalidation.
+                // A NavigationSession without a trusted tracker fix must clear live lane claims.
+                call(session, "updatePositionReliability")
+                assertFalse("Untrusted tracker status must revoke lane reliability", session.positionReliable)
+                assertEquals("Loss of trusted measured position must invalidate visible lane status",
                     com.drivemate.app.nav.LanePresentationStatus.POSITION_UNCERTAIN,
                     session.lanePresentationStatus)
+                assertTrue("Any previously visible strip must be removed after GPS becomes unreliable",
+                    session.nav?.lanes.orEmpty().isEmpty())
             }
         } finally { compose.runOnIdle { session.close() } }
     }
