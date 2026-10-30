@@ -187,6 +187,22 @@ class TurnByTurnDecisionsTest {
         assertTrue("walking pace: the window never drops below 30 s at 8 m/s (240 m)", thenShown(200.0, 1.0))
     }
 
+    /** M04: a zero-length second provider step at the same junction is not a second turn. */
+    @Test fun m04_thenDoesNotRepeatTheSameJunction() {
+        val base = testRoute()
+        val steps = listOf(
+            RouteStep("Head out on Mill Lane", "depart", "", "Mill Lane", 800.0, road(0.0)),
+            RouteStep("Turn right onto Station Road", "turn", "right", "Station Road", 0.0, road(800.0)),
+            RouteStep("Turn left onto Station Road", "turn", "left", "Station Road", 400.0, road(800.0)),
+            RouteStep("You have arrived", "arrive", "", "", 0.0, road(800.0, 400.0)),
+        )
+        val engine = NavigationEngine(Route(base.points, 1_200.0, 120.0, steps, "synthetic"))
+        engine.update(road(740.0), 0.0, 3.0)
+        val progress = engine.update(road(750.0), 0.0, 3.0)
+        assertEquals(1, progress.nextStep)
+        assertNull("Do not show 'Then' at the exact same physical junction", progress.thenStep)
+    }
+
     /** 1.12: side of the road when known, "ahead" when not. */
     @Test fun q1_12_destination() {
         assertEquals("Destination on the left", arrivalApproachInstruction("arrive", "left"))
