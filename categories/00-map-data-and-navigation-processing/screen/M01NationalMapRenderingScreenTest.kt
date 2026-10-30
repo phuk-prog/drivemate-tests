@@ -11,6 +11,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.drivemate.app.data.MapLayout
+import com.drivemate.app.data.Http
+import com.drivemate.app.data.MapReleaseSource
+import com.drivemate.app.data.UkJoin
 import com.drivemate.app.data.MapPack
 import com.drivemate.app.data.OwnMap
 import org.junit.Assert.assertTrue
@@ -46,9 +49,12 @@ class M01NationalMapRenderingScreenTest {
     )
     private val roads = arrayOf("road-primary", "road-secondary", "road-tertiary",
         "road-minor", "road-service", "road-trunk", "road-motorway")
-    private val release = "map-data-ukmap-r40883954274-a1"
-    private val pmtiles = "pmtiles://https://github.com/phuk-prog/drivemate-map/releases/download/" +
-        "$release/drivemate-v1.pmtiles"
+    private fun publishedPmtilesUrl(): String {
+        val base = MapReleaseSource.requireBase()
+        val pointer = Http.getBounded("$base/${UkJoin.MAP_POINTER}", 1024 * 1024, 10_000)
+        val map = UkJoin.map(pointer)
+        return "pmtiles://$base/${map.tag}/${MapLayout.OWN.archive}"
+    }
 
     @Test fun publishedOnePieceUkMapRendersRoadsInAllFourNations() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
@@ -60,7 +66,7 @@ class M01NationalMapRenderingScreenTest {
         val renderedFrames = AtomicLong()
         try {
             val style = OwnMap.prepare(OwnMap.appStyle(false, MapLayout.OWN),
-                pmtiles, null).toString()
+                publishedPmtilesUrl(), null).toString()
             compose.setContent {
                 AndroidView(modifier = Modifier.fillMaxSize().testTag("m01-uk-map"),
                     factory = { appContext ->
