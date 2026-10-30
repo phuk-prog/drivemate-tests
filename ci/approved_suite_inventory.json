@@ -19,7 +19,7 @@
     "app-unit/java/com/drivemate/app/dmn/UnmarkedRoundaboutTest.kt": "0ba7b350b5d2bb873bd3bedb00a95582bc5833a5",
     "app-unit/java/com/drivemate/app/map/JourneyMapLookTest.kt": "824e5a1b0eb6bbc5935cf8f9d8987743b2f85f00",
     "app-unit/java/com/drivemate/app/map/JourneyMotionAndRoadsTest.kt": "ba354b68650ff13b04356172de01b9217e8b5a88",
-    "app-unit/java/com/drivemate/app/map/LocationComponentPermissionPolicyTest.kt": "b6d9ff566a2eec86ff0f8ed1dea446f5590160c7",
+    "app-unit/java/com/drivemate/app/map/LocationComponentPermissionPolicyTest.kt": "846b312206843c6a37d71fa6401295557d58831b",
     "app-unit/java/com/drivemate/app/map/MapRequestLogTest.kt": "da564afa2493750391f6729a03d5e3ccc1fdf68f",
     "app-unit/java/com/drivemate/app/nav/GpsGapProgressPolicyTest.kt": "7e0ca17a4594562afe310f858a2c4519aad93b19",
     "app-unit/java/com/drivemate/app/nav/ImmersiveMapTest.kt": "8b83d4d32c4e3d1de4eabfd6db1b572637ae1118",
