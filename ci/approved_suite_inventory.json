@@ -23,6 +23,7 @@
     "app-unit/java/com/drivemate/app/nav/GpsGapProgressPolicyTest.kt": "7e0ca17a4594562afe310f858a2c4519aad93b19",
     "app-unit/java/com/drivemate/app/nav/ImmersiveMapTest.kt": "8b83d4d32c4e3d1de4eabfd6db1b572637ae1118",
     "app-unit/java/com/drivemate/app/nav/LaneTimingTest.kt": "dba0b15f2c8b716aad3ee984b95221b115ef0772",
+    "app-unit/java/com/drivemate/app/nav/M03ArrowJunctionCapTest.kt": "fd17d0f03c3431d9a8ba9bb7bd25a23a1b7c3282",
     "app-unit/java/com/drivemate/app/nav/ParkedFixAgeTest.kt": "005e82c9f93d46819cbf32a1d9e1b578470edf84",
     "app-unit/java/com/drivemate/app/nav/PositionSnapConfidenceTest.kt": "3be447b4518fc55b6120a40ee0c5f82189f998cb",
     "app-unit/java/com/drivemate/app/nav/PositionUncertaintyTest.kt": "530cbd23d98b83da188ca259f96b41edc1eca92e",
