@@ -41,7 +41,7 @@
     "categories/02-voice-and-sound/screen/RoundaboutNextExitScreenTest.kt": "3b6df35b8ba2b479a110f2cd7bfc0091dd089c28",
     "categories/03-lane-guidance/decisions/LaneConnectivityDecisionsTest.kt": "3b0b74b14ed1e48c55e794ac2b76cf86da4a2807",
     "categories/03-lane-guidance/decisions/LaneContinuityAcceptanceTest.kt": "7490ed934615c38ca19528c12ecb0d9b79ab7092",
-    "categories/03-lane-guidance/decisions/LaneGuidanceDecisionsTest.kt": "78dc13cf2abf1eee2c8b190f568ad212c91e7bc2",
+    "categories/03-lane-guidance/decisions/LaneGuidanceDecisionsTest.kt": "332f05a54f3f3513f61eeb89f13bf831554911c6",
     "categories/03-lane-guidance/decisions/LaneSourceDecisionsTest.kt": "6f1e66a1ac5ffc876f7e039c34f473bbd87d3543",
     "categories/03-lane-guidance/decisions/LaneSpeechInterruptionAcceptanceTest.kt": "ac41f870f91c73b78f5fc5a5262f80433a111080",
     "categories/03-lane-guidance/decisions/LaneStorageDecisionsTest.kt": "89b30a17a428815f7d033b7326febaf50f2c446f",
