@@ -6,6 +6,7 @@ import com.drivemate.app.data.RoadAlerts
 import com.drivemate.app.data.Route
 import com.drivemate.app.data.RouteStep
 import com.drivemate.app.nav.BackgroundGuidance
+import com.drivemate.app.nav.Geo
 import com.drivemate.app.nav.Format
 import com.drivemate.app.nav.LaneTiming
 import com.drivemate.app.nav.LatLon
@@ -152,6 +153,49 @@ class TurnByTurnDecisionsTest {
         assertEquals("unconfirmed next: retain ordinal", "Take the 2nd exit onto Station Road",
             roundaboutCirculationInstruction(2, 50.0, "Station Road"))
         assertEquals("unknown exit: never an ordinal", "Take the exit", roundaboutCirculationInstruction(0, 200.0, ""))
+    }
+
+    /**
+     * M04 synthetic clockwise UK ring followed by a genuine second street turn.
+     * Asserts the active manoeuvre stays the roundabout throughout circulation and
+     * changes to the street turn only after source-backed exit passage confirmation.
+     * This geometry fixture is not independent legal evidence for Pyramid/Yew Street.
+     */
+    @Test fun m04RingInstructionDoesNotSwitchToFollowingStreetBeforeExit() {
+        val centre = LatLon(53.409, -2.174)
+        val entry = Geo.offset(centre, 180.0, 35.0)
+        val approach = Geo.offset(entry, 180.0, 95.0)
+        val arrivalAtRing = (0..10).map { Geo.interpolate(approach, entry, it / 10.0) }
+        val ring = (1..8).map { Geo.offset(centre, 180.0 + it * 22.5, 35.0) }
+        val leave = ring.last()
+        val exitRoad = (1..6).map { Geo.offset(leave, 0.0, it * 10.0) }
+        val nextTurn = exitRoad.last()
+        val finalRoad = (1..10).map { Geo.offset(nextTurn, 90.0, it * 10.0) }
+        val points = arrivalAtRing + ring + exitRoad + finalRoad
+        fun through(i: Int) = (1..i).sumOf { Geo.distance(points[it - 1], points[it]) }
+        val ringStart = through(arrivalAtRing.lastIndex)
+        val nextTurnAt = through(arrivalAtRing.size + ring.size + exitRoad.size - 1)
+        val total = through(points.lastIndex)
+        val steps = listOf(
+            RouteStep("Head out", "depart", "", "Approach Road", ringStart, approach),
+            RouteStep("At roundabout, take 2nd exit", "roundabout", "", "Exit Road",
+                nextTurnAt - ringStart, entry, exit = 2, leftDriving = true),
+            RouteStep("Turn right onto Following Street", "turn", "right", "Following Street",
+                total - nextTurnAt, nextTurn, leftDriving = true),
+            RouteStep("Arrive", "arrive", "", "", 0.0, points.last()),
+        )
+        val engine = NavigationEngine(Route(points, total, 90.0, steps, "synthetic"))
+        for (p in points.subList(arrivalAtRing.size, arrivalAtRing.size + 6)) {
+            val progress = engine.update(p, speed = 5.0, accuracy = 5.0)
+            assertEquals("Following street must not become active while circulating", 1, progress.nextStep)
+            assertTrue("Keep the roundabout banner on the ring", progress.onRoundabout)
+        }
+        val beyondExit = points.drop(arrivalAtRing.size + ring.size + 2).take(3)
+        var progress = engine.update(beyondExit[0], speed = 5.0, accuracy = 5.0)
+        progress = engine.update(beyondExit[1], speed = 5.0, accuracy = 5.0)
+        progress = engine.update(beyondExit[2], speed = 5.0, accuracy = 5.0)
+        assertEquals("Following street becomes active after confirmed exit passage", 2, progress.nextStep)
+        assertFalse("No false roundabout circulation after verified exit", progress.onRoundabout)
     }
 
     /** M04: when a graph has no defensible exit geometry, do not assume 120 m into the ring. */
