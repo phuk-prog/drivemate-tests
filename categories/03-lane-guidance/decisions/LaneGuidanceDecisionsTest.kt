@@ -3,6 +3,7 @@ package com.drivemate.tests.cat03
 import com.drivemate.app.data.Lane
 import com.drivemate.app.data.VoiceCommand
 import com.drivemate.app.nav.LaneDisplay
+import com.drivemate.app.nav.LanePresentationStatus
 import com.drivemate.app.nav.LanePolicy
 import com.drivemate.app.nav.LaneTiming
 import org.junit.Assert.*
@@ -35,6 +36,50 @@ class LaneGuidanceDecisionsTest {
         assertFalse(LanePolicy.inScope(true, 3, false))
         assertTrue(LanePolicy.inScope(true, 3, true))
     }
+    @Test fun m05_passedJunctionNeverRevivesOldLaneAdviceAfterGpsBacktrack() {
+        val display = LaneDisplay()
+        val onset = { 250.0 }
+        assertTrue(display.due("route-a", "junction-a", 130.0, onset))
+        assertFalse("A confirmed passed decision must clear its strip",
+            display.due("route-a", "junction-a", -2.0, onset))
+        assertFalse("Backtracking must not resurrect the already-passed lane strip",
+            display.due("route-a", "junction-a", 15.0, onset))
+        assertTrue("A distinct following decision can show sourced arrows",
+            display.due("route-a", "junction-b", 80.0, onset))
+        assertTrue("An actual replacement route starts with a fresh decision",
+            display.due("route-b", "junction-a", 120.0, onset))
+        display.clear()
+        assertTrue("Explicit navigation restart can re-arm the same decision",
+            display.due("route-a", "junction-a", 100.0, onset))
+    }
+
+    @Test fun m05_lanePresentationExplainsWhichGateSuppressedARealStrip() {
+        val status = LanePresentationStatus.Companion
+        assertEquals(LanePresentationStatus.SOURCE_UNKNOWN, status.of(false, false, false, false))
+        assertEquals(LanePresentationStatus.OUTSIDE_SCOPE, status.of(true, false, true, true))
+        assertEquals(LanePresentationStatus.BEFORE_APPROACH_WINDOW, status.of(true, true, false, true))
+        assertEquals(LanePresentationStatus.POSITION_UNCERTAIN, status.of(true, true, true, false))
+        assertEquals(LanePresentationStatus.VISIBLE, status.of(true, true, true, true))
+        // An unknown source must never be turned into a lane suggestion by a good GPS fix.
+        assertEquals(LanePresentationStatus.SOURCE_UNKNOWN, status.of(false, true, true, true))
+    }
+
+    @Test fun m05_liveClosureMustNotRecommendAnUnusableLane() {
+        val layout = listOf(
+            Lane(listOf("left"), true),
+            Lane(listOf("straight"), true),
+        )
+        val oneClosed = requireNotNull(LanePolicy.afterLiveClosures(layout, setOf(0)))
+        assertTrue(oneClosed[0].closed)
+        assertEquals(listOf(1), LanePolicy.usable(oneClosed))
+        assertNull("No usable lanes means no recommended lane strip",
+            LanePolicy.afterLiveClosures(layout, setOf(0, 1)))
+        assertNull("Out-of-range source closure count must not invent advice",
+            LanePolicy.afterLiveClosures(layout, setOf(5)))
+        assertEquals(LanePresentationStatus.RESTRICTIONS_BLOCKED,
+            LanePresentationStatus.of(true, true, true, true, false))
+    }
+
     @Test fun q3_2_3_10_allUsableLanesRemainWithDistinctPreference() {
         val lanes = listOf(lane(false), lane(preferred = false), lane(preferred = true))
         assertEquals(listOf(1, 2), LanePolicy.usable(lanes))

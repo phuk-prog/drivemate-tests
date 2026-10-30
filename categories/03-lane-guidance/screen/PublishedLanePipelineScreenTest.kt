@@ -108,6 +108,101 @@ class PublishedLanePipelineScreenTest {
             compose.runOnIdle { session.close(); OwnMap.trimMemory() }
         }
     }
+    /**
+     * Published Manchester lane arrows -> production LaneDb -> real NavigationSession gating
+     * -> actually rendered LaneRow. The outgoing left branch is a CONTROLLED TEST FIXTURE,
+     * not independently verified road connectivity or legal lane advice. This closes a
+     * source-to-screen testing gap without claiming a real road-law acceptance.
+     */
+    @Test fun publishedManchesterArrowSourceReachesNavigatingSessionAndVisibleLaneStrip() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val app = instrumentation.targetContext.applicationContext as Application
+        val raw = instrumentation.context.assets.open("cat3-published-manchester-lanes-3.json")
+            .bufferedReader().use { it.readText() }
+        val root = JSONObject(raw)
+        assertEquals("dcaff102f855531e6bce98b77d8a2068684296590f20c032240a4eb8521e5685",
+            root.getString("source_sha256"))
+        val ways = root.getJSONArray("ways")
+        val source = (0 until ways.length()).map { ways.getJSONObject(it) }
+            .single { it.getLong("id") == 930354L }
+        assertEquals("left;through|through", source.getJSONObject("t").getString("turn:lanes"))
+        val geo = source.getJSONArray("g")
+        val start = geo.getJSONArray(1).let { LatLon(it.getDouble(1), it.getDouble(0)) }
+        val decision = geo.getJSONArray(2).let { LatLon(it.getDouble(1), it.getDouble(0)) }
+        val approachBearing = Geo.bearing(start, decision)
+        val length = Geo.distance(start, decision)
+        assertTrue("Source approach must provide enough actual geometry for pre-turn lookup", length > 40.0)
+        val destination = Geo.offset(decision, (approachBearing + 270.0) % 360.0, 125.0)
+        val route = Route(
+            listOf(start, decision, destination), length + 125.0, 45.0,
+            listOf(
+                RouteStep("Depart", "depart", "straight", "Great Ancoats Street", length,
+                    start, leftDriving = true),
+                RouteStep("Turn left", "turn", "left", "Controlled test exit", 125.0,
+                    decision, leftDriving = true),
+                RouteStep("Arrive", "arrive", "", "", 0.0, destination, leftDriving = true),
+            ),
+            "Source-verified Manchester approach + controlled non-legal branch",
+        )
+        lateinit var session: NavigationSession
+        compose.runOnIdle { session = NavigationSession(app) }
+        compose.waitUntil(30000) { session.settingsReady }
+        try {
+            compose.runOnIdle {
+                val engine = NavigationSession::class.java.declaredMethods.single {
+                    it.name == "setRouteInternal" && it.parameterCount == 1
+                }.apply { isAccessible = true }
+                engine.invoke(session, route)
+                val activeEngine = NavigationSession::class.java.getDeclaredField("engine")
+                    .apply { isAccessible = true }.get(session) as com.drivemate.app.nav.NavigationEngine
+                activeEngine.speedLimits = List(route.points.size - 1) { 30.0 * 1.609344 }
+                OwnMap.trimMemory()
+                val loader = OwnMap::class.java.getDeclaredField("laneLoader")
+                    .apply { isAccessible = true }.get(OwnMap)
+                val request = loader.javaClass.getDeclaredMethod("beginRequest")
+                    .invoke(loader) as Long
+                val read: (String, String?) -> String? = { key, _ ->
+                    if (key == "106_-5") raw else null
+                }
+                val loaded = loader.javaClass.declaredMethods.single {
+                    it.name == "load" && it.parameterCount == 5
+                }.apply { isAccessible = true }.invoke(loader, listOf(start, decision), request,
+                    { 0L } as () -> Long, { true } as () -> Boolean, read) as Boolean
+                assertTrue("Frozen published source must load through actual production parser", loaded)
+                val at = Geo.interpolate(start, decision, 0.35)
+                val gps = Location("gps").apply {
+                    latitude = at.lat; longitude = at.lon
+                    accuracy = 3f; speed = 5f; bearing = approachBearing.toFloat()
+                    time = System.currentTimeMillis()
+                    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
+                }
+                val reliable = NavigationSession::class.java.declaredMethods.single {
+                    it.name == "setPositionReliable" && it.parameterCount == 1
+                }.apply { isAccessible = true }
+                reliable.invoke(session, true)
+                NavigationSession::class.java.declaredMethods.single {
+                    it.name == "updateNavigationInternal" && it.parameterCount == 1
+                }.apply { isAccessible = true }.invoke(session, gps)
+                val actual = requireNotNull(session.nav)
+                assertEquals("Source's two directional arrows must reach actual navigation",
+                    2, actual.lanes.size)
+                assertEquals(listOf("left", "straight"), actual.lanes[0].indications)
+                assertEquals(listOf(0), com.drivemate.app.nav.LanePolicy.usable(actual.lanes))
+                assertEquals(com.drivemate.app.nav.LanePresentationStatus.VISIBLE,
+                    session.lanePresentationStatus)
+            }
+            compose.setContent { LaneRow(session.nav?.lanes.orEmpty(), true, maneuver = "left") }
+            compose.onNodeWithContentDescription(
+                "Lane 1. Markings: left or straight on. Recommended by lane guidance"
+            ).assertIsDisplayed()
+            compose.onNodeWithContentDescription(
+                "Lane 2. Markings: straight on. Not recommended by lane guidance"
+            ).assertIsDisplayed()
+        } finally {
+            compose.runOnIdle { session.close(); OwnMap.trimMemory() }
+        }
+    }
+
     @Test fun sourceGeometryContinuationDoesNotBecomeAnInventedJunction() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
         val raw = InstrumentationRegistry.getInstrumentation().context.assets

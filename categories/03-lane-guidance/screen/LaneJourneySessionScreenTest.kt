@@ -81,6 +81,8 @@ class LaneJourneySessionScreenTest {
         val guidance = session.nav
         assertNotNull("NavigationSession must publish guidance at $where", guidance)
         assertEquals(where, expected, LanePolicy.usable(guidance!!.lanes))
+        if (expected.isNotEmpty()) assertEquals("The full session must report lanes actually visible at $where",
+            com.drivemate.app.nav.LanePresentationStatus.VISIBLE, session.lanePresentationStatus)
         assertTrue("No preference without verified next-junction links at $where",
             LanePolicy.preferred(guidance.lanes).isEmpty())
     }
@@ -140,6 +142,18 @@ class LaneJourneySessionScreenTest {
                     List(third.route.points.size - 1) { 30.0 * 1.609344 }
                 call(session, "setPositionReliable", true)
                 assertStrip(session, third.start, emptyList(), "outside new route onset")
+                assertStrip(session, Geo.offset(third.start, 0.0, 290.0), listOf(0, 1),
+                    "new-route eligible lane approach before location loss")
+                // Exercise the REAL reliability update, not Kotlin's reflective
+                // setPositionReliable property setter which does not run the UI invalidation.
+                // A NavigationSession without a trusted tracker fix must clear live lane claims.
+                call(session, "updatePositionReliability")
+                assertFalse("Untrusted tracker status must revoke lane reliability", session.positionReliable)
+                assertEquals("Loss of trusted measured position must invalidate visible lane status",
+                    com.drivemate.app.nav.LanePresentationStatus.POSITION_UNCERTAIN,
+                    session.lanePresentationStatus)
+                assertTrue("Any previously visible strip must be removed after GPS becomes unreliable",
+                    session.nav?.lanes.orEmpty().isEmpty())
             }
         } finally { compose.runOnIdle { session.close() } }
     }
