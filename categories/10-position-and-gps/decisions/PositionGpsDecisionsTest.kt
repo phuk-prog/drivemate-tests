@@ -84,4 +84,25 @@ class PositionGpsDecisionsTest {
         assertNull(parked.recall(LatLon(53.42, -2.26)))
         assertNull(stored)
     }
+
+    @Test fun materiallyMorePreciseCurrentGpsBeatsRoughFusedButStaleGpsDoesNotBlockRecovery() {
+        val policy = LocationSelectionPolicy()
+        assertTrue(policy.accept(fix(100_000, accuracy = 32.0, source = LocationSelectionPolicy.Source.GOOGLE), 100_000, true))
+        assertTrue("fresh direct GPS is significantly more precise",
+            policy.accept(fix(100_100, accuracy = 4.0), 100_100, true))
+        assertEquals(LocationSelectionPolicy.Source.GPS, policy.lastDelivered!!.source)
+        assertFalse("rough fused fix does not instantly displace precise GPS",
+            policy.accept(fix(100_200, accuracy = 28.0, source = LocationSelectionPolicy.Source.GOOGLE), 100_200, true))
+        assertFalse(policy.accept(fix(103_000, accuracy = 8.0, source = LocationSelectionPolicy.Source.GOOGLE), 103_000, true))
+        assertFalse(policy.accept(fix(104_000, accuracy = 8.0, source = LocationSelectionPolicy.Source.GOOGLE), 104_000, true))
+        assertTrue("three good fixes over two seconds restore fused after the GPS evidence ages",
+            policy.accept(fix(105_100, accuracy = 8.0, source = LocationSelectionPolicy.Source.GOOGLE), 105_100, true))
+    }
+
+    @Test fun smallAccuracyDifferenceKeepsStableFusedNavigation() {
+        val policy = LocationSelectionPolicy()
+        assertTrue(policy.accept(fix(100_000, accuracy = 12.0, source = LocationSelectionPolicy.Source.GOOGLE), 100_000, true))
+        assertFalse(policy.accept(fix(100_100, accuracy = 9.0), 100_100, true))
+        assertEquals(LocationSelectionPolicy.Source.GOOGLE, policy.lastDelivered!!.source)
+    }
 }
