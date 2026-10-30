@@ -228,7 +228,8 @@ class TurnByTurnDecisionsTest {
         )
         val engine = NavigationEngine(Route(points, 700.0, 90.0, steps, "synthetic"))
         assertFalse("Another exit ahead", engine.roundaboutNextExitKnown(1, 200.0))
-        assertTrue("That exit is passed, junction data complete", engine.roundaboutNextExitKnown(1, 320.0))
+        assertFalse("Intersecting roads alone do not prove the actual exit geometry",
+            engine.roundaboutNextExitKnown(1, 320.0))
         assertFalse("After ring completion", engine.roundaboutNextExitKnown(1, 410.0))
     }
 
