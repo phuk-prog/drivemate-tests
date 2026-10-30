@@ -49,7 +49,7 @@
     "categories/03-lane-guidance/decisions/PublishedManchesterLaneDbDecisionsTest.kt": "7f6683e92d77fe260199230475527993c09e155f",
     "categories/03-lane-guidance/law/LaneGuidanceLawTest.kt": "341beb91a165e93e56dd83c2fd0d4605c71ed461",
     "categories/03-lane-guidance/screen/LaneGuidanceScreenTest.kt": "ef8729c07b8c4b318ac5971a2f446f5699712c05",
-    "categories/03-lane-guidance/screen/LaneJourneySessionScreenTest.kt": "86bc949981fffce48ad89f9cd26e6c15d50784c9",
+    "categories/03-lane-guidance/screen/LaneJourneySessionScreenTest.kt": "eb9602a11b5b72885c88f12e435d4fdc1fe9a9f4",
     "categories/03-lane-guidance/screen/LaneSettingsReadinessScreenTest.kt": "f6b7f931f2b18481b3174171732a5ba5feca5ac0",
     "categories/03-lane-guidance/screen/LaneSpeechSessionScreenTest.kt": "2cb00d23f8f2241a55dce583048451cd90b5793b",
     "categories/03-lane-guidance/screen/LaneSplitParkedReviewAcceptanceScreenTest.kt": "a6b457caf8ac8b859aa6d0e4528fbede2d9fa896",
