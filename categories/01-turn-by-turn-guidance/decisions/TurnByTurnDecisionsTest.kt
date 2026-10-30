@@ -223,6 +223,19 @@ class TurnByTurnDecisionsTest {
         assertTrue("walking pace: the window never drops below 30 s at 8 m/s (240 m)", thenShown(200.0, 1.0))
     }
 
+    /** M04: changed street name on a bend must not be auto-promoted to a new turn. */
+    @Test fun m04NameChangeWithoutTurnEvidenceRemainsStraight() {
+        val points = (0..20).map { road(it * 10.0) } + (1..20).map { road(200.0, it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Old Road", 200.0, road(0.0)),
+            RouteStep("Continue onto Aber Road", "new name", "straight", "Aber Road", 200.0, road(200.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(200.0, 200.0)),
+        )
+        val engine = NavigationEngine(Route(points, 400.0, 40.0, steps, "synthetic"))
+        assertEquals("straight", engine.steps[1].modifier)
+        assertEquals("new name", engine.steps[1].type)
+    }
+
     /** M04: a zero-length second provider step at the same junction is not a second turn. */
     @Test fun m04_thenDoesNotRepeatTheSameJunction() {
         val base = testRoute()
