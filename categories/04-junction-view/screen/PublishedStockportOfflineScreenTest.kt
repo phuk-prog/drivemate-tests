@@ -1,11 +1,31 @@
 package com.drivemate.tests.cat04
 
 import android.app.Application
+import android.os.Bundle
+import android.graphics.Bitmap
+import android.graphics.RectF
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.viewinterop.AndroidView
+import org.junit.Rule
+import org.maplibre.android.MapLibre
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.camera.CameraPosition
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.drivemate.app.dmn.Dmn
 import com.drivemate.app.data.PublishedRegionCatalog
 import com.drivemate.app.data.RegionPacks
+import com.drivemate.app.data.MapPack
+import com.drivemate.app.data.MapLayout
+import com.drivemate.app.data.OwnMap
 import com.drivemate.app.nav.LatLon
 import com.drivemate.app.nav.NavigationEngine
 import org.json.JSONObject
@@ -30,6 +50,7 @@ import java.security.MessageDigest
  */
 @RunWith(AndroidJUnit4::class)
 class PublishedStockportOfflineScreenTest {
+    @get:Rule val compose = createComposeRule()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext.applicationContext as Application
 
@@ -50,6 +71,90 @@ class PublishedStockportOfflineScreenTest {
         val dir = File(requireNotNull(app.externalMediaDirs.firstOrNull()),
             "additional_test_output").apply { mkdirs() }
         File(dir, "$test-receipt.json").writeText(body.toString())
+    }
+
+
+    /**
+     * C01.2/C01.3: the exact production-installed, SHA-verified Stockport PMTiles
+     * must render real road layers in MapLibre while the *emulator* has no network.
+     * Regional component acceptance only: does not certify nationwide offline map.
+     */
+    private fun verifyInstalledStockportRendersOffline(installed: File): Int {
+        assertTrue("Network precondition is required for an honest offline proof", reachable())
+        val originalMapContext = MapPack.context
+        val map = AtomicReference<MapLibreMap?>()
+        val view = AtomicReference<MapView?>()
+        val failure = AtomicReference<String?>()
+        val completedFrames = AtomicLong()
+        var roadCount = 0
+        try {
+            shell("cmd connectivity airplane-mode enable")
+            shell("svc wifi disable")
+            shell("svc data disable")
+            Thread.sleep(1500)
+            assertFalse("Device can still reach the Internet after isolation", reachable())
+            val tiles = "pmtiles://file://" + installed.absolutePath
+            val style = OwnMap.prepare(OwnMap.appStyle(false, MapLayout.OWN), tiles, null).toString()
+            MapPack.context = app
+            compose.setContent {
+                AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
+                    MapLibre.getInstance(context)
+                    MapView(context).also { v ->
+                        view.set(v)
+                        v.addOnDidFinishRenderingFrameListener(
+                            MapView.OnDidFinishRenderingFrameWithStatsListener { done, _ ->
+                                if (done) completedFrames.incrementAndGet()
+                            })
+                        v.addOnDidFailLoadingMapListener { failure.set("Offline local PMTiles style failed") }
+                        v.onCreate(Bundle()); v.onStart(); v.onResume()
+                        v.getMapAsync { m ->
+                            m.setStyle(Style.Builder().fromJson(style)) { map.set(m) }
+                        }
+                    }
+                })
+            }
+            compose.waitUntil(45_000) { map.get() != null || failure.get() != null }
+            assertNotNull("MapLibre failed to load offline file: " + failure.get(), map.get())
+            val before = completedFrames.get()
+            compose.runOnIdle {
+                map.get()!!.moveCamera(CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder().target(LatLng(53.4051, -2.1630))
+                        .zoom(14.0).tilt(0.0).build()))
+            }
+            val roadLayers = arrayOf("road-primary", "road-secondary", "road-tertiary",
+                "road-minor", "road-service", "road-trunk", "road-motorway")
+            compose.waitUntil(45_000) {
+                if (completedFrames.get() <= before) return@waitUntil false
+                compose.runOnIdle {
+                    val v = view.get()
+                    if (v != null && v.width > 0 && v.height > 0) {
+                        roadCount = map.get()!!.queryRenderedFeatures(
+                            RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roadLayers).size
+                    }
+                }
+                roadCount > 0 || failure.get() != null
+            }
+            assertTrue("Local offline PMTiles has no rendered Stockport roads: " + failure.get(), roadCount > 0)
+            assertFalse("Network became reachable during local rendered map proof", reachable())
+            val screenshot = AtomicReference<Bitmap?>()
+            compose.runOnIdle { map.get()!!.snapshot { screenshot.set(it) } }
+            compose.waitUntil(15_000) { screenshot.get() != null }
+            val output = File(requireNotNull(app.externalMediaDirs.firstOrNull()),
+                "additional_test_output").apply { mkdirs() }
+            File(output, "C01-stockport-verified-offline-render.png").outputStream().use {
+                screenshot.get()!!.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            screenshot.get()!!.recycle()
+            return roadCount
+        } finally {
+            compose.runOnIdle { view.get()?.let { it.onPause(); it.onStop(); it.onDestroy() } }
+            MapPack.context = originalMapContext
+            shell("cmd connectivity airplane-mode disable")
+            shell("svc wifi enable")
+            shell("svc data enable")
+            Thread.sleep(1500)
+            assertTrue("Network not restored after local map test", reachable())
+        }
     }
 
     @Test fun publishedStockportInstalledByProductionRegionDownloader() {
@@ -73,6 +178,7 @@ class PublishedStockportOfflineScreenTest {
             assertTrue(installed.isFile)
             assertEquals(region.map.bytes,installed.length())
             assertEquals(region.map.sha256,sha(installed))
+            val offlineRoads = verifyInstalledStockportRendersOffline(installed)
             receipt("publishedStockportInstalledByProductionRegionDownloader",
                 JSONObject().put("schema",1)
                     .put("scope","published_stockport_display_install_only")
@@ -81,6 +187,10 @@ class PublishedStockportOfflineScreenTest {
                     .put("published_map_tag",region.map.tag)
                     .put("installed_sha256",sha(installed))
                     .put("installed_bytes",installed.length())
+                    .put("offline_map_screen_rendered",true)
+                    .put("offline_rendered_road_features",offlineRoads)
+                    .put("network_isolated_during_render",true)
+                    .put("whole_uk_offline_map_accepted",false)
                     .put("production_installer","RegionPacks.sync")
                     .put("offline_route_accepted",false)
                     .put("screen_guidance_accepted",false))

@@ -40,12 +40,18 @@ import java.util.concurrent.atomic.AtomicLong
 @RunWith(AndroidJUnit4::class)
 class M01NationalMapRenderingScreenTest {
     @get:Rule val compose = createComposeRule()
-    private data class Sample(val name: String, val latitude: Double, val longitude: Double)
+    private data class Sample(val name: String, val latitude: Double, val longitude: Double, val zoom: Double = 14.0)
     private val cities = listOf(
         Sample("manchester", 53.4808, -2.2426),
         Sample("edinburgh", 55.9533, -3.1883),
         Sample("cardiff", 51.4816, -3.1791),
         Sample("belfast", 54.5973, -5.9301),
+        // More real UK viewports relevant to the reported M60/Scotland map gaps.
+        // These are renderer probes, NOT road-law, physical GPS or every-tile proof.
+        Sample("stockport-m60", 53.4120, -2.1690),
+        Sample("glasgow", 55.8610, -4.2510),
+        Sample("inverness", 57.4778, -4.2247),
+        Sample("glasgow-midzoom", 55.8610, -4.2510, 12.0),
     )
     private val roads = arrayOf("road-primary", "road-secondary", "road-tertiary",
         "road-minor", "road-service", "road-trunk", "road-motorway")
@@ -118,7 +124,7 @@ class M01NationalMapRenderingScreenTest {
                 compose.runOnIdle {
                     map.get()!!.moveCamera(CameraUpdateFactory.newCameraPosition(
                         CameraPosition.Builder().target(LatLng(city.latitude, city.longitude))
-                            .zoom(14.0).tilt(0.0).build()))
+                            .zoom(city.zoom).tilt(0.0).build()))
                 }
                 var foundRoads = false
                 try {
