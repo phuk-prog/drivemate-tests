@@ -635,4 +635,110 @@ class PublishedDmnStockportSourceTest {
             .apply { mkdirs() }, "m03-published-stockport-gps-match.json").writeText(receipt.toString())
     }
 
+
+
+    /**
+     * M04: genuine published Stockport routing geometry near the Edgeley Road/B5465
+     * neighbourhood. Replays an actual connected approach -> roundabout segment ->
+     * departure as measured points. It checks implementation semantics only.
+     *
+     * The source pack's tags/coordinates cannot independently prove which Bird Hall
+     * Lane exit is legal, that it is the user's pictured roundabout, or any ordinal.
+     */
+    @Test fun m04PublishedStockportRoundaboutKeepsExitUnknownUntilMeasuredDeparture() {
+        val index = JSONObject(instrumentation.context.assets.open("cat1-dmn-stockport-index.json")
+            .bufferedReader().use { it.readText() })
+        val piece = index.getJSONObject("tiles").getJSONObject("213_-9")
+        val bytes = instrumentation.context.assets.open("cat1-dmn-stockport-piece.dmnpack")
+            .use { it.readBytes() }
+        assertEquals(piece.getLong("bytes"), bytes.size.toLong())
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+        assertEquals(piece.getString("sha256"), digest)
+        val graph = bytes.inputStream().use { DmnPack.read(it) }
+        val anchor = LatLon(53.399953, -2.189155) // published centre for B5465 Edgeley Road, not a surveyed exit
+        fun nearby(edge: Int): Boolean {
+            val n = graph.from[edge]
+            return kotlin.math.abs(graph.lat[n] - anchor.lat) <= 0.025 &&
+                kotlin.math.abs(graph.lon[n] - anchor.lon) <= 0.040
+        }
+        val local = (0 until graph.edgeCount).filter { nearby(it) }
+        val incoming = local.groupBy { graph.to[it] }
+        val outgoing = local.groupBy { graph.from[it] }
+        val evidenceRoads = local.filter { edge ->
+            val w = graph.way[edge]
+            graph.wayRef[w].contains("B5465") ||
+                graph.wayName[w].contains("Edgeley Road", ignoreCase = true)
+        }
+        assertTrue("Published Stockport graph needs source-backed B5465/Edgeley geometry",
+            evidenceRoads.isNotEmpty())
+
+        data class Sequence(val inEdge: Int, val ring: Int, val outEdge: Int)
+        val sample = local.asSequence().filter { e ->
+            graph.access[e].toInt() == 0 && graph.wayRoundabout[graph.way[e]] &&
+                graph.metres[e] >= 12f
+        }.mapNotNull { ring ->
+            val before = incoming[graph.from[ring]].orEmpty().firstOrNull { e ->
+                graph.access[e].toInt() == 0 && !graph.wayRoundabout[graph.way[e]] &&
+                    graph.metres[e] >= 10f && !graph.banned(e, ring)
+            } ?: return@mapNotNull null
+            val after = outgoing[graph.to[ring]].orEmpty().firstOrNull { e ->
+                graph.access[e].toInt() == 0 && !graph.wayRoundabout[graph.way[e]] &&
+                    graph.metres[e] >= 10f && !graph.banned(ring, e) && e != before
+            } ?: return@mapNotNull null
+            Sequence(before, ring, after)
+        }.firstOrNull()
+        assertNotNull("The published local graph must have a traversable approach/ring/exit sample", sample)
+        val selected = requireNotNull(sample)
+        val edges = listOf(selected.inEdge, selected.ring, selected.outEdge)
+        val sourcePoints = listOf(graph.from[edges[0]]) + edges.map { graph.to[it] }
+        val points = sourcePoints.map { LatLon(graph.lat[it], graph.lon[it]) }
+        val firstM = com.drivemate.app.nav.Geo.distance(points[0], points[1])
+        val ringM = com.drivemate.app.nav.Geo.distance(points[1], points[2])
+        val exitM = com.drivemate.app.nav.Geo.distance(points[2], points[3])
+        assertTrue("Actual source segment lengths must be usable", firstM > 5 && ringM > 5 && exitM > 5)
+        val steps = listOf(
+            com.drivemate.app.data.RouteStep("Head out", "depart", "", "", firstM, points[0]),
+            com.drivemate.app.data.RouteStep("Enter roundabout", "roundabout", "", "", ringM,
+                points[1], exit = 0, leftDriving = true, junctionsKnown = false),
+            com.drivemate.app.data.RouteStep("Continue", "continue", "", "", exitM, points[2]),
+            com.drivemate.app.data.RouteStep("Arrive", "arrive", "", "", 0.0, points[3]),
+        )
+        val route = com.drivemate.app.data.Route(points, firstM + ringM + exitM,
+            (firstM + ringM + exitM) / 6.0, steps, "published Stockport mapped junction")
+        val engine = com.drivemate.app.nav.NavigationEngine(route)
+        engine.update(com.drivemate.app.nav.Geo.interpolate(points[0], points[1], 0.5),
+            speed = 4.0, accuracy = 5.0)
+        val ringProgress = engine.update(com.drivemate.app.nav.Geo.interpolate(points[1], points[2], 0.35),
+            speed = 4.0, accuracy = 5.0)
+        assertEquals("Real ring position must retain the roundabout manoeuvre", 1, ringProgress.nextStep)
+        assertTrue("Unconfirmed ring position must not place the exit behind the vehicle",
+            ringProgress.distanceToNext > 0.0)
+        assertFalse("Without an exit count/junction source, never claim next exit",
+            engine.roundaboutNextExitKnown(1, ringProgress.along))
+        val receipt = JSONObject().put("schema", 1)
+            .put("scope", "m04_source_backed_stockport_roundabout_manoeuvre_replay")
+            .put("source_sha256", digest)
+            .put("source_release", index.optString("release"))
+            .put("edgeley_centroid_lat", anchor.lat).put("edgeley_centroid_lon", anchor.lon)
+            .put("local_edge_count", local.size)
+            .put("edgeley_road_reference_edges", evidenceRoads.size)
+            .put("edge_ids", org.json.JSONArray().apply { edges.forEach { put(it) } })
+            .put("osm_way_ids", org.json.JSONArray().apply {
+                edges.forEach { put(graph.wayId[graph.way[it]]) }
+            })
+            .put("source_road_names", org.json.JSONArray().apply {
+                edges.forEach { put(graph.wayName[graph.way[it]]) }
+            })
+            .put("source_roundabout_tag", graph.wayRoundabout[graph.way[selected.ring]])
+            .put("ring_progress_along_m", ringProgress.along)
+            .put("ring_progress_next_step", ringProgress.nextStep)
+            .put("ordinal_legal_truth", "unknown")
+            .put("is_confirmed_user_screenshot_junction", false)
+            .put("independent_road_law_truth_verified", false)
+            .put("physical_gps_verified", false)
+        val out = File(requireNotNull(app.externalMediaDirs.firstOrNull()), "additional_test_output")
+            .apply { mkdirs() }
+        File(out, "m04-published-stockport-roundabout-replay.json").writeText(receipt.toString())
+    }
 }
