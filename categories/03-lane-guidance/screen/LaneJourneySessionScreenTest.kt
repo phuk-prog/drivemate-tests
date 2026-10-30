@@ -81,6 +81,8 @@ class LaneJourneySessionScreenTest {
         val guidance = session.nav
         assertNotNull("NavigationSession must publish guidance at $where", guidance)
         assertEquals(where, expected, LanePolicy.usable(guidance!!.lanes))
+        if (expected.isNotEmpty()) assertEquals("The full session must report lanes actually visible at $where",
+            com.drivemate.app.nav.LanePresentationStatus.VISIBLE, session.lanePresentationStatus)
         assertTrue("No preference without verified next-junction links at $where",
             LanePolicy.preferred(guidance.lanes).isEmpty())
     }
