@@ -10,9 +10,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.drivemate.app.data.Http
 import com.drivemate.app.data.MapLayout
 import com.drivemate.app.data.MapPack
 import com.drivemate.app.data.OwnMap
+import com.drivemate.app.data.MapReleaseSource
+import com.drivemate.app.data.UkJoin
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -30,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * M01: actual Android/MapLibre road-layer rendering against the immutable UK
- * display map already independently verified as published, across four nations.
+ * display map selected from the current publisher catalog, across four nations.
  * This is a live network screen test, not a substitute for a signed APK on a phone
  * or proof of every road/zoom/offline tile in the UK.
  */
@@ -46,9 +49,19 @@ class M01NationalMapRenderingScreenTest {
     )
     private val roads = arrayOf("road-primary", "road-secondary", "road-tertiary",
         "road-minor", "road-service", "road-trunk", "road-motorway")
-    private val release = "map-data-ukmap-r40883954274-a1"
-    private val pmtiles = "pmtiles://https://github.com/phuk-prog/drivemate-map/releases/download/" +
-        "$release/drivemate-v1.pmtiles"
+    private data class PublishedMap(val tiles: String, val tag: String, val sha256: String, val bytes: Long)
+
+    private fun publishedMap(): PublishedMap {
+        val base = MapReleaseSource.requireBase()
+        val catalog = Http.getBounded("$base/${UkJoin.MAP_POINTER}", 64 * 1024, 15_000)
+        val asset = UkJoin.map(catalog)
+        require(asset.sha256.matches(Regex("[0-9a-f]{64}")) && asset.bytes > 0) {
+            "Published UK map catalog resolved invalid asset receipt: " +
+                "tag=${asset.tag}, sha256=${asset.sha256}, bytes=${asset.bytes}"
+        }
+        val url = "$base/${asset.tag}/${MapLayout.OWN.archive}"
+        return PublishedMap("pmtiles://$url", asset.tag, asset.sha256, asset.bytes)
+    }
 
     @Test fun publishedOnePieceUkMapRendersRoadsInAllFourNations() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
@@ -58,56 +71,83 @@ class M01NationalMapRenderingScreenTest {
         val view = AtomicReference<MapView?>()
         val failure = AtomicReference<String?>()
         val renderedFrames = AtomicLong()
+        val rendererState = AtomicReference("not-created")
         try {
+            val published = publishedMap()
             val style = OwnMap.prepare(OwnMap.appStyle(false, MapLayout.OWN),
-                pmtiles, null).toString()
+                published.tiles, null).toString()
             compose.setContent {
                 AndroidView(modifier = Modifier.fillMaxSize().testTag("m01-uk-map"),
                     factory = { appContext ->
                         MapLibre.getInstance(appContext)
                         MapView(appContext).also { v ->
                             view.set(v)
+                            rendererState.set("view-created:${v.width}x${v.height}")
                             v.addOnDidFinishRenderingFrameListener(MapView.OnDidFinishRenderingFrameWithStatsListener { done, _ ->
                                 if (done) renderedFrames.incrementAndGet()
                             })
                             v.addOnDidFailLoadingMapListener { failure.set("MapLibre style load failed") }
                             v.onCreate(Bundle()); v.onStart(); v.onResume()
                             v.getMapAsync { m ->
-                                m.setStyle(Style.Builder().fromJson(style)) { map.set(m) }
+                                rendererState.set("map-async-ready:${v.width}x${v.height}")
+                                m.setStyle(Style.Builder().fromJson(style)) {
+                                    map.set(m)
+                                    rendererState.set("style-ready:${v.width}x${v.height}")
+                                }
                             }
                         }
                     })
             }
-            compose.waitUntil(45_000) { map.get() != null || failure.get() != null }
-            assertTrue("Published UK map style failed: ${failure.get()}", map.get() != null)
+            try {
+                compose.waitUntil(45_000) { map.get() != null || failure.get() != null }
+            } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+                throw AssertionError("Timed out loading published UK map style; state=${rendererState.get()}, " +
+                    "failure=${failure.get()}, frames=${renderedFrames.get()}", e)
+            }
+            assertTrue("Published UK map style failed: ${failure.get()}; state=${rendererState.get()}", map.get() != null)
             val dir = File(requireNotNull(ctx.externalMediaDirs.firstOrNull()), "additional_test_output")
                 .apply { mkdirs() }
+            File(dir, "M01-published-map-source.json").writeText(org.json.JSONObject()
+                .put("release", published.tag).put("published_sha256", published.sha256)
+                .put("published_bytes", published.bytes)
+                .put("scope", "catalog-selected immutable source and representative rendering")
+                .put("entire_archive_independently_hashed", false).toString())
             for (city in cities) {
                 val beforeMove = renderedFrames.get()
+                rendererState.set("moving:${city.name};frames=$beforeMove")
                 compose.runOnIdle {
                     map.get()!!.moveCamera(CameraUpdateFactory.newCameraPosition(
                         CameraPosition.Builder().target(LatLng(city.latitude, city.longitude))
                             .zoom(14.0).tilt(0.0).build()))
                 }
                 var foundRoads = false
-                compose.waitUntil(45_000) {
-                    // MapLibre's native renderer has no actor before the first completed
-                    // post-camera frame. Querying it early crashes the whole Android
-                    // instrumentation process instead of reporting a missing map.
-                    if (failure.get() != null) return@waitUntil true
-                    if (renderedFrames.get() <= beforeMove) return@waitUntil false
-                    compose.runOnIdle {
-                        val v = view.get()
-                        if (v != null && v.width > 0 && v.height > 0 &&
-                            renderedFrames.get() > beforeMove) {
-                            val seen = map.get()!!.queryRenderedFeatures(
-                                RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
-                            foundRoads = seen.isNotEmpty()
+                try {
+                    compose.waitUntil(45_000) {
+                        // MapLibre's native renderer has no actor before the first completed
+                        // post-camera frame. Querying it early crashes the whole Android
+                        // instrumentation process instead of reporting a missing map.
+                        if (failure.get() != null) return@waitUntil true
+                        if (renderedFrames.get() <= beforeMove) return@waitUntil false
+                        compose.runOnIdle {
+                            val v = view.get()
+                            if (v != null && v.width > 0 && v.height > 0 &&
+                                renderedFrames.get() > beforeMove) {
+                                val seen = map.get()!!.queryRenderedFeatures(
+                                    RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
+                                foundRoads = seen.isNotEmpty()
+                                rendererState.set("queried:${city.name};viewport=${v.width}x${v.height};" +
+                                    "features=${seen.size};frames=${renderedFrames.get()}")
+                            }
                         }
+                        foundRoads || failure.get() != null
                     }
-                    foundRoads || failure.get() != null
+                } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+                    throw AssertionError("Timed out rendering ${city.name}; state=${rendererState.get()}, " +
+                        "failure=${failure.get()}, frames=${renderedFrames.get()}, " +
+                        "framesBeforeMove=$beforeMove, viewport=${view.get()?.width}x${view.get()?.height}", e)
                 }
-                assertTrue("No published UK roads rendered at ${city.name}: ${failure.get()}", foundRoads)
+                assertTrue("No published UK roads rendered at ${city.name}: ${failure.get()}; " +
+                    "state=${rendererState.get()}, frames=${renderedFrames.get()}", foundRoads)
                 val shot = AtomicReference<Bitmap?>()
                 compose.runOnIdle { map.get()!!.snapshot { shot.set(it) } }
                 compose.waitUntil(15_000) { shot.get() != null }

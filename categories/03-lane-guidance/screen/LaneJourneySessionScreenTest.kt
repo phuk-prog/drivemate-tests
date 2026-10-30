@@ -103,11 +103,13 @@ class LaneJourneySessionScreenTest {
                 // The first decision is within its 30-mph lane-onset window.
                 assertStrip(session, Geo.offset(trip.start, 0.0, 290.0), listOf(0, 1), "approach first turn")
                 // Once the first decision is behind, stale lane information must not linger.
-                assertStrip(session, Geo.offset(trip.a, 90.0, 40.0), emptyList(), "between junctions")
+                assertStrip(session, Geo.offset(trip.a, 90.0, 40.0), listOf(0, 1), "first crossing provisional")
+                assertStrip(session, Geo.offset(trip.a, 90.0, 44.0), emptyList(), "between junctions confirmed")
                 // The second turn has a different set of lane restrictions and markings.
                 assertStrip(session, Geo.offset(trip.a, 90.0, 405.0), listOf(0), "approach second turn")
                 // Passed second decision, before arrival: no old advice remains.
-                assertStrip(session, Geo.offset(trip.b, 0.0, 100.0), emptyList(), "after second turn")
+                assertStrip(session, Geo.offset(trip.b, 0.0, 100.0), listOf(0), "second crossing provisional")
+                assertStrip(session, Geo.offset(trip.b, 0.0, 104.0), emptyList(), "after confirmed second turn")
             }
         } finally { compose.runOnIdle { session.close() } }
     }

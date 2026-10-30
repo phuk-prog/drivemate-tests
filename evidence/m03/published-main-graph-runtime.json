@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-30",
+  "scope": "local runtime proof; published UK main-roads graph only, not joined national graph",
+  "runtime": "OpenJDK 17.0.21+9, -Xmx2g, compiled app debug Kotlin classes",
+  "release": "dmn-uk-20261030-28",
+  "main_pack": {
+    "file": "m03-main-uk.dmnpack",
+    "bytes": 52652354,
+    "sha256": "a4901140f798a491a8fea7c511d688514d317b07a8d0104b7344f0a459914374",
+    "index_hash_verified": true,
+    "nodes": 2076203,
+    "edges": 3202593,
+    "read_plus_router_ms": 4518,
+    "coarse_used_heap_delta_mib": 184.6,
+    "distinct_allowed_link_way_midpoint_queries": [
+      {
+        "edge": 148,
+        "result": 148,
+        "elapsed_ms": 323.178
+      },
+      {
+        "edge": 149,
+        "result": 149,
+        "elapsed_ms": 399.839
+      },
+      {
+        "edge": 664,
+        "result": 664,
+        "elapsed_ms": 97.997
+      },
+      {
+        "edge": 677,
+        "result": 677,
+        "elapsed_ms": 81.54
+      },
+      {
+        "edge": 850,
+        "result": null,
+        "elapsed_ms": 46.031
+      },
+      {
+        "edge": 859,
+        "result": 859,
+        "elapsed_ms": 132.564
+      },
+      {
+        "edge": 1088,
+        "result": 1088,
+        "elapsed_ms": 43.915
+      },
+      {
+        "edge": 1098,
+        "result": null,
+        "elapsed_ms": 102.35
+      }
+    ],
+    "same_exact_key_100_queries_total_ms": 1,
+    "same_exact_key_average_us": 17.9
+  },
+  "stockport_pack": {
+    "file": "m03-stockport.dmnpack",
+    "sha256": "d661e234d0fd64c65fa37c18453ea9c77cead4433b1e969de4737fdf6bf6460d",
+    "edges": 483938,
+    "nodes": 245071,
+    "midpoint_between_edge_699_and_406131_match": null,
+    "plan_start_699_finish_701_edges": 2,
+    "plan_metres": 7.2,
+    "plan_seconds": 0.5
+  },
+  "caveats": [
+    "Main graph timing covers eight selected link-edge midpoints only; it is not a national joined graph benchmark.",
+    "Used-heap delta is a coarse before/after sample and is not peak resident memory.",
+    "Per-query latency includes JVM warm-up and varies materially across samples."
+  ],
+  "matching_source_sha256": {
+    "app/src/main/java/com/drivemate/app/dmn/DmnPack.kt": "49704ce0c157b409234055268e9c9a67dee16bda4e360b6b6e8cfea64b2bba42",
+    "app/src/main/java/com/drivemate/app/dmn/DmnRouter.kt": "01b97673b3517d350c221a5de679ee4f36e3d315a33f566704ffbe5f83a11b76",
+    "app/src/main/java/com/drivemate/app/nav/Geo.kt": "4aa42c796ccb9f89d2384b5f84394215a54574e0b41e574e763c2d62031eea12"
+  },
+  "index_sha256": "7a3f0d08a501332956d205c1cc741a18cb21754e4f258bc2507ae21e83d413ca"
+}
