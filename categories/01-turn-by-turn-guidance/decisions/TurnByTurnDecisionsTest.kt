@@ -41,13 +41,17 @@ class TurnByTurnDecisionsTest {
         assertEquals("15 mi", uk.distance(24_140.0))
     }
 
-    /** 1.4: "Now" about 5 seconds before the turn at your speed, and never further than that. */
+    /** M04: 5-second lead, no fixed 45 m "Now" in stopped or 5 mph traffic. */
     @Test fun q1_4_nowAboutFiveSeconds() {
         assertTrue(turnBannerNow(false, "turn", 150.0, 30f, 1_000))
         assertFalse(turnBannerNow(false, "turn", 160.0, 30f, 1_000))
-        assertTrue("slow: at least ~50 yd", turnBannerNow(false, "turn", 45.0, 5f, 1_000))
-        assertFalse(turnBannerNow(false, "turn", 50.0, 5f, 1_000))
-        assertFalse("not for arriving", turnBannerNow(false, "arrive", 10.0, 5f, 1_000))
+        assertFalse("5 mph, 45 m must keep counting down", turnBannerNow(false, "turn", 45.0, 2.24f, 1_000))
+        assertTrue("5 mph, about 11 m is near the junction", turnBannerNow(false, "turn", 11.0, 2.24f, 1_000))
+        assertFalse("stopped 20 m away is not 'Now'", turnBannerNow(false, "turn", 20.0, 0f, 1_000))
+        assertTrue("stopped at the actual junction", turnBannerNow(false, "turn", 6.0, 0f, 1_000))
+        assertFalse("stale GPS cannot claim execution moment", turnBannerNow(false, "turn", 5.0, 2.24f, 10_000))
+        assertFalse("missing speed cannot claim execution moment", turnBannerNow(false, "turn", 5.0, null, 1_000))
+        assertFalse("not for arriving", turnBannerNow(false, "arrive", 5.0, 2.24f, 1_000))
     }
 
     /** 1.5: the turn arrow is always shown, however far the next move is. */
