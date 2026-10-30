@@ -1,1 +1,5 @@
-Read REGISTER.md in drivemate-app first. (On GitHub: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md)
+Read the authoritative DriveMate app REGISTER on the test integration branch first: https://github.com/phuk-prog/drivemate-app/blob/test/continuous-drive-20261030/REGISTER.md
+
+Owner directive (30 October 2026): All new changes in THIS repository must be committed ONLY to branch `test/continuous-drive-20261030`, not main. Use exact pinned app test-branch SHA and pinned test source SHA. Public repo may contain test source and non-sensitive evidence ONLY, never private application source, token, APK signing material or proprietary map asset. Keep regression checks source-backed; distinguish passed, failed, skipped and unknown. While older tests run, begin the next independent source change on test branch, preserving immutable previous-test SHAs. Keep emulator-heavy checks serialized, avoid duplicate runs, and never claim that branch passes authorize release.
+
+Respect the single Cxx.N register, independent dependency-ready parallel work, blocker isolation, no false legality/phone/road assertions, and no release/merge to main without guarded approval. Automated GitHub Actions are tests, not an unattended arbitrary-code authoring agent.
