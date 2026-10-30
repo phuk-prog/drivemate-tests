@@ -6,6 +6,7 @@ import com.drivemate.app.data.RoadAlerts
 import com.drivemate.app.data.Route
 import com.drivemate.app.data.RouteStep
 import com.drivemate.app.nav.BackgroundGuidance
+import com.drivemate.app.nav.Geo
 import com.drivemate.app.nav.Format
 import com.drivemate.app.nav.LaneTiming
 import com.drivemate.app.nav.LatLon
@@ -41,13 +42,17 @@ class TurnByTurnDecisionsTest {
         assertEquals("15 mi", uk.distance(24_140.0))
     }
 
-    /** 1.4: "Now" about 5 seconds before the turn at your speed, and never further than that. */
+    /** M04: 5-second lead, no fixed 45 m "Now" in stopped or 5 mph traffic. */
     @Test fun q1_4_nowAboutFiveSeconds() {
         assertTrue(turnBannerNow(false, "turn", 150.0, 30f, 1_000))
         assertFalse(turnBannerNow(false, "turn", 160.0, 30f, 1_000))
-        assertTrue("slow: at least ~50 yd", turnBannerNow(false, "turn", 45.0, 5f, 1_000))
-        assertFalse(turnBannerNow(false, "turn", 50.0, 5f, 1_000))
-        assertFalse("not for arriving", turnBannerNow(false, "arrive", 10.0, 5f, 1_000))
+        assertFalse("5 mph, 45 m must keep counting down", turnBannerNow(false, "turn", 45.0, 2.24f, 1_000))
+        assertTrue("5 mph, about 11 m is near the junction", turnBannerNow(false, "turn", 11.0, 2.24f, 1_000))
+        assertFalse("stopped 20 m away is not 'Now'", turnBannerNow(false, "turn", 20.0, 0f, 1_000))
+        assertTrue("stopped at the actual junction", turnBannerNow(false, "turn", 6.0, 0f, 1_000))
+        assertFalse("stale GPS cannot claim execution moment", turnBannerNow(false, "turn", 5.0, 2.24f, 10_000))
+        assertFalse("missing speed cannot claim execution moment", turnBannerNow(false, "turn", 5.0, null, 1_000))
+        assertFalse("not for arriving", turnBannerNow(false, "arrive", 5.0, 2.24f, 1_000))
     }
 
     /** 1.5: the turn arrow is always shown, however far the next move is. */
@@ -144,8 +149,88 @@ class TurnByTurnDecisionsTest {
     /** 1.10: on the roundabout, the exit number until the last 60 m, then "Take the next exit" (changed by 2.7). */
     @Test fun q1_10_onTheRoundabout() {
         assertEquals("Take the 2nd exit onto Station Road", roundaboutCirculationInstruction(2, 100.0, "Station Road"))
-        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
+        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road", nextExitKnown = true))
+        assertEquals("unconfirmed next: retain ordinal", "Take the 2nd exit onto Station Road",
+            roundaboutCirculationInstruction(2, 50.0, "Station Road"))
         assertEquals("unknown exit: never an ordinal", "Take the exit", roundaboutCirculationInstruction(0, 200.0, ""))
+    }
+
+    /**
+     * M04 synthetic clockwise UK ring followed by a genuine second street turn.
+     * Asserts the active manoeuvre stays the roundabout throughout circulation and
+     * changes to the street turn only after source-backed exit passage confirmation.
+     * This geometry fixture is not independent legal evidence for Pyramid/Yew Street.
+     */
+    @Test fun m04RingInstructionDoesNotSwitchToFollowingStreetBeforeExit() {
+        val centre = LatLon(53.409, -2.174)
+        val entry = Geo.offset(centre, 180.0, 35.0)
+        val approach = Geo.offset(entry, 180.0, 95.0)
+        val arrivalAtRing = (0..10).map { Geo.interpolate(approach, entry, it / 10.0) }
+        val ring = (1..8).map { Geo.offset(centre, 180.0 + it * 22.5, 35.0) }
+        val leave = ring.last()
+        val exitRoad = (1..6).map { Geo.offset(leave, 0.0, it * 10.0) }
+        val nextTurn = exitRoad.last()
+        val finalRoad = (1..10).map { Geo.offset(nextTurn, 90.0, it * 10.0) }
+        val points = arrivalAtRing + ring + exitRoad + finalRoad
+        fun through(i: Int) = (1..i).sumOf { Geo.distance(points[it - 1], points[it]) }
+        val ringStart = through(arrivalAtRing.lastIndex)
+        val nextTurnAt = through(arrivalAtRing.size + ring.size + exitRoad.size - 1)
+        val total = through(points.lastIndex)
+        val steps = listOf(
+            RouteStep("Head out", "depart", "", "Approach Road", ringStart, approach),
+            RouteStep("At roundabout, take 2nd exit", "roundabout", "", "Exit Road",
+                nextTurnAt - ringStart, entry, exit = 2, leftDriving = true),
+            RouteStep("Turn right onto Following Street", "turn", "right", "Following Street",
+                total - nextTurnAt, nextTurn, leftDriving = true),
+            RouteStep("Arrive", "arrive", "", "", 0.0, points.last()),
+        )
+        val engine = NavigationEngine(Route(points, total, 90.0, steps, "synthetic"))
+        for (p in points.subList(arrivalAtRing.size, arrivalAtRing.size + 6)) {
+            val progress = engine.update(p, speed = 5.0, accuracy = 5.0)
+            assertEquals("Following street must not become active while circulating", 1, progress.nextStep)
+            assertTrue("Keep the roundabout banner on the ring", progress.onRoundabout)
+        }
+        val beyondExit = points.drop(arrivalAtRing.size + ring.size + 2).take(3)
+        var progress = engine.update(beyondExit[0], speed = 5.0, accuracy = 5.0)
+        progress = engine.update(beyondExit[1], speed = 5.0, accuracy = 5.0)
+        progress = engine.update(beyondExit[2], speed = 5.0, accuracy = 5.0)
+        assertEquals("Following street becomes active after confirmed exit passage", 2, progress.nextStep)
+        assertFalse("No false roundabout circulation after verified exit", progress.onRoundabout)
+    }
+
+    /** M04: when a graph has no defensible exit geometry, do not assume 120 m into the ring. */
+    @Test fun m04UnknownRoundaboutHoldsUntilStepBoundary() {
+        val points = (0..70).map { road(it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Approach Road", 100.0, road(0.0)),
+            RouteStep("Enter the roundabout", "roundabout", "", "Exit Road", 300.0, road(100.0), exit = 2),
+            RouteStep("Turn left", "turn", "left", "Next Street", 300.0, road(400.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(700.0)),
+        )
+        val engine = NavigationEngine(Route(points, 700.0, 90.0, steps, "synthetic"))
+        engine.update(road(150.0), 0.0, 3.0)
+        val onRing = engine.update(road(260.0), 0.0, 3.0)
+        assertTrue("No invented 120 m exit", onRing.onRoundabout)
+        assertEquals(1, onRing.nextStep)
+        assertTrue("Until known completion, keep ring instruction", onRing.distanceToNext > 100.0)
+        assertFalse("Unmapped intersections cannot prove next exit", engine.roundaboutNextExitKnown(1, onRing.along))
+    }
+
+    /** M04: 'next' requires complete mapped intersections and no remaining intermediate arm. */
+    @Test fun m04NextExitClaimNeedsMappedJunctions() {
+        val points = (0..70).map { road(it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Approach Road", 100.0, road(0.0)),
+            RouteStep("Roundabout, 2nd exit", "roundabout", "", "Exit Road", 300.0, road(100.0),
+                exit = 2, junctionsKnown = true, sideExits = listOf(road(300.0))),
+            RouteStep("Continue", "continue", "straight", "Next Street", 300.0, road(400.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(700.0)),
+        )
+        val engine = NavigationEngine(Route(points, 700.0, 90.0, steps, "synthetic"))
+        assertFalse("Another exit ahead", engine.roundaboutNextExitKnown(1, 200.0))
+        assertFalse("Intersecting roads alone do not prove the actual exit geometry",
+            engine.roundaboutNextExitKnown(1, 320.0))
+        assertFalse("After ring completion", engine.roundaboutNextExitKnown(1, 410.0))
     }
 
     /**
@@ -181,6 +266,35 @@ class TurnByTurnDecisionsTest {
         assertTrue("30 m/s (about 67 mph), turns 800 m apart", thenShown(800.0, 30.0))
         assertFalse("30 m/s, turns 950 m apart: never beyond ~900 m", thenShown(950.0, 30.0))
         assertTrue("walking pace: the window never drops below 30 s at 8 m/s (240 m)", thenShown(200.0, 1.0))
+    }
+
+    /** M04: changed street name on a bend must not be auto-promoted to a new turn. */
+    @Test fun m04NameChangeWithoutTurnEvidenceRemainsStraight() {
+        val points = (0..20).map { road(it * 10.0) } + (1..20).map { road(200.0, it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Old Road", 200.0, road(0.0)),
+            RouteStep("Continue onto Aber Road", "new name", "straight", "Aber Road", 200.0, road(200.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(200.0, 200.0)),
+        )
+        val engine = NavigationEngine(Route(points, 400.0, 40.0, steps, "synthetic"))
+        assertEquals("straight", engine.steps[1].modifier)
+        assertEquals("new name", engine.steps[1].type)
+    }
+
+    /** M04: a zero-length second provider step at the same junction is not a second turn. */
+    @Test fun m04_thenDoesNotRepeatTheSameJunction() {
+        val base = testRoute()
+        val steps = listOf(
+            RouteStep("Head out on Mill Lane", "depart", "", "Mill Lane", 800.0, road(0.0)),
+            RouteStep("Turn right onto Station Road", "turn", "right", "Station Road", 0.0, road(800.0)),
+            RouteStep("Turn left onto Station Road", "turn", "left", "Station Road", 400.0, road(800.0)),
+            RouteStep("You have arrived", "arrive", "", "", 0.0, road(800.0, 400.0)),
+        )
+        val engine = NavigationEngine(Route(base.points, 1_200.0, 120.0, steps, "synthetic"))
+        engine.update(road(740.0), 0.0, 3.0)
+        val progress = engine.update(road(750.0), 0.0, 3.0)
+        assertEquals(1, progress.nextStep)
+        assertNull("Do not show 'Then' at the exact same physical junction", progress.thenStep)
     }
 
     /** 1.12: side of the road when known, "ahead" when not. */

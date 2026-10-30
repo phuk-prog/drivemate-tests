@@ -42,7 +42,14 @@ class VoiceAndSoundDecisionsTest {
         assertEquals("Slight left onto Station Road", card)
         assertEquals("In half a mile, slight left onto Station Road", VoiceAnswers.nextTurn("half a mile", card))
         assertEquals("In 300 yards, slight left onto Station Road", SpokenGuidance.early("300 yards", null, card))
-        assertEquals("roundabout: card and voice the same", roundaboutCirculationInstruction(2, 40.0, ""), roundaboutExitPrompt(""))
+        assertEquals("No unverified ordinal on the voice prompt", "Take the exit", roundaboutExitPrompt(""))
+        assertEquals("Unknown exit number is consistently neutral on card and voice",
+            roundaboutCirculationInstruction(0, 40.0, ""), roundaboutExitPrompt(""))
+        assertEquals("When the source explicitly provides an exit ordinal, card and voice match",
+            roundaboutCirculationInstruction(2, 40.0, ""), roundaboutExitPrompt("", exit = 2))
+        assertEquals("Only mapped junctions justify the next-exit claim",
+            roundaboutCirculationInstruction(2, 40.0, "", nextExitKnown = true),
+            roundaboutExitPrompt("", nextExitKnown = true, exit = 2))
         val mini = TurnInstructions.miniRoundabout("right", "")
         assertTrue(mini, mini.startsWith("At the mini-roundabout, turn right"))
     }
@@ -63,7 +70,9 @@ class VoiceAndSoundDecisionsTest {
         assertEquals(800.0, VoiceTiming.approach(22.0), 0.1)
         assertEquals(350.0, VoiceTiming.approach(13.0), 0.1)
         assertEquals("about 5 seconds", 150.0, VoiceTiming.now(30.0, 1), 0.1)
-        assertEquals("never under 45 m", 45.0, VoiceTiming.now(5.0, 1), 0.1)
+        assertEquals("at 5 m/s use five seconds, not 45 m", 25.0, VoiceTiming.now(5.0, 1), 0.1)
+        assertEquals("at 5 mph use about 11 m", 11.2, VoiceTiming.now(2.24, 1), 0.1)
+        assertEquals("at a stop use only junction tolerance", 8.0, VoiceTiming.now(0.0, 1), 0.1)
     }
 
     /** 2.4: motorway exits: 1 mile with the junction number first, ½ mile, then "Exit now, on the left". */
@@ -100,9 +109,18 @@ class VoiceAndSoundDecisionsTest {
 
     /** 2.7: "Take the next exit" on the card and in the voice just before your exit; the lane when known. */
     @Test fun q2_7_roundaboutNextExit() {
-        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
-        assertEquals("Take the next exit", roundaboutExitPrompt(""))
-        assertEquals("Take the next exit, from the left lane", roundaboutExitPrompt("from the left lane"))
+        assertEquals("Take the next exit onto Station Road",
+            roundaboutCirculationInstruction(2, 50.0, "Station Road", nextExitKnown = true))
+        assertEquals("Take the next exit", roundaboutExitPrompt("", nextExitKnown = true))
+        assertEquals("Take the next exit, from the left lane",
+            roundaboutExitPrompt("from the left lane", nextExitKnown = true))
+        assertEquals("Unknown next exit retains the numbered claim instead of an invented 'next'",
+            "Take the 2nd exit onto Station Road",
+            roundaboutExitPrompt("", exit = 2, road = "Station Road"))
+        assertEquals("Unmapped exit stays unknown", "Take the exit", roundaboutExitPrompt(""))
+        assertEquals("Card and speech identical when unverified",
+            roundaboutCirculationInstruction(2, 40.0, "Station Road"),
+            roundaboutExitPrompt("", exit = 2, road = "Station Road"))
         assertEquals("further out, the exit number", "Take the 2nd exit onto Station Road", roundaboutCirculationInstruction(2, 100.0, "Station Road"))
     }
 

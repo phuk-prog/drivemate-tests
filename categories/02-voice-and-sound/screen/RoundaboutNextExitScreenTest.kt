@@ -42,9 +42,9 @@ class RoundaboutNextExitScreenTest {
     }
 
     @Test fun q2_7_cardSaysTakeTheNextExit() {
-        val instruction = roundaboutCirculationInstruction(2, 40.0, "Station Road")
+        val instruction = roundaboutCirculationInstruction(2, 40.0, "Station Road", nextExitKnown = true)
         val action = navigationCirculationAction(onRoundabout = true, arrived = false, instruction = instruction, road = "Station Road")!!
-        assertEquals("the card's words are the voice's words", roundaboutExitPrompt(""), action)
+        assertEquals("the card's words are the voice's words", roundaboutExitPrompt("", nextExitKnown = true), action)
         compose.setContent {
             Box(Modifier.fillMaxSize().background(NavigationCardNavy)) {
                 NavigationHeader(

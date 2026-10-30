@@ -35,6 +35,28 @@ class DmnAmbiguousRoadMatchTest {
         )
     )
 
+    /** M04: a 90-degree bend on one uninterrupted mapped way is not a right turn. */
+    @Test fun continuousSameWayBendNeedsNoInventedTurn() {
+        val nodes = listOf(
+            LatLon(53.40000, -2.20000), LatLon(53.40050, -2.20000),
+            LatLon(53.40050, -2.19950),
+        )
+        val pack = DmnPack(
+            lat = nodes.map { it.lat }.toDoubleArray(), lon = nodes.map { it.lon }.toDoubleArray(),
+            nodeId = longArrayOf(1, 2, 3), wayId = longArrayOf(101),
+            wayRoundabout = booleanArrayOf(false), wayName = arrayOf("Aber Road"), wayRef = arrayOf(""),
+            wayHighway = arrayOf("residential"), from = intArrayOf(0, 1), to = intArrayOf(1, 2),
+            metres = floatArrayOf(55.0f, 33.0f), kph = floatArrayOf(30f, 30f),
+            access = ByteArray(2), startAccess = ByteArray(2), finishAccess = ByteArray(2),
+            restricted = BooleanArray(2), way = intArrayOf(0, 0), banPairs = LongArray(0),
+            sequences = emptyList(), uturnNode = BooleanArray(3), metadata = "synthetic same-way bend",
+        )
+        val plan = DmnRouter.Plan(0, 1, intArrayOf(1), 88.0, 12.0, false)
+        val route = Dmn.build(DmnRouter(pack), listOf(Triple(nodes.first(), nodes.last(), plan)))
+        assertEquals("Only depart and arrive; no actual branch exists",
+            listOf("depart", "arrive"), route.steps.map { it.type })
+    }
+
     @Test fun halfwayBetweenParallelRoadsIsUnknown() {
         val point = LatLon(53.40004, -2.1995)
         val r = router()
