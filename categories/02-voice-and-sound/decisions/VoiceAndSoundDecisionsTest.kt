@@ -42,7 +42,14 @@ class VoiceAndSoundDecisionsTest {
         assertEquals("Slight left onto Station Road", card)
         assertEquals("In half a mile, slight left onto Station Road", VoiceAnswers.nextTurn("half a mile", card))
         assertEquals("In 300 yards, slight left onto Station Road", SpokenGuidance.early("300 yards", null, card))
-        assertEquals("roundabout: card and voice the same", roundaboutCirculationInstruction(2, 40.0, ""), roundaboutExitPrompt(""))
+        assertEquals("No unverified ordinal on the voice prompt", "Take the exit", roundaboutExitPrompt(""))
+        assertEquals("Unknown exit number is consistently neutral on card and voice",
+            roundaboutCirculationInstruction(0, 40.0, ""), roundaboutExitPrompt(""))
+        assertEquals("When the source explicitly provides an exit ordinal, card and voice match",
+            roundaboutCirculationInstruction(2, 40.0, ""), roundaboutExitPrompt("", exit = 2))
+        assertEquals("Only mapped junctions justify the next-exit claim",
+            roundaboutCirculationInstruction(2, 40.0, "", nextExitKnown = true),
+            roundaboutExitPrompt("", nextExitKnown = true, exit = 2))
         val mini = TurnInstructions.miniRoundabout("right", "")
         assertTrue(mini, mini.startsWith("At the mini-roundabout, turn right"))
     }

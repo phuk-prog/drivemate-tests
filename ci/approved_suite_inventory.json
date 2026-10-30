@@ -36,7 +36,7 @@
     "categories/01-turn-by-turn-guidance/decisions/TurnByTurnDecisionsTest.kt": "ec6306f8a3061ec417bc7f603711790eca5b58ba",
     "categories/01-turn-by-turn-guidance/law/TurnByTurnLawTest.kt": "761b5dece204e15e09136addb82839d74f66af7f",
     "categories/01-turn-by-turn-guidance/screen/TurnCardScreenTest.kt": "f5478b6048415190f401e310120639b5f8b15aa3",
-    "categories/02-voice-and-sound/decisions/VoiceAndSoundDecisionsTest.kt": "594294de61f1d78e2523e6ecf788b6e35e86ead8",
+    "categories/02-voice-and-sound/decisions/VoiceAndSoundDecisionsTest.kt": "26e9e7e8a4d7099259980723ba38d0e3ff0e366e",
     "categories/02-voice-and-sound/law/VoiceAndSoundLawTest.kt": "d19ccb39a3ee78f4b5f23e70abc9eb9be457db98",
     "categories/02-voice-and-sound/screen/RoundaboutNextExitScreenTest.kt": "3b6df35b8ba2b479a110f2cd7bfc0091dd089c28",
     "categories/03-lane-guidance/decisions/LaneConnectivityDecisionsTest.kt": "3b0b74b14ed1e48c55e794ac2b76cf86da4a2807",
