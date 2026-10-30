@@ -75,4 +75,20 @@ class DmnAmbiguousRoadMatchTest {
         assertNull(r.snapForMatch(LatLon(53.4, -2.1995), 90f, Double.NaN))
         assertNull(r.snapForMatch(LatLon(53.4, -2.1995), 90f, 100.0))
     }
+
+    @Test fun repeatedObservationsDoNotChangeConfidenceOrInventRoads() {
+        val graph = router()
+        val ambiguous = LatLon(53.40004, -2.1995)
+        val unique = LatLon(53.400005, -2.1995)
+        // Overlapping GPS windows repeatedly reference precisely the same fix.
+        repeat(25) {
+            assertNull(graph.snapForMatch(ambiguous, 90f, 6.0))
+            assertEquals(0, graph.pack.way[graph.snapForMatch(unique, 90f, 5.0)!!])
+            assertNull("Large reported accuracy must remain unknown even after a confident fix was cached",
+                graph.snapForMatch(unique, 90f, 25.0))
+        }
+        // A different heading is not permitted to reuse the eastbound match.
+        val westbound = graph.snapForMatch(unique, 270f, 5.0)
+        if (westbound != null) assertEquals(0, graph.pack.way[westbound])
+    }
 }

@@ -439,7 +439,7 @@ class PublishedDmnStockportSourceTest {
             .put("published_release", index.optString("release"))
             .put("source_sha256", piece.getString("sha256"))
             .put("graph_edges", graph.edgeCount)
-            .put("real_junction_node", graph.nodeId[junction])
+            .put("real_junction_node", (graph.nodeId?.get(junction)?.takeIf { it > 0 } ?: -1L))
             .put("real_junction_unknown", true)
             .put("sampled_slip_edges", slips.size)
             .put("confident_slip_matches", confidentlyMatchedLinks)
