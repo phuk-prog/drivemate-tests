@@ -75,7 +75,7 @@
     "categories/08-rerouting/decisions/ReroutingDistractionDecisionsTest.kt": "898933f788a6a7e8c123632e633643fb646f48d4",
     "categories/08-rerouting/screen/RerouteAcceptanceScreenTest.kt": "f8b094da2bf21e14a7ee9233654db313f63235e9",
     "categories/09-traffic/decisions/TrafficDecisionsTest.kt": "1eb31d0e95ec01e701c84016478e5d2fd48a3362",
-    "categories/10-position-and-gps/decisions/PositionGpsDecisionsTest.kt": "b31491126e815df7bfc0231e8c2503bbc2ce941e",
+    "categories/10-position-and-gps/decisions/PositionGpsDecisionsTest.kt": "817f74323df8d17e847bbdb2432ede5d2e798585",
     "categories/10-position-and-gps/screen/GpsAcceptanceScreenTest.kt": "63628e10412507de127e19edd1c3a8e00de1c08a",
     "categories/10-position-and-gps/screen/GpsFilterScreenTest.kt": "78d42bc5c438bbb9a1c5d2aa61fd59efc422c4f2",
     "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "7d4d46312a12175c7f64eb23c3f093917709a569",
