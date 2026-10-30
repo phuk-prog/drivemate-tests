@@ -148,8 +148,44 @@ class TurnByTurnDecisionsTest {
     /** 1.10: on the roundabout, the exit number until the last 60 m, then "Take the next exit" (changed by 2.7). */
     @Test fun q1_10_onTheRoundabout() {
         assertEquals("Take the 2nd exit onto Station Road", roundaboutCirculationInstruction(2, 100.0, "Station Road"))
-        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road"))
+        assertEquals("Take the next exit onto Station Road", roundaboutCirculationInstruction(2, 50.0, "Station Road", nextExitKnown = true))
+        assertEquals("unconfirmed next: retain ordinal", "Take the 2nd exit onto Station Road",
+            roundaboutCirculationInstruction(2, 50.0, "Station Road"))
         assertEquals("unknown exit: never an ordinal", "Take the exit", roundaboutCirculationInstruction(0, 200.0, ""))
+    }
+
+    /** M04: when a graph has no defensible exit geometry, do not assume 120 m into the ring. */
+    @Test fun m04UnknownRoundaboutHoldsUntilStepBoundary() {
+        val points = (0..70).map { road(it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Approach Road", 100.0, road(0.0)),
+            RouteStep("Enter the roundabout", "roundabout", "", "Exit Road", 300.0, road(100.0), exit = 2),
+            RouteStep("Turn left", "turn", "left", "Next Street", 300.0, road(400.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(700.0)),
+        )
+        val engine = NavigationEngine(Route(points, 700.0, 90.0, steps, "synthetic"))
+        engine.update(road(150.0), 0.0, 3.0)
+        val onRing = engine.update(road(260.0), 0.0, 3.0)
+        assertTrue("No invented 120 m exit", onRing.onRoundabout)
+        assertEquals(1, onRing.nextStep)
+        assertTrue("Until known completion, keep ring instruction", onRing.distanceToNext > 100.0)
+        assertFalse("Unmapped intersections cannot prove next exit", engine.roundaboutNextExitKnown(1, onRing.along))
+    }
+
+    /** M04: 'next' requires complete mapped intersections and no remaining intermediate arm. */
+    @Test fun m04NextExitClaimNeedsMappedJunctions() {
+        val points = (0..70).map { road(it * 10.0) }
+        val steps = listOf(
+            RouteStep("Head north", "depart", "", "Approach Road", 100.0, road(0.0)),
+            RouteStep("Roundabout, 2nd exit", "roundabout", "", "Exit Road", 300.0, road(100.0),
+                exit = 2, junctionsKnown = true, sideExits = listOf(road(300.0))),
+            RouteStep("Continue", "continue", "straight", "Next Street", 300.0, road(400.0)),
+            RouteStep("Arrive", "arrive", "", "", 0.0, road(700.0)),
+        )
+        val engine = NavigationEngine(Route(points, 700.0, 90.0, steps, "synthetic"))
+        assertFalse("Another exit ahead", engine.roundaboutNextExitKnown(1, 200.0))
+        assertTrue("That exit is passed, junction data complete", engine.roundaboutNextExitKnown(1, 320.0))
+        assertFalse("After ring completion", engine.roundaboutNextExitKnown(1, 410.0))
     }
 
     /**
