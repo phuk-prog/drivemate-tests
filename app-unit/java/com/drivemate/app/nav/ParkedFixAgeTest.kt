@@ -53,4 +53,20 @@ class ParkedFixAgeTest {
         val parkedPolicy = LocationSelectionPolicy().apply { maxAgeMs = LocationTracker.STATIONARY_FIX_MS + 5_000 }
         assertTrue(parkedPolicy.accept(fix(100_000), 110_000, navigation = false))
     }
+
+    @Test fun navigationAsksForMaximumFreshLocationRateWithoutChangingParkedTracking() {
+        assertEquals("active navigation asks as fast as the device can provide", 0L,
+            fixInterval(LocationTracker.Mode.NAVIGATION))
+        assertEquals("20 Hz callback safety cap", 50L,
+            fastestFixInterval(LocationTracker.Mode.NAVIGATION))
+        assertEquals("browsing frequency unchanged", 500L,
+            fixInterval(LocationTracker.Mode.BROWSE))
+        assertEquals(250L, fastestFixInterval(LocationTracker.Mode.BROWSE))
+        assertEquals(15_000L, fixInterval(LocationTracker.Mode.STATIONARY))
+        assertEquals(7_500L, fastestFixInterval(LocationTracker.Mode.STATIONARY))
+    }
+
+    @Test fun navigationFallbackProbesWithinThreeSecondsOfStalledFusedFeed() {
+        assertEquals(3_000L, LocationTracker.NAVIGATION_FALLBACK_MS)
+    }
 }
