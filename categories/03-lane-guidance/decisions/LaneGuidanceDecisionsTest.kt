@@ -35,6 +35,23 @@ class LaneGuidanceDecisionsTest {
         assertFalse(LanePolicy.inScope(true, 3, false))
         assertTrue(LanePolicy.inScope(true, 3, true))
     }
+    @Test fun m05_passedJunctionNeverRevivesOldLaneAdviceAfterGpsBacktrack() {
+        val display = LaneDisplay()
+        val onset = { 250.0 }
+        assertTrue(display.due("route-a", "junction-a", 130.0, onset))
+        assertFalse("A confirmed passed decision must clear its strip",
+            display.due("route-a", "junction-a", -2.0, onset))
+        assertFalse("Backtracking must not resurrect the already-passed lane strip",
+            display.due("route-a", "junction-a", 15.0, onset))
+        assertTrue("A distinct following decision can show sourced arrows",
+            display.due("route-a", "junction-b", 80.0, onset))
+        assertTrue("An actual replacement route starts with a fresh decision",
+            display.due("route-b", "junction-a", 120.0, onset))
+        display.clear()
+        assertTrue("Explicit navigation restart can re-arm the same decision",
+            display.due("route-a", "junction-a", 100.0, onset))
+    }
+
     @Test fun q3_2_3_10_allUsableLanesRemainWithDistinctPreference() {
         val lanes = listOf(lane(false), lane(preferred = false), lane(preferred = true))
         assertEquals(listOf(1, 2), LanePolicy.usable(lanes))
