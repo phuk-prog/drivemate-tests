@@ -85,6 +85,10 @@ class WorldOverviewTest {
         val incomplete = JSONObject(base.toString())
         incomplete.getJSONObject("source_assets").remove("world-countries.geojson")
         assertTrue(rejected(incomplete))
+        val unexpected = JSONObject(base.toString())
+        unexpected.getJSONObject("source_assets").put("unverified-extra.geojson",
+            JSONObject().put("tag", source).put("sha256", sha).put("bytes", 3200))
+        assertTrue("Foreign source layers cannot sneak into a world publication", rejected(unexpected))
         val foreign = JSONObject(base.toString())
         foreign.getJSONObject("source_assets").getJSONObject("world-land.geojson").put("tag", release)
         assertTrue(rejected(foreign))
