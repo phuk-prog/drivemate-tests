@@ -63,7 +63,9 @@ class VoiceAndSoundDecisionsTest {
         assertEquals(800.0, VoiceTiming.approach(22.0), 0.1)
         assertEquals(350.0, VoiceTiming.approach(13.0), 0.1)
         assertEquals("about 5 seconds", 150.0, VoiceTiming.now(30.0, 1), 0.1)
-        assertEquals("never under 45 m", 45.0, VoiceTiming.now(5.0, 1), 0.1)
+        assertEquals("at 5 m/s use five seconds, not 45 m", 25.0, VoiceTiming.now(5.0, 1), 0.1)
+        assertEquals("at 5 mph use about 11 m", 11.2, VoiceTiming.now(2.24, 1), 0.1)
+        assertEquals("at a stop use only junction tolerance", 8.0, VoiceTiming.now(0.0, 1), 0.1)
     }
 
     /** 2.4: motorway exits: 1 mile with the junction number first, ½ mile, then "Exit now, on the left". */
