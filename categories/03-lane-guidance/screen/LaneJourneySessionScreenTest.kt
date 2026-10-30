@@ -142,6 +142,10 @@ class LaneJourneySessionScreenTest {
                     List(third.route.points.size - 1) { 30.0 * 1.609344 }
                 call(session, "setPositionReliable", true)
                 assertStrip(session, third.start, emptyList(), "outside new route onset")
+                call(session, "setPositionReliable", false)
+                assertEquals("Lost measured location must immediately invalidate lane visibility diagnostics",
+                    com.drivemate.app.nav.LanePresentationStatus.POSITION_UNCERTAIN,
+                    session.lanePresentationStatus)
             }
         } finally { compose.runOnIdle { session.close() } }
     }
