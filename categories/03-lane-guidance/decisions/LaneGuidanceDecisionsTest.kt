@@ -3,6 +3,7 @@ package com.drivemate.tests.cat03
 import com.drivemate.app.data.Lane
 import com.drivemate.app.data.VoiceCommand
 import com.drivemate.app.nav.LaneDisplay
+import com.drivemate.app.nav.LanePresentationStatus
 import com.drivemate.app.nav.LanePolicy
 import com.drivemate.app.nav.LaneTiming
 import org.junit.Assert.*
@@ -50,6 +51,17 @@ class LaneGuidanceDecisionsTest {
         display.clear()
         assertTrue("Explicit navigation restart can re-arm the same decision",
             display.due("route-a", "junction-a", 100.0, onset))
+    }
+
+    @Test fun m05_lanePresentationExplainsWhichGateSuppressedARealStrip() {
+        val status = LanePresentationStatus.Companion
+        assertEquals(LanePresentationStatus.SOURCE_UNKNOWN, status.of(false, false, false, false))
+        assertEquals(LanePresentationStatus.OUTSIDE_SCOPE, status.of(true, false, true, true))
+        assertEquals(LanePresentationStatus.BEFORE_APPROACH_WINDOW, status.of(true, true, false, true))
+        assertEquals(LanePresentationStatus.POSITION_UNCERTAIN, status.of(true, true, true, false))
+        assertEquals(LanePresentationStatus.VISIBLE, status.of(true, true, true, true))
+        // An unknown source must never be turned into a lane suggestion by a good GPS fix.
+        assertEquals(LanePresentationStatus.SOURCE_UNKNOWN, status.of(false, true, true, true))
     }
 
     @Test fun q3_2_3_10_allUsableLanesRemainWithDistinctPreference() {
