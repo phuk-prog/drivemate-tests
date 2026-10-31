@@ -19,12 +19,18 @@ REGION_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,70}\Z")
 
 
 def verify_asset(data, release):
-    assets = [a for a in release.get("assets", []) if a.get("name") == "catalog.json"]
+    # Remote release JSON is untrusted. A malformed asset list must produce a
+    # recorded failed audit, not an uncaught AttributeError before output JSON.
+    if not isinstance(release, dict) or not isinstance(release.get("assets"), list):
+        raise ValueError("CATALOG_RELEASE_ASSET_INDEX_INVALID")
+    if any(not isinstance(a, dict) for a in release["assets"]):
+        raise ValueError("CATALOG_RELEASE_ASSET_INDEX_INVALID")
+    assets = [a for a in release["assets"] if a.get("name") == "catalog.json"]
     if len(assets) != 1:
         raise ValueError("CATALOG_ASSET_MISSING_OR_DUPLICATED")
     asset = assets[0]
     digest = hashlib.sha256(data).hexdigest()
-    if asset.get("size") != len(data) or asset.get("digest") != "sha256:" + digest:
+    if type(asset.get("size")) is not int or asset["size"] != len(data) or asset.get("digest") != "sha256:" + digest:
         raise ValueError("CATALOG_RELEASE_DIGEST_MISMATCH")
     if release.get("tag_name") != "map-regions":
         raise ValueError("UNEXPECTED_CATALOG_RELEASE")

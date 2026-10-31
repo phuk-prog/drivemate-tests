@@ -60,6 +60,25 @@ class LiveCatalogAuditContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CATALOG_RELEASE_DIGEST_MISMATCH"):
             verify_asset(data, tampered)
 
+    def test_untrusted_release_asset_structure_and_size_fail_closed(self):
+        """Malformed remote release JSON must fail with a recorded ValueError."""
+        data = b'{"schema":1,"coverage":"partial","regions":{}}'
+        good = {"tag_name": "map-regions", "assets": [{
+            "name": "catalog.json", "size": len(data),
+            "digest": "sha256:" + hashlib.sha256(data).hexdigest()}]}
+        for broken in (None, {}, {"assets": {}}, {"assets": [None]},
+                       {"assets": ["catalog.json"]}):
+            with self.subTest(release=broken):
+                with self.assertRaisesRegex(ValueError, "CATALOG_RELEASE_ASSET_INDEX_INVALID"):
+                    verify_asset(data, broken)
+        for invalid_size in (float(len(data)), str(len(data)), True):
+            broken = copy.deepcopy(good)
+            broken["assets"][0]["size"] = invalid_size
+            with self.subTest(size=invalid_size):
+                with self.assertRaisesRegex(ValueError, "CATALOG_RELEASE_DIGEST_MISMATCH"):
+                    verify_asset(data, broken)
+        self.assertEqual(len(data), verify_asset(data, good)["bytes"])
+
     def test_invalid_region_manifest_pointer_fails_closed(self):
         document = catalogue()
         document["regions"]["wales"]["manifest"]["sha256"] = "unverified"
