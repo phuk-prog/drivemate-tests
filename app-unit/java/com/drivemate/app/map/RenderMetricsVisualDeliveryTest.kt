@@ -110,6 +110,22 @@ class RenderMetricsVisualDeliveryTest {
         assertTrue(s.summary().contains("complete-frame callback age unknown"))
     }
 
+    @Test fun rendererSummaryDisclosesInstanceLifetimeInsteadOfDriveScope() {
+        val metrics = RenderMetrics()
+        metrics.frame(1_000_000_000L, true, 2, 1)
+        val before = metrics.snapshot()
+        metrics.frame(2_000_000_000L, true, 2, 1)
+        val after = metrics.snapshot()
+        // Frame totals accumulate for this renderer; starting another drive does not reset them.
+        assertEquals(1L, before.frames)
+        assertEquals(2L, after.frames)
+        MapRenderDiagnostics.register("phone", metrics)
+        val report = MapRenderDiagnostics.summary()
+        assertTrue(report.contains("cumulative per renderer instance, not per drive"))
+        assertTrue(report.contains("not acknowledgements of individual positions"))
+        assertTrue(report.contains("Map frames: 2 (2 complete)"))
+    }
+
     @Test fun activeRendererAwaitingFirstFrameDiffersFromPausedRenderer() {
         val metrics = RenderMetrics()
         val active = metrics.visualSnapshot(1_000_000_000L)
