@@ -15,8 +15,14 @@ import java.io.File
 class M01NationalMapSelectionTest {
     @get:Rule val temp = TemporaryFolder()
 
+    // Only the 8-byte PMTiles v3 signature is under test; this is NOT a complete map.
+    private fun headerOnlyFixture(): ByteArray = ByteArray(127).apply {
+        "PMTiles".toByteArray(Charsets.US_ASCII).copyInto(this)
+        this[7] = 3
+    }
+
     @Test fun visibleOnlineUkMapDoesNotShrinkToAnInstalledScottishRegion() {
-        val regional = temp.newFile("installed-scotland.pmtiles").apply { writeBytes(ByteArray(127)) }
+        val regional = temp.newFile("installed-scotland.pmtiles").apply { writeBytes(headerOnlyFixture()) }
         val national = MapData.Download(
             "https://github.com/phuk-prog/drivemate-map/releases/download/map-data-ukmap-r40883954274-a1/drivemate-v1.pmtiles",
             MapData.Asset("b".repeat(64), 1_781_936_174L, "map-data-ukmap-r40883954274-a1"),
@@ -31,7 +37,7 @@ class M01NationalMapSelectionTest {
             networkAvailable = false)
         assertEquals("pmtiles://file://${regional.absolutePath}", offline.tiles)
         assertEquals(scotlandTag, offline.snapshotTag)
-        val countryFile = temp.newFile("installed-whole-uk.pmtiles").apply { writeBytes(ByteArray(127)) }
+        val countryFile = temp.newFile("installed-whole-uk.pmtiles").apply { writeBytes(headerOnlyFixture()) }
         val localUk = OwnMap.selectMap(national, countryFile, MapLayout.OWN,
             national.snapshotTag, networkAvailable = true)
         assertEquals("pmtiles://file://${countryFile.absolutePath}", localUk.tiles)
@@ -94,6 +100,24 @@ class M01NationalMapSelectionTest {
         assertEquals(false, OwnMap.useRegionalFallback(regionTag, null, "wales", false))
     }
 
+
+    @Test fun malformedHeaderCannotMasqueradeAsAnInstalledUkArchive() {
+        val tag = "map-data-ukmap-r40883954274-a1"
+        val national = MapData.Download(
+            "https://github.com/phuk-prog/drivemate-map/releases/download/$tag/drivemate-v1.pmtiles",
+            MapData.Asset("b".repeat(64), 1_781_936_174L, tag),
+            MapLayout.OWN, tag
+        )
+        val malformed = temp.newFile("malformed-header-uk.pmtiles")
+            .apply { writeBytes(ByteArray(127)) }
+        assertEquals(127L, malformed.length())
+        assertEquals("A file of plausible length without the PMTiles v3 header is not an installed map",
+            false, VerifiedMapArchive.plausibleInstalled(malformed))
+        val selected = OwnMap.selectMap(national, malformed, MapLayout.OWN, tag,
+            networkAvailable = true)
+        assertEquals("Do not hide the published UK map behind a malformed local file",
+            "pmtiles://${national.url}", selected.tiles)
+    }
 
     @Test fun zeroByteUkArchiveCannotMasqueradeAsAnInstalledCountryMap() {
         val tag = "map-data-ukmap-r40883954274-a1"
