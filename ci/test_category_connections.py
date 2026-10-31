@@ -87,8 +87,8 @@ class CategoryConnectionContracts(unittest.TestCase):
         extra = self.root / "app/src/main/java/com/drivemate/app/Unexpected.kt"
         extra.write_text('val api = "https://unrecognized.example.net/service"\n')
         report = self.run_audit()
-        self.assertIn("unassigned_source_needs_review", report["categories"]["2"]["finding_codes"])
-        self.assertEqual("blocked_needs_investigation", report["categories"]["2"]["status"])
+        self.assertIn("unassigned_source_needs_review", report["categories"]["20"]["finding_codes"])
+        self.assertEqual("blocked_needs_investigation", report["categories"]["20"]["status"])
 
     def test_comments_do_not_create_fake_active_downloads(self):
         items = classify_source_text(
@@ -173,8 +173,8 @@ class CategoryConnectionContracts(unittest.TestCase):
         report = self.run_audit()
         self.assertEqual(1, report["categories"]["23"]["reference_status_counts"]["test_service_reference_not_live"])
         self.assertEqual(1, report["categories"]["23"]["unresolved_references"])
-        self.assertEqual(1, report["categories"]["2"]["unassigned_references"])
-        self.assertEqual(1, report["categories"]["2"]["ownership_unverified_references"])
+        self.assertEqual(1, report["categories"]["20"]["unassigned_references"])
+        self.assertEqual(1, report["categories"]["20"]["ownership_unverified_references"])
         self.assertFalse(report["categories"]["23"]["live_http_verified"])
 
     def test_tf02_batch_counts_exclude_unselected_categories(self):
@@ -204,7 +204,7 @@ class CategoryConnectionContracts(unittest.TestCase):
             'fun panoramaxUrl() = "https://panoramax.fr/#focus=map&map=18/$latitude/$longitude"\n'
         )
         report = self.run_audit()
-        self.assertEqual(0, report["categories"]["2"]["unassigned_references"])
+        self.assertEqual(0, report["categories"]["20"]["unassigned_references"])
         self.assertEqual(2, report["categories"]["23"]["references"])
         self.assertEqual(2, report["categories"]["23"]["ownership_unverified_references"])
         self.assertFalse(report["categories"]["23"]["live_http_verified"])

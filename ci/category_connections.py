@@ -133,12 +133,12 @@ def classify_source_text(path, content):
 
 def audit(app_root, programme, alignment=None, batch="all"):
     app_root = Path(app_root)
-    if programme.get("schema") != 1 or set(programme["execution_order"]) != set(range(1, 24)):
+    if programme.get("schema") != 1 or set(programme["execution_order"]) != set(range(1, 25)):
         raise ValueError("CATEGORY_PROGRAMME_INVALID")
     batches = {x["id"]: set(x["categories"]) for x in programme["batches"]}
     if batch != "all" and batch not in batches:
         raise ValueError("UNKNOWN_TEST_BATCH")
-    chosen = set(range(1, 24)) if batch == "all" else batches[batch]
+    chosen = set(range(1, 25)) if batch == "all" else batches[batch]
     source = app_root / "app/src/main/java"
     if not source.is_dir():
         raise ValueError("PRODUCTION_APP_SOURCES_MISSING")
