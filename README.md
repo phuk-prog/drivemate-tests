@@ -2,9 +2,9 @@
 
 The testing for DriveMate. Every test runs here, in this public repository.
 
-Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
+Authoritative register: https://github.com/phuk-prog/drivemate-app/blob/test/continuous-drive-20261030/REGISTER.md
 
-**Current category scope (29 October 2026):** The original 23 categories are the only active work order. Map/source licensing and usage-rights reviews are deferred: do not plan them, add licensing tests, or use them as Category 1–23 acceptance tasks unless the owner reactivates them. Existing historical test files, mandatory credits/notices and production safety controls are retained; the dedicated Category 1 licensing-review workflow no longer invokes the rights/credits test modules. Road-traffic legality and safety checks remain in scope.
+**Current execution scope (31 October 2026):** The app's authoritative TEST-branch register contains **24 categories and 124 subcategories** in dependency/driver-priority order. Some historical test-programme files still use 23 legacy slots; those are test-harness groupings, **not** the current development category count or execution cursor. Read `AGENTS.md` and the live register before selecting work. Keep all new source/tests on matching TEST integration or isolated candidate branches, never on `main`. Preserve mandatory attribution and road-safety checks; do not mistake a passing emulator test for UK-road or real-phone acceptance.
 
 ## Layout
 
