@@ -16,7 +16,7 @@
     "app-unit/java/com/drivemate/app/data/RegionPackFilesTest.kt": "796031406db68a02a3e938d4c0beda4ec767a986",
     "app-unit/java/com/drivemate/app/data/RoadDetailsTest.kt": "8fda79dd97a9144d6ad1ba8edbb24f15698fff1c",
     "app-unit/java/com/drivemate/app/data/UkJoinTest.kt": "69feca98aecf095e46a8a4a19307e9ca191da392",
-    "app-unit/java/com/drivemate/app/data/WorldOverviewTest.kt": "5f727e629edb3f13b3e19a3bea49600c8802e0a5",
+    "app-unit/java/com/drivemate/app/data/WorldOverviewTest.kt": "dac1f01aeff7105634c255bc36613e6aa16ef552",
     "app-unit/java/com/drivemate/app/data/WorldUkPreviewComposerTest.kt": "be168b59bccaf0e0306a7a119115381df1ebe124",
     "app-unit/java/com/drivemate/app/dmn/DmnAmbiguousRoadMatchTest.kt": "40fdbd6d7cfdd0859496f5289259fd2b2aa8004c",
     "app-unit/java/com/drivemate/app/dmn/DmnPackWriterTest.kt": "2c467613631edafb86ce9d3d288ed14429d99e36",
