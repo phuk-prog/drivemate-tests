@@ -5,6 +5,7 @@
   "files": {
     "app-unit/java/com/drivemate/app/controller/OnlineRoadDataTest.kt": "aea860b9b9059d81730cd77ee5b8bb8fca28745c",
     "app-unit/java/com/drivemate/app/data/M01InstalledPmtilesRootTest.kt": "b7fb970868993e0271dd4f98d1c448f3925f2541",
+    "app-unit/java/com/drivemate/app/data/M01InstalledSizeReceiptTest.kt": "3ea6b98cc6988764709cb23ecf5d6c36507a0d19",
     "app-unit/java/com/drivemate/app/data/M01InstalledReceiptTest.kt": "25af9eee1cd31e3c072269c9323f88ed92fcda21",
     "app-unit/java/com/drivemate/app/data/M01MapResumeTest.kt": "caf1dd821a56dcc2c537281492c881844ca831c0",
     "app-unit/java/com/drivemate/app/data/M01NationalMapSelectionTest.kt": "22cba325a3b7961dfa9bc1eb4ad0accb2f0c8c0c",
