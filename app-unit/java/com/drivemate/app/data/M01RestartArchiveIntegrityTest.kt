@@ -64,10 +64,11 @@ class M01RestartArchiveIntegrityTest {
         assertTrue("The first request must read the file", checkpoints > 0)
         val firstRead = checkpoints
         assertTrue(InstalledMapIntegrity.verifyOnIo(file, expected) { checkpoints++ })
-        org.junit.Assert.assertEquals("A queued second load must not rehash 1.8 GB", firstRead, checkpoints)
+        org.junit.Assert.assertEquals("A queued load should do one cancellation check, not rehash 1.8 GB",
+            firstRead + 1, checkpoints)
         InstalledMapIntegrity.clear()
         assertTrue(InstalledMapIntegrity.verifyOnIo(file, expected) { checkpoints++ })
-        assertTrue("A new process must rehash", checkpoints > firstRead)
+        assertTrue("A new process must rehash", checkpoints > firstRead + 1)
     }
 
     @Test fun wrongExpectedDigestCannotBecomeTrusted() {
