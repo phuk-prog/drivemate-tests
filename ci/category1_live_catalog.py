@@ -14,6 +14,17 @@ import subprocess
 OUT_OF_UK = {"isle-of-man", "guernsey-jersey"}
 PROBES = {"England": "greater-manchester", "Scotland": "scotland",
           "Wales": "wales", "Northern Ireland": "northern-ireland-area"}
+# Sample UK points (lon, lat) that must fall inside a published region's declared bounds.
+# This is a bounds-level coverage check, not road or tile coverage.
+UK_PROBES = [
+    ("Land's End", -5.71, 50.07), ("Dover", 1.32, 51.13), ("Lowestoft", 1.75, 52.48),
+    ("Isle of Wight", -1.3, 50.68), ("Manchester", -2.24, 53.48), ("Newcastle", -1.6, 54.97),
+    ("Berwick-upon-Tweed", -2.0, 55.77), ("Stranraer", -5.02, 54.9), ("Edinburgh", -3.19, 55.95),
+    ("John o' Groats", -3.07, 58.64), ("Stornoway", -6.39, 58.21), ("Lerwick", -1.15, 60.15),
+    ("Holyhead", -4.63, 53.31), ("Aberystwyth", -4.08, 52.41), ("Cardiff", -3.18, 51.48),
+    ("St David's", -5.27, 51.88), ("Belfast", -5.93, 54.6), ("Londonderry", -7.31, 55.0),
+    ("Fermanagh", -7.65, 54.35), ("Larne", -5.82, 54.85),
+]
 HEX64 = re.compile(r"[a-f0-9]{64}\Z")
 REGION_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,70}\Z")
 
@@ -30,6 +41,22 @@ def verify_asset(data, release):
         raise ValueError("UNEXPECTED_CATALOG_RELEASE")
     return {"asset_id": asset.get("id"), "bytes": len(data), "sha256": digest,
             "release_tag": release["tag_name"], "published_at": release.get("published_at")}
+
+
+def uncovered_uk_probes(regions):
+    """Names of UK probe points not inside any region's declared bounds."""
+    uncovered = []
+    for name, lon, lat in UK_PROBES:
+        inside = False
+        for item in regions.values():
+            bounds = item.get("bounds") if isinstance(item, dict) else None
+            if (isinstance(bounds, list) and len(bounds) == 4
+                    and bounds[0] <= lon <= bounds[2] and bounds[1] <= lat <= bounds[3]):
+                inside = True
+                break
+        if not inside:
+            uncovered.append(name)
+    return uncovered
 
 
 def audit_catalog(catalog):
@@ -66,6 +93,9 @@ def audit_catalog(catalog):
         problems.append("LIVE_CATALOG_NON_UK_REGIONS")
     if not all(nations.values()):
         problems.append("FOUR_NATION_PRESENCE_MISSING")
+    uncovered = uncovered_uk_probes(regions)
+    if uncovered:
+        problems.append("UK_PROBE_UNCOVERED")
     ni = regions.get("northern-ireland-area")
     ni_source = ni.get("source_url", "") if isinstance(ni, dict) else ""
     ni_bounds = ni.get("bounds") if isinstance(ni, dict) else None
@@ -73,6 +103,7 @@ def audit_catalog(catalog):
             "region_count": len(regions), "non_uk_regions": out_of_scope,
             "malformed_regions": sorted(set(malformed)),
             "four_nation_region_presence": nations,
+            "uk_probe_coverage": {"checked": len(UK_PROBES), "uncovered": uncovered},
             "northern_ireland_source": ni_source,
             "northern_ireland_bounds": ni_bounds,
             "northern_ireland_border_only": "unknown",
