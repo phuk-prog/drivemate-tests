@@ -55,6 +55,7 @@ jobs:
           fi
           if [ -z "$sha" ]; then echo "::error::No drivemate-app commit for \"$APP_REF\"."; exit 1; fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          # Bounded 60 s check interval reduces API requests while preserving the exact-source gate.
           # Use the current app-main gate, even when building an older app commit.
           # It requires this public suite's current main SHA and unexpired attempt evidence.
           result() {
@@ -76,14 +77,14 @@ jobs:
             echo "No test run for ${sha:0:7} yet: starting one." | tee -a "$GITHUB_STEP_SUMMARY"
             gh workflow run test-app.yml -R "$GITHUB_REPOSITORY" --ref main -f app_ref="$sha"
           fi
-          for i in $(seq 1 80); do
+          for i in $(seq 1 40); do
             run=$(result)
             if [ -n "$run" ]; then break; fi
             # No result and nothing running (e.g. the test run failed to start): stop.
             if [ -z "$run" ] && [ "$(running)" = 0 ] && [ "$i" -gt 2 ]; then
               echo "::error::The test run for ${sha:0:7} ended without results."; exit 1
             fi
-            sleep 30
+            sleep 60
           done
           if [ -z "$run" ]; then echo "::error::No test result for ${sha:0:7} after 40 minutes."; exit 1; fi
           conclusion=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq .conclusion)
