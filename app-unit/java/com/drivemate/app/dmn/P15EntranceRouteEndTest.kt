@@ -117,7 +117,7 @@ class P15EntranceRouteEndTest {
         val after = Dmn.route(listOf(start, pin), heading = 90f).single()
         assertTrue("with the front door it stays on Front Street", after.points.dropLast(1).all { it.lat < 53.4001 })
         assertEquals(pin, after.points.last()) // the pin is still the destination
-        assertTrue(after.metres < before.metres)
+        assertTrue(after.distance < before.distance)
     }
 
     @Test fun unusableOrDistantEntrancesLeaveTheRouteAsBefore() {
