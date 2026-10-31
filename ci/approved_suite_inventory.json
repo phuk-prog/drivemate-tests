@@ -6,7 +6,7 @@
     "app-unit/java/com/drivemate/app/controller/OnlineRoadDataTest.kt": "aea860b9b9059d81730cd77ee5b8bb8fca28745c",
     "app-unit/java/com/drivemate/app/data/M01InstalledPmtilesRootTest.kt": "b7fb970868993e0271dd4f98d1c448f3925f2541",
     "app-unit/java/com/drivemate/app/data/M01MapResumeTest.kt": "caf1dd821a56dcc2c537281492c881844ca831c0",
-    "app-unit/java/com/drivemate/app/data/M01NationalMapSelectionTest.kt": "6109eb05a2dbf66559c6bba8712db1587a87cb00",
+    "app-unit/java/com/drivemate/app/data/M01NationalMapSelectionTest.kt": "22cba325a3b7961dfa9bc1eb4ad0accb2f0c8c0c",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
     "app-unit/java/com/drivemate/app/data/MemoryPreferences.kt": "81b88db08b9e78fe17ec05aef917306b04758ba5",
     "app-unit/java/com/drivemate/app/data/PublishedRegionCatalogTest.kt": "cbbffa2fa6265cca4deebff9ca89c3563c5ef0d0",
