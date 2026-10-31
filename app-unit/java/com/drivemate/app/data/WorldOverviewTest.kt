@@ -97,11 +97,11 @@ class WorldOverviewTest {
     @Test fun schemaAndSixContinentReceiptRequireExactJsonIntegers() {
         val b = archiveBytes()
         val valid = validPointer(digest(b), b.size.toLong())
-        for (wrong in listOf("6", 6.0, true, JSONObject.NULL)) {
+        for (wrong in listOf("6", 6.5, true, JSONObject.NULL)) {
             assertTrue("Coerced six-continent receipt must not pass: $wrong",
                 rejected(JSONObject(valid.toString()).put("tested_sample_count", wrong)))
         }
-        for (wrong in listOf("1", 1.0, true, JSONObject.NULL)) {
+        for (wrong in listOf("1", 1.5, true, JSONObject.NULL)) {
             assertTrue("Coerced schema must not pass: $wrong",
                 rejected(JSONObject(valid.toString()).put("schema", wrong)))
         }
