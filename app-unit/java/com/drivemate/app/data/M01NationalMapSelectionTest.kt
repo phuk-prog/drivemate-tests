@@ -16,7 +16,7 @@ class M01NationalMapSelectionTest {
     @get:Rule val temp = TemporaryFolder()
 
     @Test fun visibleOnlineUkMapDoesNotShrinkToAnInstalledScottishRegion() {
-        val regional = temp.newFile("installed-scotland.pmtiles")
+        val regional = temp.newFile("installed-scotland.pmtiles").apply { writeBytes(ByteArray(127)) }
         val national = MapData.Download(
             "https://github.com/phuk-prog/drivemate-map/releases/download/map-data-ukmap-r40883954274-a1/drivemate-v1.pmtiles",
             MapData.Asset("b".repeat(64), 1_781_936_174L, "map-data-ukmap-r40883954274-a1"),
@@ -31,7 +31,7 @@ class M01NationalMapSelectionTest {
             networkAvailable = false)
         assertEquals("pmtiles://file://${regional.absolutePath}", offline.tiles)
         assertEquals(scotlandTag, offline.snapshotTag)
-        val countryFile = temp.newFile("installed-whole-uk.pmtiles")
+        val countryFile = temp.newFile("installed-whole-uk.pmtiles").apply { writeBytes(ByteArray(127)) }
         val localUk = OwnMap.selectMap(national, countryFile, MapLayout.OWN,
             national.snapshotTag, networkAvailable = true)
         assertEquals("pmtiles://file://${countryFile.absolutePath}", localUk.tiles)
@@ -94,4 +94,20 @@ class M01NationalMapSelectionTest {
         assertEquals(false, OwnMap.useRegionalFallback(regionTag, null, "wales", false))
     }
 
+
+    @Test fun zeroByteUkArchiveCannotMasqueradeAsAnInstalledCountryMap() {
+        val tag = "map-data-ukmap-r40883954274-a1"
+        val national = MapData.Download(
+            "https://github.com/phuk-prog/drivemate-map/releases/download/$tag/drivemate-v1.pmtiles",
+            MapData.Asset("b".repeat(64), 1_781_936_174L, tag),
+            MapLayout.OWN, tag
+        )
+        val truncated = temp.newFile("truncated-uk.pmtiles")
+        assertEquals(0L, truncated.length())
+        val choice = OwnMap.selectMap(national, truncated, MapLayout.OWN, tag,
+            networkAvailable = true)
+        assertEquals("An empty local file cannot hide the verified published national map",
+            "pmtiles://${national.url}", choice.tiles)
+        assertEquals(tag, choice.snapshotTag)
+    }
 }
