@@ -105,6 +105,8 @@
     "app-unit/java/com/drivemate/app/nav/C15LimitChangeCueTest.kt": "37ba189d5e1642fff925e9e756d8a5dde923479d",
     "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "ddacc50d8c313401c6de5f42f788fca20557e1c3",
     "app-unit/java/com/drivemate/app/ui/C11DrivingTextCapsTest.kt": "a27390328b3cb36015475c93ba320a7951bdb49d",
-    "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626"
+    "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626",
+    "app-unit/java/com/drivemate/app/nav/P10PhoneSpeakerRouteTest.kt": "b70e92558e1b946d1c472cbec3a27043b1394cdb",
+    "categories/02-voice-and-sound/screen/P10PhoneSpeakerPlayerScreenTest.kt": "3c3c069beb63a98fe2977f663aa81444de9d349e"
   }
 }
