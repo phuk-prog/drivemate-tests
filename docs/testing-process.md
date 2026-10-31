@@ -7,7 +7,7 @@ Scope: the 14 approved FW/EN improvements only. Driving-feature implementation a
 | FW-01 | Current exact-suite/app evidence; expired or unrelated artifacts cannot qualify | private `check_drivemate_tests.py`, public `test_release_gate.py` |
 | FW-02 | Missing, misnamed, unmapped and duplicate tests cannot silently pass | `collect_results.py`, `test_collect_results.py` |
 | FW-03 | Frozen fixture changes trigger source comparison; live and frozen audits remain distinct | source audit workflow, `verify_frozen_lanes.py`, archived source digests |
-| FW-04 | All 23 current categories and related batches, preserving historical IDs | `programme.json`, `run_summary.py`, `run_report.py` |
+| FW-04 | All 24 numbered categories and related test batches, preserving source filenames | `programme.json`, `run_summary.py`, `run_report.py` |
 | FW-05 | Actual published fixture -> production loader/parser -> free-driving session -> visible lane strip; stage and screenshot fingerprints required | `PublishedLanePipelineScreenTest.kt`, collector sidecar gate |
 | EN-01 | Prerequisites backed by observed test imports and production source digests; unobserved/transitive relationships remain explicit | `dependency_graph.py` |
 | EN-02 | Separate law/decision/screen tests and stable failure/incomplete reason codes | collector and `process_contract.py` |
@@ -89,7 +89,7 @@ Frozen file-readback regressions: [public PR #41](https://github.com/phuk-prog/d
 
 ## Category-linked production external connection audit (Improvement 3 follow-up, 28 October 2026)
 
-The existing public Android test workflow now inspects the exact checked-out private app Kotlin/Java source and Gradle source **once per run**, classifying literal HTTP(S) references into the **current Categories 1–23** (not the retired category numbering). Related batch A–F runs report selected categories only; unselected categories are explicitly `not_selected`. A new `results/category-connection-audit.json` bounded artifact and the category summary inside `results/summary.json` show each category’s reference count and fault codes. Unknown source ownership is assigned to Category 2 Reliability with `unassigned_source_needs_review`; it is **not** silently green.
+The existing public Android test workflow now inspects the exact checked-out private app Kotlin/Java source and Gradle source **once per run**, classifying literal HTTP(S) references into the **numbered categories 1–24** (as defined only by REGISTER.md). Related batch A–F runs report selected categories only; unselected categories are explicitly `not_selected`. A new `results/category-connection-audit.json` bounded artifact and the category summary inside `results/summary.json` show each category’s reference count and fault codes. Unknown source ownership is assigned to Category 2 Reliability with `unassigned_source_needs_review`; it is **not** silently green.
 
 Mapped connections include UK graph + regional map downloads (Categories **1/4/5**), account/Google Drive backup (**3**), traffic/TomTom/TfL/National Highways (**16**), forecast and road alerts (**15**), fuel services/places (**17**), OSM notes + API and Panoramax imagery (**22**), share links (**19**) and app attributions (**20**). The existing source-to-publisher mismatch receipt is applied as a blocker to both **1** and **4**. An HTTP URL, old-project target or unclassified source is flagged for investigation. A test-server reference is **not** promoted to the live service. Categories without static URLs stay `no_static_url_observed`, not accepted.
 

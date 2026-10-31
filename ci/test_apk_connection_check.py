@@ -17,7 +17,7 @@ class DebugApkConnectionContracts(unittest.TestCase):
             "scope": "production_source_static_connection_inventory",
             "apk_binary_inspected": False,
             "references": [{
-                "host": "github.com", "categories": [1, 4],
+                "host": "github.com", "categories": [1, 2],
             }],
         }
 
@@ -30,7 +30,7 @@ class DebugApkConnectionContracts(unittest.TestCase):
         self.pack(b"https://github.com/phuk-prog/drivemate-data/releases/download/routing-uk")
         result = inspect(self.apk, self.source)
         self.assertEqual("blocked_obsolete_project", result["status"])
-        self.assertEqual([1, 4], result["blocked_categories"])
+        self.assertEqual([1, 2], result["blocked_categories"])
         self.assertTrue(result["apk_sha256"])
         self.assertFalse(result["installed_owner_apk_verified"])
 

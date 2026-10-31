@@ -1,4 +1,4 @@
-"""Classify production app URL references within the existing 23 test categories.
+"""Classify production app URL references within the current 24 numbered categories.
 
 Static source inventory, not a compiled APK/network test. No requests are made,
 no secrets or full private source are printed, and links without an ownership
@@ -17,27 +17,27 @@ GITHUB_RELEASE = re.compile(
     r"^https?://(?:www\.)?github\.com/(?P<repo>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/releases/download/"
     r"(?P<tag>[A-Za-z0-9._-]+)", re.IGNORECASE
 )
-# Scoped to current *new* category numbering, not historical folder IDs.
+# Classifies into REGISTER.md numbers; source paths are not category labels.
 # A path not on this list is still found, but flagged unclassified.
 SOURCE_CATEGORIES = {
-    "app/build.gradle.kts": ([1, 4], "runtime_build_config"),
-    "data/RoadPack.kt": ([1, 4], "network_download"),
-    "data/RegionPacks.kt": ([1, 4], "network_download"),
-    "data/MapData.kt": ([1, 5], "network_download"),
-    "data/OwnMap.kt": ([5], "attribution_or_reference"),
-    "data/TomTom.kt": ([16], "network_service"),
-    "data/NationalHighways.kt": ([16], "network_service"),
-    "data/UkRoadFeeds.kt": ([16], "network_service"),
-    "data/RouteWeather.kt": ([15], "network_service"),
-    "data/FuelPrices.kt": ([17], "network_service"),
-    "data/ReviewImagery.kt": ([22], "network_service"),
-    "osm/OsmConnection.kt": ([22], "network_service"),
-    "account/DriveAppDataBackup.kt": ([3], "network_service"),
-    "controller/NavigationSession.kt": ([22], "network_service"),
-    "controller/ShareText.kt": ([19], "attribution_or_reference"),
-    "data/DataCredits.kt": ([1, 20], "attribution_or_reference"),
+    "app/build.gradle.kts": ([1,2], "runtime_build_config"),
+    "data/RoadPack.kt": ([1,2], "network_download"),
+    "data/RegionPacks.kt": ([1,2], "network_download"),
+    "data/MapData.kt": ([1], "network_download"),
+    "data/OwnMap.kt": ([1], "attribution_or_reference"),
+    "data/TomTom.kt": ([19], "network_service"),
+    "data/NationalHighways.kt": ([19], "network_service"),
+    "data/UkRoadFeeds.kt": ([19], "network_service"),
+    "data/RouteWeather.kt": ([18], "network_service"),
+    "data/FuelPrices.kt": ([24], "network_service"),
+    "data/ReviewImagery.kt": ([23], "network_service"),
+    "osm/OsmConnection.kt": ([23], "network_service"),
+    "account/DriveAppDataBackup.kt": ([20], "network_service"),
+    "controller/NavigationSession.kt": ([23], "network_service"),
+    "controller/ShareText.kt": ([22], "attribution_or_reference"),
+    "data/DataCredits.kt": ([1,20], "attribution_or_reference"),
     "ui/MainMenu.kt": ([20], "attribution_or_reference"),
-    "ui/ReviewLocationMap.kt": ([22], "attribution_or_reference"),
+    "ui/ReviewLocationMap.kt": ([23], "attribution_or_reference"),
     "PrivacyNotice.kt": ([20], "attribution_or_reference"),
 }
 OLD_PROJECTS = frozenset({"phuk-prog/drivemate-data", "phuk-prog/DriveMate-Navigation",
@@ -122,7 +122,7 @@ def classify_source_text(path, content):
             inspected = classify_url(match.group(0))
             inspected.update({
                 "source_path": path, "line": number,
-                "categories": categories if categories else [2],
+                "categories": categories if categories else [20],
                 "source_role": role, "category_assignment": "assigned" if categories else "needs_review",
                 # Hash only; full URLs may include dynamic query strings or keys.
                 "reference_sha256": hashlib.sha256(match.group(0).encode()).hexdigest(),
@@ -217,7 +217,7 @@ def audit(app_root, programme, alignment=None, batch="all"):
         }
     return {
         "schema": 1, "scope": "production_source_static_connection_inventory",
-        "category_numbering": "current_1_to_23", "batch": batch,
+        "category_numbering": "current_1_to_24", "batch": batch,
         "source_files_scanned": len(files), "url_references": len(records),
         "categories": mapping, "references": [
             r for r in records if any(c in chosen for c in r["categories"])
@@ -226,7 +226,7 @@ def audit(app_root, programme, alignment=None, batch="all"):
         "limitations": [
             "Static Kotlin/Java and Gradle URL literals only: no APK binary, runtime-composed URLs, redirects, HTTP handshakes, permissions, or installed app request trace",
             "Static URL/reference matches are not evidence of an operational service, downloaded assets, or route-to-screen navigation",
-            "Unknown ownership remains a review finding in Reliability category 2; unused and attribution URLs are not assumed live network requests",
+            "Unknown ownership remains a review finding in reliability category 20; unused and attribution URLs are not assumed live network requests",
         ],
     }
 
