@@ -48,6 +48,26 @@ class NationalReleaseMetadata(unittest.TestCase):
         self.assertFalse(report["offline_navigation_accepted"])
         self.assertEqual("unknown", report["uk_legal_road_truth"])
 
+    def test_national_pointers_require_exact_integer_schema(self):
+        """JSON boolean/float schema 1 must not certify either national pointer."""
+        for invalid in (True, 1.0, "1", None):
+            with self.subTest(pointer="dmn", schema=invalid):
+                document = copy.deepcopy(self.dmn)
+                document["schema"] = invalid
+                raw = json.dumps(document).encode()
+                rolling = {"tag_name": "dmn-uk",
+                           "assets": [asset("dmn-uk.json", raw)]}
+                with self.assertRaisesRegex(ValueError, "POINTER_SCHEMA_INVALID"):
+                    verify_dmn(raw, rolling, self.dated)
+            with self.subTest(pointer="ukmap", schema=invalid):
+                document = copy.deepcopy(self.map)
+                document["schema"] = invalid
+                raw = json.dumps(document).encode()
+                rolling = {"tag_name": "map-data-ukmap",
+                           "assets": [asset("ukmap.json", raw)]}
+                with self.assertRaisesRegex(ValueError, "POINTER_SCHEMA_INVALID"):
+                    verify_ukmap(raw, rolling, self.map_dated)
+
     def test_dmn_wrong_rolling_pointer_hash_fails_closed(self):
         self.rolling["assets"][0]["digest"] = "sha256:" + "0" * 64
         with self.assertRaises(ValueError):
