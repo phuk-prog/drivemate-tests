@@ -1,4 +1,4 @@
-"""Focused roundabout graph tests for Category 03.2.
+"""Focused roundabout graph tests for Category 2.1.
 These assert the observable directed graph, not inferred junction legality.
 Run: python3 -m unittest tools.test_real_uk_graph_check -v
 """

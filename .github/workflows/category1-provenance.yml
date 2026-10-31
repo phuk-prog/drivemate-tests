@@ -1,4 +1,4 @@
-name: Category 1 UK graph join and scope checks
+name: Categories 1.3 and 2.1 UK graph join and scope checks
 # Fast Python-only UK graph processing checks.
 on:
   pull_request:

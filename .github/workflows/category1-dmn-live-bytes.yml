@@ -1,4 +1,4 @@
-name: Category 1 four-nation actual DMN piece byte audit
+name: Category 2.3 four-nation actual DMN piece byte audit
 # Public diagnostic only: published compressed sample bytes, NOT on-device routing.
 on:
   pull_request:

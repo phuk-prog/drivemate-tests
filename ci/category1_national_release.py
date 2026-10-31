@@ -1,4 +1,4 @@
-"""Category 1: fail-closed metadata checks for actual published UK map and DMN assets.
+"""Categories 1.1 and 2.3: fail-closed metadata checks for actual published UK map and DMN assets.
 
 Verifies GitHub release metadata and small rolling JSON pointers only. It does
 NOT download graph/map bytes, prove licensing, legal roads or Android guidance.

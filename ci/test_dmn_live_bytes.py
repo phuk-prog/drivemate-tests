@@ -1,4 +1,4 @@
-"""Frozen Category 1 tests: actual bytes of four small, published UK DMN pieces.
+"""Frozen Category 2.3 tests: actual bytes of four small, published UK DMN pieces.
 
 Synthetic data is only a compressed-format unit fixture. It is NEVER a
 synthetic UK road, verified routing session, or legal road assertion.
