@@ -91,11 +91,15 @@ def main():
     app_sha, suite_sha = os.environ["APP_SHA"], os.environ["GITHUB_SHA"]
     if not SHA_RE.fullmatch(app_sha) or not SHA_RE.fullmatch(suite_sha):
         raise ValueError("Exact app/test commit SHA required")
+    # Query active states separately: a full page of 100 *completed* runs is
+    # normal in a busy repository and must not permanently disable the watcher.
+    # This also finds a long-running job older than the 100 most recent runs.
+    for state in ("queued", "in_progress", "waiting", "requested", "pending"):
+        active = get(f"actions/workflows/test-app.yml/runs?status={state}&per_page=1")["workflow_runs"]
+        if active:
+            print(f"A public full test is {state}; no duplicate dispatch.")
+            return 0
     recent = get("actions/workflows/test-app.yml/runs?per_page=100")["workflow_runs"]
-    # If this page is saturated, avoid dispatch without visibility of in-flight work.
-    if len(recent) == 100:
-        print("100 recent runs reached: defer rather than risk duplicate execution")
-        return 0
     artifacts = get(f"actions/artifacts?name=drivemate-tests-{app_sha}&per_page=100")["artifacts"]
     if len(artifacts) == 100:
         print("100 matching artifacts reached: defer to avoid unsafe status inference")
