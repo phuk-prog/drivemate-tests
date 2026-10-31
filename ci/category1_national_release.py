@@ -45,7 +45,7 @@ def verify_pointer(raw, rolling, tag, name, maximum):
         doc = json.loads(raw)
     except (ValueError, UnicodeDecodeError):
         raise ValueError("POINTER_JSON_INVALID") from None
-    require(isinstance(doc, dict) and doc.get("schema") == 1,
+    require(isinstance(doc, dict) and type(doc.get("schema")) is int and doc["schema"] == 1,
             "POINTER_SCHEMA_INVALID")
     return doc
 
