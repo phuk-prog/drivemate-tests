@@ -15,10 +15,13 @@ import java.io.File
 class M01NationalMapSelectionTest {
     @get:Rule val temp = TemporaryFolder()
 
-    // Only the 8-byte PMTiles v3 signature is under test; this is NOT a complete map.
-    private fun headerOnlyFixture(): ByteArray = ByteArray(127).apply {
+    // Minimal PMTiles v3 header with a bounded root directory for selection tests.
+    // This is deliberately NOT a complete tile archive or a checksum proof.
+    private fun headerOnlyFixture(): ByteArray = ByteArray(132).apply {
         "PMTiles".toByteArray(Charsets.US_ASCII).copyInto(this)
         this[7] = 3
+        java.nio.ByteBuffer.wrap(this).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .putLong(8, 127L).putLong(16, 5L)
     }
 
     @Test fun visibleOnlineUkMapDoesNotShrinkToAnInstalledScottishRegion() {
