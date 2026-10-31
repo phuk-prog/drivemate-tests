@@ -33,7 +33,7 @@ def verify_asset(data, release):
 
 
 def audit_catalog(catalog):
-    if not isinstance(catalog, dict) or catalog.get("schema") != 1 or catalog.get("coverage") != "partial":
+    if not isinstance(catalog, dict) or type(catalog.get("schema")) is not int or catalog["schema"] != 1 or catalog.get("coverage") != "partial":
         raise ValueError("INVALID_PARTIAL_CATALOG")
     regions = catalog.get("regions")
     if not isinstance(regions, dict):
