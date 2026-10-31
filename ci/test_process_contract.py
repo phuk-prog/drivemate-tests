@@ -17,24 +17,24 @@ class ProcessContractTest(unittest.TestCase):
 
     def document(self):
         return {'app_commit': 'a'*40, 'public_tests_sha': 'b'*40,
-                'checklist': {'3 Lane guidance: decisions': {'tests': [
+                'checklist': {'9 Lane guidance: decisions': {'tests': [
                     {'class': 'com.drivemate.tests.cat03.LaneChecks', 'name': 'known', 'status': 'passed'},
                     {'class': 'com.drivemate.tests.cat03.LaneChecks', 'name': 'missing', 'status': 'unknown'},
                     {'class': 'com.drivemate.tests.cat03.LaneChecks', 'name': 'dated', 'status': 'provisional'}]}}}
 
     def test_all_current_categories_are_reported_without_invented_passes(self):
         report = self.c.programme_summary(self.document())
-        self.assertEqual(list(range(1,24)), [r['id'] for r in report['categories']])
-        lanes = report['categories'][7]
+        self.assertEqual(list(range(1,25)), [r['id'] for r in report['categories']])
+        lanes = report['categories'][8]
         self.assertEqual((1,3,0,1,1), tuple(lanes[k] for k in ('correct','total','failed','unknown','provisional')))
         self.assertEqual('incomplete', lanes['status'])
         self.assertEqual('not_tested', report['categories'][0]['status'])
         self.assertEqual('NO_RECORDED_CHECKS', report['categories'][0]['reason_code'])
 
     def test_later_historical_category_labels_are_mapped(self):
-        d=self.document(); d['checklist']={'cat11: screen':{'tests':[{'name':'camera','status':'passed'}]}}
+        d=self.document(); d['checklist']={'13 Driving camera: screen':{'tests':[{'name':'camera','status':'passed'}]}}
         r=self.c.programme_summary(d)
-        self.assertEqual(1,r['categories'][10]['correct'])
+        self.assertEqual(1,r['categories'][12]['correct'])
         self.assertEqual(0,r['unassigned']['total'])
 
     def test_unassigned_component_results_do_not_become_category_acceptance(self):
@@ -53,7 +53,7 @@ class ProcessContractTest(unittest.TestCase):
         self.assertEqual('component_checks_only',row['evidence_scope'])
 
     def test_invalid_status_cannot_be_green(self):
-        d=self.document(); d['checklist']['3 Lane guidance: decisions']['tests'][0]['status']='maybe'
+        d=self.document(); d['checklist']['9 Lane guidance: decisions']['tests'][0]['status']='maybe'
         with self.assertRaisesRegex(ValueError,'INVALID_RESULT_STATUS'):
             self.c.programme_summary(d)
 

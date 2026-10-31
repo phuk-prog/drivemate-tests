@@ -46,7 +46,7 @@ def inspect(apk_path, source_report=None):
         host = record.get("host")
         cats = record.get("categories", [])
         if isinstance(host, str) and isinstance(cats, list):
-            known.setdefault(host, set()).update(x for x in cats if type(x) is int and 1 <= x <= 23)
+            known.setdefault(host, set()).update(x for x in cats if type(x) is int and 1 <= x <= 24)
     sha = hashlib.sha256()
     with p.open("rb") as f:
         for piece in iter(lambda: f.read(1024 * 1024), b""):
@@ -87,7 +87,7 @@ def inspect(apk_path, source_report=None):
                         path = parsed.path.lower()
                         for project in OLD:
                             if path.startswith("/" + project + "/"):
-                                cats = sorted(known.get(host, set()) & {1, 4}) or [1, 4]
+                                cats = sorted(known.get(host, set()) & {1, 2}) or [1, 2]
                                 problems.append({
                                     "code": "obsolete_or_unreachable_embedded_project",
                                     "host": host, "project": project,

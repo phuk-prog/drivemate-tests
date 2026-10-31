@@ -16,7 +16,7 @@ from test_selection import selected
 from process_contract import validate_acceptance
 from dmn_android_reader_evidence import verify as verify_android_dmn_reader, verify_install_route, verify_four_nation_routes
 
-CATEGORIES = {"cat01": "1 Turn-by-turn guidance", "cat02": "2 Voice and sound", "cat03": "3 Lane guidance", "cat04": "4 Junction view", "cat05": "5 3D immersive navigation", "cat06": "6 Speed limits", "cat07": "7 Road alerts", "cat08": "8 Rerouting", "cat09": "9 Traffic", "cat10": "10 Position and GPS"}
+CATEGORIES = {"cat00":"2 Road graph and routing packs","cat01":"8 Roundabouts and turn instructions","cat02":"10 Voice, Bluetooth and audio focus","cat03":"9 Lane guidance","cat04":"17 3D junction, motorway and lane views","cat05":"16 Immersive 3D map","cat06":"12 Speed limits and upcoming changes","cat07":"18 Road hazards, cameras and weather","cat08":"11 Safe rerouting and missed exits","cat09":"19 Traffic and closures","cat10":"3 GPS and route calculation","cat18":"1 UK map and downloads"}
 
 
 def item_for(classname):

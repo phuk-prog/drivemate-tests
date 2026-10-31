@@ -5,29 +5,25 @@ import re
 from process_contract import manifest
 
 COMPONENTS = {
-    1:'LaneDb MapData UkJoin DmnPack DmnRouter Route RouteStep',
-    2:'SessionTasks ApplicationContainer OperationStatus',
-    3:'BackupManager BackupSchema SettingsRepository',
-    4:'OfflineStorage RegionalMapDownloader MapPack',
-    5:'OwnMap RegionalMapStyleComposer RegionMosaic',
-    6:'GpsFilter LocationTracker MotionHeading PositionUncertainty',
-    7:'NavigationEngine TurnInstructions Wording',
-    8:'LanePolicy LanePlan LaneTiming LaneGuidance',
-    9:'Voice Speech SpokenGuidance VoiceQueue',
-    10:'OffRouteRule ReroutePolicy',
-    11:'PositionCameraPolicy ImmersiveMotion',
-    12:'JunctionViewPolicy JunctionPlan JunctionModel',
-    13:'JunctionScene ImmersiveJunction ImmersiveMap',
-    14:'SpeedLimitMatcher LimitComparison',
-    15:'RoadAlerts RoadAlertPolicy',
-    16:'TrafficPolicies TrafficDetails NationalHighways',
-    17:'Geocoder OfflineSearch',
-    18:'Router Dmn RouteChoices',
-    19:'ArrivalPolicy ArrivalApproachInstruction',
-    20:'SettingsSections',
-    21:'PostDriveReview PostDriveController TripStore',
-    22:'SharedMapCorrections LaneCorrections',
-    23:'CarBridge',
+    1:'OfflineStorage RegionalMapDownloader MapPack OwnMap RegionalMapStyleComposer RegionMosaic',
+    2:'LaneDb MapData UkJoin DmnPack DmnRouter Route RouteStep Router Dmn RouteChoices',
+    3:'GpsFilter LocationTracker MotionHeading PositionUncertainty',
+    4:'Geocoder OfflineSearch',
+    8:'NavigationEngine TurnInstructions Wording',
+    9:'LanePolicy LanePlan LaneTiming LaneGuidance',
+    10:'Voice Speech SpokenGuidance VoiceQueue',
+    11:'OffRouteRule ReroutePolicy',
+    12:'SpeedLimitMatcher LimitComparison',
+    13:'PositionCameraPolicy ImmersiveMotion',
+    15:'ArrivalPolicy ArrivalApproachInstruction',
+    16:'JunctionScene ImmersiveJunction ImmersiveMap',
+    17:'JunctionViewPolicy JunctionPlan JunctionModel',
+    18:'RoadAlerts RoadAlertPolicy',
+    19:'TrafficPolicies TrafficDetails NationalHighways',
+    20:'SessionTasks ApplicationContainer OperationStatus BackupManager BackupSchema SettingsRepository SettingsSections',
+    21:'CarBridge',
+    22:'PostDriveReview PostDriveController TripStore',
+    23:'SharedMapCorrections LaneCorrections',
 }
 
 
@@ -44,7 +40,7 @@ def build(app_root,test_root):
     edges=[]; observed=set(); unresolved=set()
     for source in sorted((test_root/'categories').rglob('*.kt')):
         old=re.match(r'(\d+)-',source.relative_to(test_root/'categories').parts[0])
-        category=m['legacy_category_map'].get(str(int(old.group(1)))) if old else None
+        category=m['test_source_directory_category_map'].get(str(int(old.group(1)))) if old else None
         if not category: continue
         observed.add(category)
         for imported in re.findall(r'^import\s+(com\.drivemate\.app\.[\w.]+)',source.read_text(),re.M):
