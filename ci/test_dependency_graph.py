@@ -13,8 +13,8 @@ class DependencyGraphTest(unittest.TestCase):
             test=tests/'categories/03-lane-guidance/decisions/LaneTest.kt'
             test.parent.mkdir(parents=True); test.write_text('import com.drivemate.app.data.LaneDb\n')
             r=build(app,tests)
-            self.assertEqual(23,len(r['nodes']))
-            self.assertEqual((8,1),(r['edges'][0]['category'],r['edges'][0]['prerequisite']))
+            self.assertEqual(24,len(r['nodes']))
+            self.assertEqual((9,2),(r['edges'][0]['category'],r['edges'][0]['prerequisite']))
             self.assertEqual(64,len(r['edges'][0]['source_sha256']))
             self.assertEqual('not_observed',r['nodes'][1]['status'])
 

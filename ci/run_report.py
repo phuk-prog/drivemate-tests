@@ -111,7 +111,7 @@ figcaption { font: 0.75rem/1.3 var(--data); color: var(--muted); overflow-wrap: 
       f'page made {uk:%d %b %Y, %H:%M} UK · <a href="{html.escape(doc["run_url"])}">run on GitHub</a></p>')
     w("</header>")
     programme = programme_summary(doc)
-    w('<section><h2>Current 23-category programme</h2><p>Automated checks only. Untested categories are not passes; historical test IDs remain unchanged.</p>')
+    w('<section><h2>Current 24-category programme</h2><p>Automated checks only. Untested categories are not passes; historical test IDs remain unchanged.</p>')
     w('<table><thead><tr><th>Category</th><th>Correct/total</th><th>Failed</th><th>Unknown</th><th>Provisional</th><th>Skipped</th><th>Status</th></tr></thead><tbody>')
     for c in programme['categories']:
         status = c['status']

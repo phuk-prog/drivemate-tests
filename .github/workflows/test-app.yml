@@ -161,7 +161,7 @@ jobs:
           python3 - <<'PY'
           import json, os
           value=json.load(open('results/category-connection-audit.json'))
-          assert len(value['categories']) == 23
+          assert len(value['categories']) == 24
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
               summary.write('### External links by current test category (source-only)\\n')
               for number, item in value['categories'].items():

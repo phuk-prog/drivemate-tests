@@ -14,7 +14,7 @@ def selected(path, batch=None):
     path=Path(path)
     if path.parts[0]=='app-unit': return True
     old=re.match(r'^(\d+)-',path.parts[1]) if len(path.parts)>2 and path.parts[0]=='categories' else None
-    current=m['legacy_category_map'].get(str(int(old.group(1)))) if old else None
+    current=m['test_source_directory_category_map'].get(str(int(old.group(1)))) if old else None
     if current is None: raise ValueError('UNMAPPED_CATEGORY_SOURCE:' + str(path))
     return batch=='all' or current in batches[batch]
 

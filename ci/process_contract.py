@@ -14,7 +14,7 @@ def manifest():
     d = json.loads(MANIFEST.read_text())
     ids = [c['id'] for c in d['categories']]
     batch_ids = [i for b in d['batches'] for i in b['categories']]
-    if d.get('schema') != 1 or ids != list(range(1,24)) or sorted(batch_ids) != ids:
+    if d.get('schema') != 1 or ids != list(range(1,25)) or sorted(batch_ids) != ids:
         raise ValueError('INVALID_PROGRAMME_MANIFEST')
     # Reviewed production component tests are evidence for a category, but
     # cannot establish end-to-end, real-road or release acceptance.
@@ -53,7 +53,7 @@ def programme_summary(doc):
                 (groups[current] if current else unassigned).append(test)
             continue
         old = re.match(r'^(?:cat)?(\d+)(?: |:)', item)
-        current = m['legacy_category_map'].get(str(int(old.group(1)))) if old else None
+        current = int(old.group(1)) if old and 1 <= int(old.group(1)) <= len(m['categories']) else None
         (groups[current] if current else unassigned).extend(group['tests'])
     categories = [dict(c, **counts(groups[c['id']])) for c in m['categories']]
     # Category 1 has only component evidence here; its overall acceptance

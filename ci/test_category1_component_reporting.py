@@ -1,6 +1,6 @@
 """Category 1 component evidence must be classified without inventing acceptance.
 
-A previously green app-unit test may be mapped into the current 1–23 report
+A previously green app-unit test may be mapped into the current 1–24 report
 only by an explicit reviewed class-to-category mapping. No new navigation
 behaviour or road/legal truth is asserted by these reporting regressions.
 """

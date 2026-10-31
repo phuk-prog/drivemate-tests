@@ -20,7 +20,7 @@ class BatchSelectionTest(unittest.TestCase):
         self.assertTrue(self.s.selected('app-unit/java/com/drivemate/app/data/UkJoinTest.kt','C'))
 
     def test_all_selects_every_historical_category(self):
-        for n in range(1,11):
+        for n in map(int, self.s.manifest()['test_source_directory_category_map']):
             self.assertTrue(self.s.selected(f'categories/{n:02d}-category/screen/Test.kt','all'))
 
     def test_unknown_batch_is_an_error(self):
