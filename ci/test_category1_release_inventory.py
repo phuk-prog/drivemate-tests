@@ -79,6 +79,15 @@ class ReleaseInventoryContract(unittest.TestCase):
         outcome = self.checked()
         self.assertEqual(8, outcome["assets_verified"])
 
+    def test_unavailable_release_identifies_exact_validated_tag(self):
+        """A failed live lookup must identify the public tag without implying coverage."""
+        tag = self.catalog["regions"]["wales"]["map"]["tag"]
+        del self.releases[tag]
+        with self.assertRaisesRegex(
+            ValueError, "REGIONAL_RELEASE_LOOKUP_FAILED.*" + tag
+        ):
+            self.checked()
+
     def test_unavailable_release_is_not_counted_as_pass(self):
         tag = self.catalog["regions"]["wales"]["map"]["tag"]
         del self.releases[tag]
