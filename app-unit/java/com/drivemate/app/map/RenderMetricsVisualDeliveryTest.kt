@@ -71,6 +71,30 @@ class RenderMetricsVisualDeliveryTest {
         assertTrue(s.summary().contains("complete-frame callback age"))
     }
 
+    @Test fun pausedRendererIgnoresLateCallbacksAndDoesNotInheritOldFreshnessOnResume() {
+        val metrics = RenderMetrics()
+        metrics.frame(1_000_000_000L, true, 2, 1)
+        metrics.visualSubmitted(1_050_000_000L)
+        metrics.suspended()
+        // An in-flight callback after Activity.onPause is not proof of an active display.
+        metrics.frame(2_000_000_000L, true, 2, 1)
+        metrics.visualSubmitted(2_050_000_000L)
+        val paused = metrics.visualSnapshot(3_000_000_000L)
+        assertNull(paused.lastCompleteFrameAgeMs)
+        assertNull(paused.lastSubmissionAgeMs)
+        assertEquals(2L, paused.submittedToMapLibre)
+
+        metrics.resumed()
+        val beforeNewFrame = metrics.visualSnapshot(3_500_000_000L)
+        assertNull(beforeNewFrame.lastCompleteFrameAgeMs)
+        assertNull(beforeNewFrame.lastSubmissionAgeMs)
+        metrics.frame(4_000_000_000L, true, 2, 1)
+        metrics.visualSubmitted(4_100_000_000L)
+        val resumed = metrics.visualSnapshot(4_200_000_000L)
+        assertEquals(200.0, resumed.lastCompleteFrameAgeMs!!, 0.001)
+        assertEquals(100.0, resumed.lastSubmissionAgeMs!!, 0.001)
+    }
+
     @Test fun incompleteFramesAndRendererSuspensionDoNotPretendToBeFresh() {
         val metrics = RenderMetrics()
         metrics.frame(1_000_000_000L, false, 2, 1)
