@@ -1,60 +1,17 @@
-# drivemate-tests
+# DriveMate tests
 
-The testing for DriveMate. Every test runs here, in this public repository.
+All public DriveMate app tests run in this repository. The single current order, descriptions, prerequisites, acceptance status and subcategories are in [DriveMate REGISTER.md](https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md): **1–24**, with subcategories **1.1, 1.2, 2.1…** and **Pending / In progress / Part done / Complete**. There is no second category programme.
 
-Register: https://github.com/phuk-prog/drivemate-app/blob/main/REGISTER.md
+## Test layout and compatibility
 
-**Current category scope (29 October 2026):** The original 23 categories are the only active work order. Map/source licensing and usage-rights reviews are deferred: do not plan them, add licensing tests, or use them as Category 1–23 acceptance tasks unless the owner reactivates them. Existing historical test files, mandatory credits/notices and production safety controls are retained; the dedicated Category 1 licensing-review workflow no longer invokes the rights/credits test modules. Road-traffic legality and safety checks remain in scope.
+- `categories/.../law/` verifies applicable road laws and official sources.
+- `categories/.../decisions/` verifies owner-approved decisions.
+- `categories/.../screen/` exercises displayed Android emulator screens.
+- `app-unit/` contains app unit tests and `ci/` collects results and evidence.
+- Existing numbered **test source directory names and class names are technical compatibility identifiers, not the category order**. Do not infer the current category number from a folder's historical name; the current register owns the mapping.
 
-## Layout
+## Running tests
 
-- `categories/NN-name/law/`: law tests. They check the app against the law and official sources
-  (GOV.UK, TSRGD, National Highways) only, never the register's decisions.
-- `categories/NN-name/decisions/`: decision checks. They check the app does what is decided
-  in that category's file in drivemate-app's `register/`. Each test names its question (e.g. `q1_6`).
-- `categories/NN-name/screen/`: screen checks, run on an Android emulator: the app draws its own
-  screens and the test checks what is on them, with a screenshot for the picture page.
-- `app-unit/`: the app's own unit tests (moved here from drivemate-app).
-- `ci/`: turns the results into `summary.json` and the picture page (`run-report.html`).
-- `.github/workflows/test-app.yml`: the test run.
+The **Test the app** workflow runs on pull requests, `main` and manual dispatch. It checks out the exact app ref, installs the public test suite and emits the `drivemate-tests-<app commit>` report artifact with `summary.json` and `run-report.html`. Partial batches never authorize releases. The signed APK workflow requires exact-source passing tests and explicit owner approval to use the private signing key. Offline acceptance requires independent evidence and must not be inferred from a cache-only or mocked test.
 
-## How they run
-
-"Test the app" runs on every pull request here, on merges to main, and by hand (Actions → Test the
-app → Run workflow, optionally naming a drivemate-app branch or commit). It fetches drivemate-app
-(the branch with the same name as this one if there is one, else main), puts these tests in place of
-the app's unit tests, runs them, and publishes one artifact, `drivemate-tests-<app commit>`, with
-`summary.json` and `run-report.html`. App code is only built on the runner; it is never published.
-
-drivemate-app's APK build only goes ahead when that artifact shows every test passed for the exact
-app commit being built.
-
-## Signed APK (for now)
-
-"Build signed APK" (Actions → Build signed APK → Run workflow) builds the signed release APK of a
-drivemate-app commit (main by default), only if "Test the app" passed on that exact commit (it starts
-that test run itself and waits for it when there is none yet). It then
-waits for the owner's approval: the signing key is only in the `release` environment, which needs
-the owner as reviewer and only serves main. The APK is saved only inside an AES-256 password-
-protected zip (password: `APK_ZIP_PASSWORD` in the same environment), kept 7 days. Open it with
-7-Zip (Windows), Keka (Mac) or ZArchiver (Android); the built-in Windows and Mac zip tools can't open
-AES zips. No debug APK is built here.
-
-## Setup (once)
-
-drivemate-app is private, so this repository needs a read-only token for it:
-
-1. GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
-   Repository access: only `phuk-prog/drivemate-app`. Permissions: Contents → Read-only.
-2. In this repository: Settings → Secrets and variables → Actions → New repository secret,
-   name `DRIVEMATE_APP_TOKEN`, value the token.
-
-## Not covered yet
-
-- Physical tests (in a real car) are not run here.
-- 1.9 and 1.18 mini-roundabouts: checked from the route and road data; the road data itself comes from drivemate-map's weekly build.
-- Category 2 sound itself is not heard by any test: the tests check what the app decides to say or play,
-  and when. Physical tests, in a real car: Car-call mode over Bluetooth, directions spoken over a real
-  phone call (2.10, 2.19), the guidance volume levels (2.17), the speeding chime and camera beeps (2.11),
-  and "Hey DriveMate" heard over road noise and music (2.15, 2.20). "Hey DriveMate" needs Android 12+
-  with on-device speech recognition, and listens only while DriveMate is on screen.
+Preserve existing legal-road safety checks, licence notices and provenance controls. No separate licence-review category is added. Do not equate a test pass with proof of on-road accuracy.
