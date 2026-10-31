@@ -55,8 +55,10 @@ class ParkedFixAgeTest {
     }
 
     @Test fun navigationAsksForMaximumFreshLocationRateWithoutChangingParkedTracking() {
-        assertEquals("active navigation asks as fast as the device can provide", 0L,
+        assertEquals("active navigation asks at the 20 Hz cap (minimum cannot exceed interval)", 50L,
             fixInterval(LocationTracker.Mode.NAVIGATION))
+        assertTrue("minimum update interval must not exceed the requested interval",
+            fastestFixInterval(LocationTracker.Mode.NAVIGATION) <= fixInterval(LocationTracker.Mode.NAVIGATION))
         assertEquals("20 Hz callback safety cap", 50L,
             fastestFixInterval(LocationTracker.Mode.NAVIGATION))
         assertEquals("browsing frequency unchanged", 500L,
