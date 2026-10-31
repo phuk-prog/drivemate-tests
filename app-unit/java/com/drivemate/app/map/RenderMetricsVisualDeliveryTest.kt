@@ -1,6 +1,7 @@
 package com.drivemate.app.map
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,5 +57,31 @@ class RenderMetricsVisualDeliveryTest {
         assertEquals(0L, s.submittedToMapLibre)
         assertTrue(s.summary().contains("do not confirm that a position was rendered"))
         assertEquals(1L, metrics.snapshot().completeFrames)
+    }
+
+    @Test fun distinguishesFreshSubmissionFromStaleCompletedFrameCallback() {
+        val metrics = RenderMetrics()
+        metrics.frame(1_000_000_000L, true, 4, 3)
+        metrics.visualSubmitted(4_000_000_000L)
+        val s = metrics.visualSnapshot(4_100_000_000L)
+        assertEquals(3_100.0, s.lastCompleteFrameAgeMs!!, 0.001)
+        assertEquals(100.0, s.lastSubmissionAgeMs!!, 0.001)
+        assertEquals(1L, s.submittedToMapLibre)
+        // This difference is a diagnostic discriminator, not proof of a visual freeze.
+        assertTrue(s.summary().contains("complete-frame callback age 3100.0 ms"))
+    }
+
+    @Test fun incompleteFramesAndRendererSuspensionDoNotPretendToBeFresh() {
+        val metrics = RenderMetrics()
+        metrics.frame(1_000_000_000L, false, 2, 1)
+        assertNull(metrics.visualSnapshot(2_000_000_000L).lastCompleteFrameAgeMs)
+        metrics.frame(2_000_000_000L, true, 2, 1)
+        metrics.visualSubmitted(2_050_000_000L)
+        metrics.suspended()
+        val s = metrics.visualSnapshot(3_000_000_000L)
+        assertNull(s.lastCompleteFrameAgeMs)
+        assertNull(s.lastSubmissionAgeMs)
+        assertEquals(1L, s.submittedToMapLibre)
+        assertTrue(s.summary().contains("complete-frame callback age unknown"))
     }
 }
