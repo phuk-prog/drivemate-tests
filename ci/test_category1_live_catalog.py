@@ -27,6 +27,15 @@ class LiveCatalogAuditContract(unittest.TestCase):
         self.assertEqual("unknown", result["northern_ireland_border_only"])
         self.assertEqual("published_catalog_metadata_only", result["claim"])
 
+    def test_catalogue_schema_requires_exact_integer(self):
+        """Python bool/float equality must not certify a published JSON schema."""
+        for invalid in (True, 1.0, "1", None):
+            document = catalogue()
+            document["schema"] = invalid
+            with self.assertRaisesRegex(ValueError, "INVALID_PARTIAL_CATALOG"):
+                audit_catalog(document)
+        self.assertEqual("passed", audit_catalog(catalogue())["status"])
+
     def test_both_crown_dependencies_fail_live_scope(self):
         document = catalogue()
         for name in ("isle-of-man", "guernsey-jersey"):
