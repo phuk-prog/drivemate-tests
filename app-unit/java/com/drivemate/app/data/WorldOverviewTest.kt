@@ -94,6 +94,15 @@ class WorldOverviewTest {
         assertTrue(rejected(foreign))
     }
 
+    @Test fun worldSourceAssetsCannotMixImmutableReleaseGenerations() {
+        val b = archiveBytes()
+        val mixed = validPointer(digest(b), b.size.toLong())
+        mixed.getJSONObject("source_assets").getJSONObject("world-land.geojson")
+            .put("tag", "map-data-world-overview-r4101-a1")
+        assertTrue("One world candidate must not combine independently dated source snapshots",
+            rejected(mixed))
+    }
+
     @Test fun incompleteOrOversizedPointerIsRejectedWithoutUsingNetwork() {
         val b = archiveBytes()
         val valid = validPointer(digest(b), b.size.toLong())
