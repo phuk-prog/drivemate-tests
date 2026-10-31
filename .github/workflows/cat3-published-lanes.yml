@@ -1,4 +1,4 @@
-name: Category 3 published Manchester lane-source audit
+name: Category 9.1 published Manchester lane-source audit
 # Source-data pretest only; not a driving-screen, legal lane truth or signed APK gate.
 on:
   pull_request:

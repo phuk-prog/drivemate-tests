@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""J27-01 Category 3: read *published* Manchester UK lane data, never synthetic roads.
+"""J27-01 Category 9.1: read *published* Manchester UK lane data, never synthetic roads.
 
 This is a source-availability/quality pretest, NOT lane legality, GPS-to-lane
 matching, UI, APK or actual driver-route acceptance. Public data only.

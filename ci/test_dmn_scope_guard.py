@@ -1,4 +1,4 @@
-"""Category 1 pretests: global OSM diff must not contaminate UK DMN packs.
+"""Category 2.3 pretests: global OSM diff must not contaminate UK DMN packs.
 
 Synthetic coordinates test a broad rejection envelope, NOT a legal UK border,
 coverage or road truth. Real producer run 40656223326 attempted a -46/170

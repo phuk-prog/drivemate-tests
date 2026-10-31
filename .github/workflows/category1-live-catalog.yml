@@ -1,4 +1,4 @@
-name: Category 1 live UK catalogue audit
+name: Category 1.3 live UK catalogue audit
 # Read-only: checks actual published map-regions/catalog.json against GitHub
 # release digest. Region presence is not complete UK road or offline acceptance.
 on:

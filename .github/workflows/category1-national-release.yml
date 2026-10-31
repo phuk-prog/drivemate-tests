@@ -1,4 +1,4 @@
-name: Category 1 national release metadata audit
+name: Categories 1.1 and 2.3 national release metadata audit
 # Read-only: validates rolling pointer bytes against dated release asset metadata.
 # Does NOT download 1GB DMN pieces/UK PMTiles or claim installed offline guidance.
 on:

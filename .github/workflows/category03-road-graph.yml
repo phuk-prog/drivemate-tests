@@ -1,4 +1,4 @@
-name: Category 03.1 road graph safety checks
+name: Category 2.1 road graph safety checks
 
 # Runs only the existing DMN road-graph writer unit suite when graph behavior changes.
 # These cases test code behavior, not real-world legal road truth or Android acceptance.

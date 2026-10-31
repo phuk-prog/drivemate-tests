@@ -1,4 +1,4 @@
-"""Bounded real-UK DMN graph audit for Category 03.1.
+"""Bounded real-UK DMN graph audit for Category 2.1.
 
 Reads a genuine Geofabrik Greater Manchester extract. Verifies *all emitted*
 DMN road edges follow adjacent OSM node IDs and OSM way direction, and that
