@@ -174,7 +174,7 @@ class CategoryConnectionContracts(unittest.TestCase):
         self.assertEqual(1, report["categories"]["23"]["reference_status_counts"]["test_service_reference_not_live"])
         self.assertEqual(1, report["categories"]["23"]["unresolved_references"])
         self.assertEqual(1, report["categories"]["20"]["unassigned_references"])
-        self.assertEqual(1, report["categories"]["20"]["ownership_unverified_references"])
+        self.assertEqual(2, report["categories"]["20"]["ownership_unverified_references"])
         self.assertFalse(report["categories"]["23"]["live_http_verified"])
 
     def test_tf02_batch_counts_exclude_unselected_categories(self):

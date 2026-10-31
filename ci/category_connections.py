@@ -181,7 +181,7 @@ def audit(app_root, programme, alignment=None, batch="all"):
         ))
         if any(x["category_assignment"] == "needs_review" for x in subset):
             flags.append("unassigned_source_needs_review")
-        if cid in (1, 4) and cid in chosen and alignment:
+        if cid in (1, 2) and cid in chosen and alignment:
             if alignment["reason"] == "routing_release_repository_mismatch":
                 flags.append("routing_release_repository_mismatch")
             elif alignment["reason"] != "source_repositories_aligned_only":

@@ -13,11 +13,11 @@ from category_connections import audit, classify_url
 def programme():
     return {
         "schema": 1,
-        "execution_order": list(range(1, 24)),
-        "categories": [{"id": i, "name": f"Category {i}"} for i in range(1, 24)],
+        "execution_order": list(range(1, 25)),
+        "categories": [{"id": i, "name": f"Category {i}"} for i in range(1, 25)],
         "batches": [
-            {"id": "A", "categories": [1, 4, 5, 17]},
-            {"id": "E", "categories": [2, 3, 20, 23]},
+            {"id": "A", "categories": [1, 2, 4]},
+            {"id": "E", "categories": [20, 21, 22, 23]},
         ],
     }
 
@@ -79,7 +79,7 @@ class TF02RepositoryOwnership(unittest.TestCase):
             (source / "OsmConnection.kt").write_text(
                 'val x = "https://master.apis.dev.openstreetmap.org/api/0.6"\n')
             report = audit(root, programme())
-        c22 = report["categories"]["22"]
+        c22 = report["categories"]["23"]
         self.assertEqual("blocked_needs_investigation", c22["status"])
         self.assertIn("test_service_reference_not_live", c22["finding_codes"])
         self.assertEqual(1, c22["unresolved_references"])
@@ -108,8 +108,8 @@ class TF02RepositoryOwnership(unittest.TestCase):
             (source / "OsmConnection.kt").write_text(
                 'val x = "https://master.apis.dev.openstreetmap.org/api/0.6"\n')
             report = audit(root, programme(), batch="A")
-        self.assertEqual("not_selected", report["categories"]["22"]["status"])
-        self.assertEqual(0, report["categories"]["22"]["unresolved_references"])
+        self.assertEqual("not_selected", report["categories"]["23"]["status"])
+        self.assertEqual(0, report["categories"]["23"]["unresolved_references"])
         self.assertFalse(report["runtime_network_verified"])
 
 

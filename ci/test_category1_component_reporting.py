@@ -53,14 +53,14 @@ class Category1ComponentReportingTest(unittest.TestCase):
         self.assertEqual(1, summary["unassigned"]["total"])
         self.assertEqual(3, cat1["total"] + summary["unassigned"]["total"])
 
-    def test_historical_cat01_remains_current_turn_by_turn_not_current_map(self):
+    def test_turn_guidance_evidence_is_not_misclassified_as_map(self):
         summary = programme_summary({
             "app_commit": "a" * 40, "public_tests_sha": "b" * 40,
-            "checklist": {"1 Turn-by-turn guidance: decisions": {
+            "checklist": {"8 Roundabouts and turn instructions: decisions": {
                 "tests": [test_case("com.drivemate.tests.cat01.GuidanceDecisionsTest")]}},
         })
         self.assertEqual(0, summary["categories"][0]["total"])
-        self.assertEqual(1, summary["categories"][6]["correct"])
+        self.assertEqual(1, summary["categories"][7]["correct"])
 
 
 if __name__ == "__main__":
