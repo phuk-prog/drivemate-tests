@@ -3,6 +3,8 @@
 Contract fixtures model publisher metadata only, not synthetic UK roads.
 """
 import hashlib
+from contextlib import redirect_stdout
+from io import StringIO
 import json
 from pathlib import Path
 import sys
@@ -28,11 +30,17 @@ class LiveAuditFailClosedTest(unittest.TestCase):
             args=["category1_live_catalog.py","--catalog",str(catalog),
                   "--release",str(meta),"--output",str(output),
                   "--verify-region-releases"]
+            # This is an intentionally failed *fixture*, not a live catalogue probe.
+            # Capture its diagnostic so a passing Android suite cannot appear to
+            # report a real regional release failure in unlabelled CI stdout.
+            diagnostic = StringIO()
             with patch.object(sys,"argv",args), patch.object(
                     audit,"github_release",side_effect=ValueError("REGIONAL_RELEASE_LOOKUP_FAILED")):
-                with self.assertRaises(SystemExit) as raised:
-                    audit.main()
+                with redirect_stdout(diagnostic):
+                    with self.assertRaises(SystemExit) as raised:
+                        audit.main()
             self.assertEqual(1,raised.exception.code)
+            self.assertEqual("failed", json.loads(diagnostic.getvalue())["status"])
             self.assertEqual("failed",json.loads(output.read_text())["status"])
             failures = json.loads(output.read_text())["failures"]
             self.assertTrue(
