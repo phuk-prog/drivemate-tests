@@ -4,6 +4,7 @@
   "scope": "approved public Kotlin test source and helpers; Git blob SHA-1 pins exact bytes",
   "files": {
     "app-unit/java/com/drivemate/app/controller/OnlineRoadDataTest.kt": "aea860b9b9059d81730cd77ee5b8bb8fca28745c",
+    "app-unit/java/com/drivemate/app/data/C08SearchTest.kt": "0001ce309d91625a49a2168e3c1f921bbfe04653",
     "app-unit/java/com/drivemate/app/data/M01MapResumeTest.kt": "caf1dd821a56dcc2c537281492c881844ca831c0",
     "app-unit/java/com/drivemate/app/data/M01NationalMapSelectionTest.kt": "fb7e58ada482f6a23b300d580bbd87cb5e46ce65",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
@@ -98,6 +99,7 @@
     "app-unit/java/com/drivemate/app/nav/C11ParkingOfferPolicyTest.kt": "00258f1276d1c15a8aa71c54665691bdfa5ebca9",
     "app-unit/java/com/drivemate/app/nav/C13MissedExitRuleTest.kt": "ba3c22a2ed11c3f69ba7eeef3b300a18a8919b9c",
     "app-unit/java/com/drivemate/app/nav/C13RerouteCountdownTest.kt": "5d9cee0109e5f85870c4f105ff77cebd4743cfeb",
+    "app-unit/java/com/drivemate/app/nav/C14ArrivalPolicyTest.kt": "2be765bcd1404b480ff0532d2615692db4f11a7b",
     "app-unit/java/com/drivemate/app/nav/C15LimitChangeCueTest.kt": "37ba189d5e1642fff925e9e756d8a5dde923479d",
     "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "ddacc50d8c313401c6de5f42f788fca20557e1c3",
     "app-unit/java/com/drivemate/app/ui/C11DrivingTextCapsTest.kt": "a27390328b3cb36015475c93ba320a7951bdb49d",
