@@ -1,0 +1,54 @@
+name: DriveMate test-branch quarter-hour status (read only)
+# STAGED ONLY: GitHub schedule events execute from the repository default branch.
+# This test-branch copy will not run on cron unless explicitly promoted via a
+# separately approved scheduler change. No app source is deployed or released.
+on:
+  schedule:
+    - cron: '8,23,38,53 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: drivemate-quarter-hour-watch
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APP_READ_TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+      TEST_BRANCH: test/continuous-drive-20261030
+    steps:
+      - name: Inspect test branches and latest CI without running builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "### DriveMate quarter-hour test-branch monitor" >> "$GITHUB_STEP_SUMMARY"
+          echo "Read-only, no code, publication, merge, signing, test dispatch or new agent job." >> "$GITHUB_STEP_SUMMARY"
+          echo '| Repo | Test branch SHA |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          for repo in phuk-prog/drivemate-tests phuk-prog/drivemate-map; do
+            sha=$(gh api "repos/$repo/git/ref/heads/$TEST_BRANCH" --jq '.object.sha')
+            test -n "$sha"
+            echo "| $repo | \`$sha\` |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          if [ -n "$APP_READ_TOKEN" ]; then
+            sha=$(GH_TOKEN="$APP_READ_TOKEN" gh api "repos/phuk-prog/drivemate-app/git/ref/heads/$TEST_BRANCH" --jq '.object.sha')
+            test -n "$sha"
+            echo "| private drivemate-app | \`$sha\` |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| private drivemate-app | unknown (read-only token unavailable) |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo '| Repo | Latest matching test-branch workflow | Status | Conclusion |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          for repo in phuk-prog/drivemate-tests phuk-prog/drivemate-map; do
+            response=$(gh api "repos/$repo/actions/runs?branch=$TEST_BRANCH&per_page=10")
+            row=$(jq -r '[.workflow_runs[] | select(.name != "DriveMate test-branch quarter-hour status (read only)")][0] | if . == null then "none|not-run|unknown" else (.html_url + "|" + .status + "|" + (.conclusion // "pending")) end' <<< "$response")
+            IFS='|' read -r url status conclusion <<< "$row"
+            echo "| $repo | $url | $status | $conclusion |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo 'A passing workflow proves only its pinned input scope. Pending/failed checks remain open; independent coding must use the authorised coding executor and test branches.' >> "$GITHUB_STEP_SUMMARY"
