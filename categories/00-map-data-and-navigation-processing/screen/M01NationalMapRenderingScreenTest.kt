@@ -147,7 +147,7 @@ class M01NationalMapRenderingScreenTest {
                                 val seen = map.get()!!.queryRenderedFeatures(
                                     RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
                                 val w = v.width / 2f; val h = v.height / 2f
-                                val emptyQuadrants = if (!city.everyQuadrant) emptyList() else
+                                val emptyQuadrants = if (!city.everyQuadrant) emptyList<String>() else
                                     listOf("top-left" to RectF(0f, 0f, w, h), "top-right" to RectF(w, 0f, 2 * w, h),
                                         "bottom-left" to RectF(0f, h, w, 2 * h), "bottom-right" to RectF(w, h, 2 * w, 2 * h))
                                         .filter { (_, r) -> map.get()!!.queryRenderedFeatures(r, *roads).isEmpty() }
