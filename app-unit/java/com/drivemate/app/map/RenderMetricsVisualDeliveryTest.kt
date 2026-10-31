@@ -147,4 +147,26 @@ class RenderMetricsVisualDeliveryTest {
         assertNull(resumed.lastCompleteFrameAgeMs)
         assertNull(resumed.lastSubmissionAgeMs)
     }
+
+    @Test fun suspendedNativeCallbacksRemainCountedButAreNotLiveScreenEvidence() {
+        val metrics = RenderMetrics()
+        metrics.frame(1_000_000_000L, true, 2, 1)
+        metrics.suspended()
+        metrics.frame(2_000_000_000L, true, 2, 1)
+        metrics.frame(2_100_000_000L, false, 2, 1)
+        val paused = metrics.snapshot()
+        assertEquals(3L, paused.frames)
+        assertEquals(2L, paused.completeFrames)
+        assertEquals(2L, paused.suspendedFrameCallbacks)
+        assertNull(metrics.visualSnapshot(2_200_000_000L).lastCompleteFrameAgeMs)
+        assertTrue(paused.summary().contains("2 frame callbacks while renderer lifecycle suspended"))
+
+        metrics.resumed()
+        metrics.frame(3_000_000_000L, true, 2, 1)
+        val resumed = metrics.snapshot()
+        assertEquals(4L, resumed.frames)
+        assertEquals(3L, resumed.completeFrames)
+        assertEquals(2L, resumed.suspendedFrameCallbacks)
+        assertEquals(100.0, metrics.visualSnapshot(3_100_000_000L).lastCompleteFrameAgeMs!!, 0.001)
+    }
 }
