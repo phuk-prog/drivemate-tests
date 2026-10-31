@@ -56,6 +56,21 @@ class M01RestartArchiveIntegrityTest {
         assertTrue(file.isFile) // Never delete a fallback on an integrity failure.
     }
 
+    @Test fun repeatedIoRequestReusesVerifiedIdentityWithoutSecondFullRead() {
+        val file = archive()
+        val expected = sha(file)
+        var checkpoints = 0
+        assertTrue(InstalledMapIntegrity.verifyOnIo(file, expected) { checkpoints++ })
+        assertTrue("The first request must read the file", checkpoints > 0)
+        val firstRead = checkpoints
+        assertTrue(InstalledMapIntegrity.verifyOnIo(file, expected) { checkpoints++ })
+        org.junit.Assert.assertEquals("A queued load should do one cancellation check, not rehash 1.8 GB",
+            firstRead + 1, checkpoints)
+        InstalledMapIntegrity.clear()
+        assertTrue(InstalledMapIntegrity.verifyOnIo(file, expected) { checkpoints++ })
+        assertTrue("A new process must rehash", checkpoints > firstRead + 1)
+    }
+
     @Test fun wrongExpectedDigestCannotBecomeTrusted() {
         val file = archive()
         assertFalse(InstalledMapIntegrity.verifyOnIo(file, "b".repeat(64)))
