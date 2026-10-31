@@ -34,8 +34,11 @@ class LiveAuditFailClosedTest(unittest.TestCase):
                     audit.main()
             self.assertEqual(1,raised.exception.code)
             self.assertEqual("failed",json.loads(output.read_text())["status"])
-            self.assertIn("REGIONAL_RELEASE_LOOKUP_FAILED",
-                          json.loads(output.read_text())["failures"])
+            failures = json.loads(output.read_text())["failures"]
+            self.assertTrue(
+                any(f.startswith("REGIONAL_RELEASE_LOOKUP_FAILED tag=") for f in failures),
+                "The failed status must retain its public tag diagnostic",
+            )
 
 
 if __name__=="__main__":

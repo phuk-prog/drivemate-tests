@@ -115,7 +115,8 @@ def verify_region_release_inventory(catalog, fetch_release):
                     release=fetch_release(tag)
                 except (KeyError, OSError, subprocess.CalledProcessError,
                         subprocess.TimeoutExpired, ValueError):
-                    raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED") from None
+                    # Tag is regex-validated above: safe public diagnostic, no token/URL leakage.
+                    raise ValueError(f"REGIONAL_RELEASE_LOOKUP_FAILED tag={tag}") from None
                 if not isinstance(release, dict):
                     raise ValueError("REGIONAL_RELEASE_LOOKUP_FAILED")
                 resolved[tag]=release
