@@ -1,6 +1,7 @@
 package com.drivemate.app.map
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -107,5 +108,27 @@ class RenderMetricsVisualDeliveryTest {
         assertNull(s.lastSubmissionAgeMs)
         assertEquals(1L, s.submittedToMapLibre)
         assertTrue(s.summary().contains("complete-frame callback age unknown"))
+    }
+
+    @Test fun activeRendererAwaitingFirstFrameDiffersFromPausedRenderer() {
+        val metrics = RenderMetrics()
+        val active = metrics.visualSnapshot(1_000_000_000L)
+        assertTrue(active.rendererActive)
+        assertNull(active.lastCompleteFrameAgeMs)
+        assertNull(active.lastSubmissionAgeMs)
+        assertTrue(active.summary().contains("Renderer lifecycle active"))
+
+        metrics.suspended()
+        val paused = metrics.visualSnapshot(2_000_000_000L)
+        assertFalse(paused.rendererActive)
+        assertNull(paused.lastCompleteFrameAgeMs)
+        assertNull(paused.lastSubmissionAgeMs)
+        assertTrue(paused.summary().contains("Renderer lifecycle suspended"))
+
+        metrics.resumed()
+        val resumed = metrics.visualSnapshot(3_000_000_000L)
+        assertTrue(resumed.rendererActive)
+        assertNull(resumed.lastCompleteFrameAgeMs)
+        assertNull(resumed.lastSubmissionAgeMs)
     }
 }
