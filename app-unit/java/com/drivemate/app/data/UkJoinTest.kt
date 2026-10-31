@@ -48,6 +48,18 @@ class UkJoinTest {
         assertTrue(runCatching { UkJoin.pointer(pointerFor(manifest(), tag = "map-data-region-x-r1-a1")) }.isFailure)
     }
 
+    /** C08: the whole-UK search list wins, so ST4 8JG is found while the map shows Stockport. */
+    @Test fun ukSearchListWinsOverTheRegionsOwnAndRegionalRemainsTheFallback() {
+        val name = "search-offline-uk.tsv.gz"
+        assertTrue(UkJoin.joinable(name))
+        val uk = mapOf(name to MapData.Asset(sha, 30_000_000, "map-data-ukjoin-r8-a1"))
+        val stockport = mapOf(name to MapData.Asset(sha, 400_000, "map-data-region-stockport-r1-a1"))
+        assertEquals(30_000_000L, UkJoin.pick(name, uk, stockport)!!.bytes)
+        assertEquals("no UK list published yet: the region's own, as before", 400_000L,
+            UkJoin.pick(name, emptyMap(), stockport)!!.bytes)
+        assertEquals(400_000L, UkJoin.pick(name, null, stockport)!!.bytes)
+    }
+
     @Test fun ukSetWinsForGuidanceRegionKeepsTheRest() {
         val uk = mapOf("lanes-106_-5.json" to MapData.Asset(sha, 1, "map-data-ukjoin-r7-a1"))
         val regional = mapOf(
