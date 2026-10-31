@@ -9,7 +9,7 @@
     "app-unit/java/com/drivemate/app/data/M01InstalledSizeReceiptTest.kt": "3ea6b98cc6988764709cb23ecf5d6c36507a0d19",
     "app-unit/java/com/drivemate/app/data/M01MapResumeTest.kt": "caf1dd821a56dcc2c537281492c881844ca831c0",
     "app-unit/java/com/drivemate/app/data/M01NationalMapSelectionTest.kt": "22cba325a3b7961dfa9bc1eb4ad0accb2f0c8c0c",
-    "app-unit/java/com/drivemate/app/data/M01RestartArchiveIntegrityTest.kt": "c88ed79edd2255fd64b16b55b6aafb3767332a6f",
+    "app-unit/java/com/drivemate/app/data/M01RestartArchiveIntegrityTest.kt": "694c4971708653c4d7b60b810693f550bc97a624",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
     "app-unit/java/com/drivemate/app/data/MemoryPreferences.kt": "81b88db08b9e78fe17ec05aef917306b04758ba5",
     "app-unit/java/com/drivemate/app/data/PublishedRegionCatalogTest.kt": "cbbffa2fa6265cca4deebff9ca89c3563c5ef0d0",
