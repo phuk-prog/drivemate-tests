@@ -32,10 +32,39 @@ class ProcessContractTest(unittest.TestCase):
         self.assertEqual('NO_RECORDED_CHECKS', report['categories'][0]['reason_code'])
 
     def test_later_historical_category_labels_are_mapped(self):
-        d=self.document(); d['checklist']={'13 Driving camera: screen':{'tests':[{'name':'camera','status':'passed'}]}}
+        d=self.document(); d['checklist']={'13 Driving camera, arrow and route line: screen':{'tests':[{'name':'camera','status':'passed'}]}}
         r=self.c.programme_summary(d)
         self.assertEqual(1,r['categories'][12]['correct'])
         self.assertEqual(0,r['unassigned']['total'])
+
+    def test_retired_heading_uses_explicit_source_mapping(self):
+        d = self.document()
+        d['checklist'] = {'1 Retired guidance label: decisions': {'tests': [
+            {'class': 'com.drivemate.tests.cat01.GuidanceDecisionsTest',
+             'name': 'realTest', 'status': 'passed'}]}}
+        report = self.c.programme_summary(d)
+        self.assertEqual(0, report['categories'][0]['total'])
+        self.assertEqual(1, report['categories'][7]['correct'])
+        self.assertEqual(0, report['unassigned']['total'])
+
+    def test_retired_heading_without_source_is_unassigned(self):
+        d = self.document()
+        d['checklist'] = {'1 Retired guidance label: screen': {'tests': [
+            {'name': 'unknownSource', 'status': 'passed'}]}}
+        report = self.c.programme_summary(d)
+        self.assertEqual(0, report['categories'][0]['total'])
+        self.assertEqual(1, report['unassigned']['total'])
+
+    def test_conflicting_current_label_and_source_fails_closed(self):
+        d = self.document()
+        d['checklist'] = {'1 UK map and downloads: decisions': {'tests': [
+            {'class': 'com.drivemate.tests.cat01.GuidanceDecisionsTest',
+             'name': 'wrongHeading', 'status': 'passed'}]}}
+        report = self.c.programme_summary(d)
+        self.assertEqual(0, report['categories'][0]['total'])
+        self.assertEqual(0, report['categories'][7]['total'])
+        self.assertEqual(1, report['unassigned']['failed'])
+        self.assertEqual('CHECK_FAILED', report['unassigned']['reason_code'])
 
     def test_unassigned_component_results_do_not_become_category_acceptance(self):
         d=self.document(); d['checklist']={'App unit tests':{'tests':[{'class':'com.drivemate.app.data.UnmappedUnitTest','name':'component','status':'passed'}]}}
