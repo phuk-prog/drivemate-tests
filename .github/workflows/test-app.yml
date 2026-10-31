@@ -70,6 +70,11 @@ jobs:
             ref="$INPUT_REF"
           elif git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/phuk-prog/drivemate-app" "$branch" >/dev/null 2>&1; then
             ref="$branch"
+          elif [ "${GITHUB_BASE_REF:-}" = "test/continuous-drive-20261030" ]; then
+            # A tests PR into the integration TEST branch must exercise app TEST
+            # integration, not silently fall back to production app main.
+            # Checkout fails closed if that app branch is unavailable.
+            ref="$GITHUB_BASE_REF"
           else
             ref=main
           fi
