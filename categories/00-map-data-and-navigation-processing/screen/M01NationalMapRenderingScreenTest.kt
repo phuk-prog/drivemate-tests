@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicLong
 @RunWith(AndroidJUnit4::class)
 class M01NationalMapRenderingScreenTest {
     @get:Rule val compose = createComposeRule()
-    private data class Sample(val name: String, val latitude: Double, val longitude: Double, val zoom: Double = 14.0)
+    private data class Sample(val name: String, val latitude: Double, val longitude: Double, val zoom: Double = 14.0,
+                              val everyQuadrant: Boolean = false)
     private val cities = listOf(
         Sample("manchester", 53.4808, -2.2426),
         Sample("edinburgh", 55.9533, -3.1883),
@@ -52,6 +53,11 @@ class M01NationalMapRenderingScreenTest {
         Sample("glasgow", 55.8610, -4.2510),
         Sample("inverness", 57.4778, -4.2247),
         Sample("glasgow-midzoom", 55.8610, -4.2510, 12.0),
+        // C01.3: the 27 Oct report showed a zoomed-out Scotland view with blank rectangles while only
+        // regional archives were published. With the national map, zoomed-out Scotland must draw
+        // roads, and at zoom 8 every quarter of the screen must have roads (no missing rectangle).
+        Sample("scotland-zoomed-out", 57.0, -4.0, 6.5),
+        Sample("scotland-quadrants", 56.9, -4.2, 8.0, everyQuadrant = true),
     )
     private val roads = arrayOf("road-primary", "road-secondary", "road-tertiary",
         "road-minor", "road-service", "road-trunk", "road-motorway")
@@ -140,9 +146,15 @@ class M01NationalMapRenderingScreenTest {
                                 renderedFrames.get() > beforeMove) {
                                 val seen = map.get()!!.queryRenderedFeatures(
                                     RectF(0f, 0f, v.width.toFloat(), v.height.toFloat()), *roads)
-                                foundRoads = seen.isNotEmpty()
+                                val w = v.width / 2f; val h = v.height / 2f
+                                val emptyQuadrants = if (!city.everyQuadrant) emptyList() else
+                                    listOf("top-left" to RectF(0f, 0f, w, h), "top-right" to RectF(w, 0f, 2 * w, h),
+                                        "bottom-left" to RectF(0f, h, w, 2 * h), "bottom-right" to RectF(w, h, 2 * w, 2 * h))
+                                        .filter { (_, r) -> map.get()!!.queryRenderedFeatures(r, *roads).isEmpty() }
+                                        .map { it.first }
+                                foundRoads = seen.isNotEmpty() && emptyQuadrants.isEmpty()
                                 rendererState.set("queried:${city.name};viewport=${v.width}x${v.height};" +
-                                    "features=${seen.size};frames=${renderedFrames.get()}")
+                                    "features=${seen.size};emptyQuadrants=$emptyQuadrants;frames=${renderedFrames.get()}")
                             }
                         }
                         foundRoads || failure.get() != null
