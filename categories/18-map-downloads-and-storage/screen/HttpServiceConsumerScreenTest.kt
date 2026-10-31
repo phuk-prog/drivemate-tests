@@ -49,7 +49,11 @@ class HttpServiceConsumerScreenTest {
         socket.outputStream.flush()
     }
 
-    internal class LocalTlsServer(context: SSLContext, val handle: (String, SSLSocket) -> Unit) : Closeable {
+    /** One parsed request: method, path and lower-cased header names (added for C01.2 resume tests). */
+    internal data class Request(val method: String, val path: String, val headers: Map<String, String>)
+
+    internal class LocalTlsServer(context: SSLContext, val handleRequest: ((Request, SSLSocket) -> Unit)? = null,
+                                  val handle: (String, SSLSocket) -> Unit) : Closeable {
         private val listener = context.serverSocketFactory.createServerSocket(
             0, 16, InetAddress.getByName("127.0.0.1")) as SSLServerSocket
         private val connections = CopyOnWriteArrayList<SSLSocket>()
@@ -66,15 +70,20 @@ class HttpServiceConsumerScreenTest {
                             socket.soTimeout = 3000
                             val reader = socket.inputStream.bufferedReader(Charsets.US_ASCII)
                             val first = reader.readLine() ?: return@use
+                            val method = first.split(' ').getOrNull(0) ?: return@use
                             val path = first.split(' ').getOrNull(1) ?: return@use
+                            val headers = HashMap<String, String>()
                             var count = 0
                             while (true) {
                                 val line = reader.readLine() ?: return@use
                                 if (line.isEmpty()) break
                                 check(++count < 100) { "Unexpected request header volume" }
+                                val colon = line.indexOf(':')
+                                if (colon > 0) headers[line.substring(0, colon).trim().lowercase()] = line.substring(colon + 1).trim()
                             }
                             paths.add(path)
-                            handle(path, socket)
+                            val custom = handleRequest
+                            if (custom != null) custom(Request(method, path, headers), socket) else handle(path, socket)
                         }
                     } catch (_: IOException) {
                         // Expected for rejected TLS, deliberately truncated/closed responses and timeout cleanup.
@@ -117,12 +126,19 @@ class HttpServiceConsumerScreenTest {
         return server to client
     }
 
-    internal fun withServer(handler: (String, SSLSocket) -> Unit, test: (LocalTlsServer) -> Unit) {
+    internal fun withServer(handler: (String, SSLSocket) -> Unit, test: (LocalTlsServer) -> Unit) =
+        withServer(handler, null, test)
+
+    internal fun withRequestServer(handler: (Request, SSLSocket) -> Unit, test: (LocalTlsServer) -> Unit) =
+        withServer({ _, _ -> }, handler, test)
+
+    private fun withServer(handler: (String, SSLSocket) -> Unit, requestHandler: ((Request, SSLSocket) -> Unit)?,
+                           test: (LocalTlsServer) -> Unit) {
         synchronized(TLS_LOCK) {
             val original = HttpsURLConnection.getDefaultSSLSocketFactory()
             val (serverContext, clientContext) = contexts()
             try {
-                LocalTlsServer(serverContext, handler).use { server ->
+                LocalTlsServer(serverContext, requestHandler, handler).use { server ->
                     HttpsURLConnection.setDefaultSSLSocketFactory(clientContext.socketFactory)
                     test(server)
                 }
