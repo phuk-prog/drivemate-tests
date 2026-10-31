@@ -10,12 +10,15 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import category1_live_catalog as audit
-from test_category1_live_catalog import catalogue
+from test_category1_live_catalog import catalogue, wide_region
 
 
 class LiveAuditFailClosedTest(unittest.TestCase):
     def test_published_release_lookup_failure_cannot_leave_status_passed(self):
-        raw=json.dumps(catalogue(),sort_keys=True).encode()
+        document=catalogue()
+        for name in document["regions"]:
+            document["regions"][name]=wide_region(name)
+        raw=json.dumps(document,sort_keys=True).encode()
         release={"tag_name":"map-regions","assets":[{
             "name":"catalog.json","size":len(raw),
             "digest":"sha256:"+hashlib.sha256(raw).hexdigest()}]}
