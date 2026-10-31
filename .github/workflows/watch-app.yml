@@ -1,6 +1,6 @@
 name: Watch the app for new commits
-# Every 30 minutes: if drivemate-app's main has a commit no test run has covered yet, start
-# "Test the app" for it. drivemate-app's APK build waits for that result.
+# On the existing 30-minute cadence, dispatch only when the public suite has
+# neither a verified success, a known failure (manual retry), nor active work.
 on:
   schedule:
     - cron: '7,37 * * * *'
@@ -16,20 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Start a test run for an untested app commit
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check watcher decision rules without Android
+        run: python3 -m unittest ci.test_watch_app ci.test_workflow_scope
+      - name: Find the current private app commit
+        id: app
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
-          if [ -z "$TOKEN" ]; then echo "::error::Secret DRIVEMATE_APP_TOKEN is missing (see README)."; exit 1; fi
+          test -n "$TOKEN" || { echo "::error::Missing private app read-only token"; exit 1; }
           sha=$(git ls-remote "https://x-access-token:${TOKEN}@github.com/phuk-prog/drivemate-app" refs/heads/main | cut -f1)
-          test -n "$sha"
-          tested=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=drivemate-tests-$sha" --jq '.total_count')
-          running=$(gh run list -R "$GITHUB_REPOSITORY" -w test-app.yml -e workflow_dispatch --json status --jq '[.[] | select(.status != "completed")] | length')
-          if [ "$tested" != "0" ]; then echo "App main $sha already tested."
-          elif [ "$running" != "0" ]; then echo "A test run is already going."
-          else
-            gh workflow run test-app.yml -R "$GITHUB_REPOSITORY" --ref main -f app_ref="$sha"
-            echo "Started a test run for app main $sha."
-          fi
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Cannot resolve app main"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Reuse exact-source results or dispatch once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_SHA: ${{ steps.app.outputs.sha }}
+        run: python3 ci/watch_app.py | tee -a "$GITHUB_STEP_SUMMARY"
