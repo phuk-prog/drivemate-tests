@@ -52,12 +52,24 @@ def programme_summary(doc):
                 current=m['component_category_map'].get(test.get('class'))
                 (groups[current] if current else unassigned).append(test)
             continue
-        old = re.match(r'^(?:cat)?(\d+)(?: |:)', item)
-        current = int(old.group(1)) if old and 1 <= int(old.group(1)) <= len(m['categories']) else None
-        (groups[current] if current else unassigned).extend(group['tests'])
+        # Match only the current register title; do not infer the category
+        # from a retired heading's leading number.
+        titles = {f"{c['id']} {c['name']}": c['id'] for c in m['categories']}
+        titled = titles.get(item.split(':', 1)[0])
+        source_map = m['test_source_directory_category_map']
+        for test in group['tests']:
+            klass = test.get('class') or ''
+            tech = re.match(r'^com\.drivemate\.tests\.cat(\d{2})\.', klass)
+            mapped = source_map.get(str(int(tech.group(1)))) if tech else None
+            if titled is not None and mapped is not None and titled != mapped:
+                # Conflicting technical evidence cannot be counted as a pass.
+                unassigned.append(dict(test, status='failed',
+                                       failure='CATEGORY_LABEL_SOURCE_CONFLICT'))
+                continue
+            current = mapped or titled
+            (groups[current] if current else unassigned).append(test)
     categories = [dict(c, **counts(groups[c['id']])) for c in m['categories']]
-    # Category 1 has only component evidence here; its overall acceptance
-    # remains open even when all mapped unit tests pass.
+    # Component checks do not decide category completion. Only REGISTER.md does.
     categories[0]['acceptance'] = 'open'
     categories[0]['evidence_scope'] = 'component_checks_only'
     return {'schema': 1, 'app_sha': doc['app_commit'], 'test_sha': doc['public_tests_sha'],

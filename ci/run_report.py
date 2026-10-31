@@ -112,11 +112,11 @@ figcaption { font: 0.75rem/1.3 var(--data); color: var(--muted); overflow-wrap: 
     w("</header>")
     programme = programme_summary(doc)
     w('<section><h2>Current 24-category programme</h2><p>Automated checks only. Untested categories are not passes; historical test IDs remain unchanged.</p>')
-    w('<table><thead><tr><th>Category</th><th>Correct/total</th><th>Failed</th><th>Unknown</th><th>Provisional</th><th>Skipped</th><th>Status</th></tr></thead><tbody>')
+    w('<table><thead><tr><th>Category</th><th>Correct/total</th><th>Failed</th><th>Unknown</th><th>Provisional</th><th>Skipped</th><th>Evidence status</th></tr></thead><tbody>')
     for c in programme['categories']:
         status = c['status']
         if c.get('evidence_scope') == 'component_checks_only':
-            status += ' (component checks only; Category 1 acceptance open)'
+            status += ' (component evidence only; register owns category completion)'
         w(f'<tr><td>{c["id"]}. {html.escape(c["name"])}</td><td>{c["correct"]}/{c["total"]}</td><td>{c["failed"]}</td><td>{c["unknown"]}</td><td>{c["provisional"]}</td><td>{c["skipped"]}</td><td>{html.escape(status)}</td></tr>')
     w('</tbody></table></section>')
     for t in sorted(tests, key=lambda t: (t["status"] == "passed", t["item"])):

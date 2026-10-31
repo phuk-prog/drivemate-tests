@@ -135,7 +135,7 @@ jobs:
           ref: d20c41f039f20b900eb46523827b01eecee167f3
           path: map-schema
           persist-credentials: false
-      - name: Trace DMN graph download, routing and matching source path (M02)
+      - name: Trace DMN graph download, routing and matching source path (category 2)
         # SOURCE ONLY: verify DMN code wiring without claiming installed UK routing.
         run: |
           python3 ci/dmn_download_path.py \
@@ -148,7 +148,7 @@ jobs:
           assert result["offline_route_to_screen_voice_verified"] is False
           assert result["real_device_behavior"] == "unknown"
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-              summary.write("Category 1 DMN download source path: **" + result["finding"] +
+              summary.write("Category 2 DMN download source path: **" + result["finding"] +
                             "** (real device/UK graph acceptance UNKNOWN)\\n")
           PY_DMN_PATH
       - name: Audit production external links in their current test categories
