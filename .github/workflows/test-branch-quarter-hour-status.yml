@@ -1,8 +1,11 @@
 name: DriveMate test-branch quarter-hour status (read only)
 # STAGED ONLY: GitHub schedule events execute from the repository default branch.
-# This test-branch copy will not run on cron unless explicitly promoted via a
-# separately approved scheduler change. No app source is deployed or released.
+# Cron on this test branch is NOT live; however lightweight checks DO run on
+# each test-branch push. A separate default-branch scheduler exception would be
+# required for cron. No app source is deployed or released.
 on:
+  push:
+    branches: [test/continuous-drive-20261030]
   schedule:
     - cron: '8,23,38,53 * * * *'
   workflow_dispatch:
@@ -10,7 +13,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: drivemate-quarter-hour-watch
+  group: drivemate-quarter-hour-watch-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   inspect:
