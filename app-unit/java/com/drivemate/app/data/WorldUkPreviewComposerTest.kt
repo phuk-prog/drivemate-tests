@@ -149,4 +149,28 @@ class WorldUkPreviewComposerTest {
         dup.getJSONArray("layers").getJSONObject(2).put("id", "water")
         assertTrue(runCatching { WorldUkPreviewComposer.compose(dup, pointer(), file, false) }.isFailure)
     }
+
+    @Test fun untrustedUkTileEndpointsCannotBeLaunderedIntoWorldPreview() {
+        val world = pointer()
+        val file = installed()
+        val base = ukStyle()
+        val trusted = base.getJSONObject("sources").getJSONObject("drivemate").getString("url")
+        assertTrue(WorldUkPreviewComposer.compose(base, world, file, false)
+            .getJSONObject("sources").getJSONObject("drivemate").getString("url") == trusted)
+        val untrusted = listOf(
+            "pmtiles://https://untrusted.example/roads.pmtiles",
+            "pmtiles://http://github.com/phuk-prog/drivemate-map/releases/download/UK/drivemate-v1.pmtiles",
+            "pmtiles://https://github.com/phuk-prog/drivemate-map.evil/releases/download/UK/drivemate-v1.pmtiles",
+            "pmtiles://https://github.com/phuk-prog/drivemate-map/releases/download.evil/UK/drivemate-v1.pmtiles",
+            "pmtiles://https://github.com@untrusted.example/phuk-prog/drivemate-map/releases/download/UK/drivemate-v1.pmtiles"
+        )
+        for (url in untrusted) {
+            val style = JSONObject(base.toString())
+            style.getJSONObject("sources").getJSONObject("drivemate").put("url", url)
+            assertTrue("Untrusted UK tiles must not be composed: $url",
+                runCatching { WorldUkPreviewComposer.compose(style, world, file, false) }.isFailure)
+            assertEquals("Untrusted source must retain the exact UK fallback",
+                style.toString(), WorldUkPreviewComposer.composeOrUk(style, world, file, false).toString())
+        }
+    }
 }
