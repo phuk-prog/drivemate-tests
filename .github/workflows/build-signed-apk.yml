@@ -175,6 +175,15 @@ jobs:
           export DRIVEMATE_VERSION_CODE=$((200000 + GITHUB_RUN_NUMBER))
           echo "Version code $DRIVEMATE_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
           ./gradlew assembleRelease --no-daemon --max-workers=4
+      - name: Check the APK uses the owner's live map publisher (C01.1)
+        working-directory: app-src
+        run: |
+          set -euo pipefail
+          CONFIG=$(find app/build/generated -path '*release*' -name BuildConfig.java -print -quit)
+          test -n "$CONFIG"
+          grep -F 'MAP_RELEASES_BASE_URL = "https://github.com/phuk-prog/drivemate-map/releases/download";' "$CONFIG" \
+            || { echo "::error::Signed APK map source is not the owner publisher"; exit 1; }
+          echo "Map source: owner publisher (live map-data-ukmap/ukmap.json)" >> "$GITHUB_STEP_SUMMARY"
       - name: Check the signature and lock the APK in a password-protected zip
         working-directory: app-src
         env:
