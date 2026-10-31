@@ -98,7 +98,8 @@
     "app-unit/java/com/drivemate/app/nav/C11ParkingOfferPolicyTest.kt": "00258f1276d1c15a8aa71c54665691bdfa5ebca9",
     "app-unit/java/com/drivemate/app/nav/C13MissedExitRuleTest.kt": "ba3c22a2ed11c3f69ba7eeef3b300a18a8919b9c",
     "app-unit/java/com/drivemate/app/nav/C13RerouteCountdownTest.kt": "5d9cee0109e5f85870c4f105ff77cebd4743cfeb",
-    "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "b45986758e78d6175c28e2918c797adeba613054",
+    "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "ddacc50d8c313401c6de5f42f788fca20557e1c3",
+    "app-unit/java/com/drivemate/app/ui/C11DrivingTextCapsTest.kt": "a27390328b3cb36015475c93ba320a7951bdb49d",
     "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626"
   }
 }
