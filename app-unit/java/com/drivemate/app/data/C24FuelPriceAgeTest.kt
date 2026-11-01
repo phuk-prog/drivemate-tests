@@ -13,7 +13,7 @@ class C24FuelPriceAgeTest {
     private fun station(fetchedAt: Long) = FuelStation("Test", LatLon(53.4, -2.2), prices, fetchedAt)
 
     @Test fun recentCopyShowsPricesWithItsAge() {
-        assertEquals("Unleaded 145.9p · Diesel 152.9p · feed checked 30 min ago",
+        assertEquals("Test · Unleaded 145.9p · Diesel 152.9p · feed checked 30 min ago",
             station(now - 30 * 60_000L).summary(now))
     }
 
@@ -24,12 +24,12 @@ class C24FuelPriceAgeTest {
     }
 
     @Test fun unknownFetchTimeIsNeverShownAsCurrent() {
-        assertEquals("Unleaded 145.9p · Diesel 152.9p · price age unknown, not current",
+        assertEquals("Test · Unleaded 145.9p · Diesel 152.9p · price age unknown, not current",
             station(0L).summary(now))
     }
 
     @Test fun pricesStillFormatFromPoundsAndPence() {
         val pounds = FuelStation("Test", LatLon(53.4, -2.2), mapOf("E10" to 1.459), now)
-        assertEquals("Unleaded 145.9p · feed checked 0 min ago", pounds.summary(now))
+        assertEquals("Test · Unleaded 145.9p · feed checked 0 min ago", pounds.summary(now))
     }
 }
