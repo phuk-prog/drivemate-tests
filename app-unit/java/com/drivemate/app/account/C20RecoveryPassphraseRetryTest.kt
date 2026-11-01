@@ -67,7 +67,7 @@ class C20RecoveryPassphraseRetryTest {
         try {
             runBlocking { RecoveryPassphraseRetry.run(stored = null, attempt = cloud("never used here"), ask = { null }) }
             fail("cancelling must stop the restore")
-        } catch (expected: IllegalStateException) {
+        } catch (expected: RecoveryPassphraseRetry.RestoreCancelledException) {
             assertEquals("Restore cancelled; nothing was restored.", expected.message)
         }
     }
