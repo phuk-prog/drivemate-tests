@@ -124,7 +124,6 @@
     "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626",
     "categories/10-position-and-gps/screen/GpsAcceptanceScreenTest.kt": "63628e10412507de127e19edd1c3a8e00de1c08a",
     "categories/10-position-and-gps/screen/GpsFilterScreenTest.kt": "78d42bc5c438bbb9a1c5d2aa61fd59efc422c4f2",
-    "categories/10-position-and-gps/screen/GpsSimulatedTimingScreenTest.kt": "cebefdc187a4f5f32521cb503d625368081ddea3",
     "categories/18-map-downloads-and-storage/screen/C01OfflineMapResumeScreenTest.kt": "4016c10d44cbc9625a23628ab1f7f8d068967740",
     "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "ac545ce7aac362c52fdd0e691550bf4b9405c83f"
   }
