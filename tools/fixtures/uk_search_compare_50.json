@@ -1,0 +1,457 @@
+{
+ "schema": 1,
+ "purpose": "Same 50 UK address and POI queries for category 4 comparison of best match vs closest reachable entrance and place data age.",
+ "note": "Query text only. Expected places, entrances and postcodes are NOT recorded here; they come from a run and must be checked against the open postcode file and the OSM extract before a result is claimed.",
+ "queries": [
+  {
+   "id": "q01",
+   "kind": "postcode",
+   "text": "SW1A 1AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q02",
+   "kind": "postcode",
+   "text": "M1 1AE",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q03",
+   "kind": "postcode",
+   "text": "B1 1BB",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q04",
+   "kind": "postcode",
+   "text": "LS1 4DY",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q05",
+   "kind": "postcode",
+   "text": "EH1 1YZ",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q06",
+   "kind": "postcode",
+   "text": "CF10 1EP",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q07",
+   "kind": "postcode",
+   "text": "BT1 1AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q08",
+   "kind": "postcode",
+   "text": "ZE1 0AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q09",
+   "kind": "postcode",
+   "text": "BA1 1NJ",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q10",
+   "kind": "postcode",
+   "text": "NW1 6XE",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q11",
+   "kind": "postcode",
+   "text": "EH2 2AN",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q12",
+   "kind": "postcode",
+   "text": "CV32 4AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q13",
+   "kind": "postcode",
+   "text": "HR1 2NW",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q14",
+   "kind": "house_postcode",
+   "text": "10 Downing Street, London SW1A 2AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q15",
+   "kind": "house_postcode",
+   "text": "1 Victoria Street, London SW1H 0ET",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q16",
+   "kind": "house_postcode",
+   "text": "4 Church Street, Bath BA1 1NJ",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q17",
+   "kind": "house_postcode",
+   "text": "12 Princes Street, Edinburgh EH2 2AN",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q18",
+   "kind": "house_postcode",
+   "text": "25 Queen Street, Cardiff CF10 2GU",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q19",
+   "kind": "house_postcode",
+   "text": "7 High Street, Lerwick ZE1 0EX",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q20",
+   "kind": "house_postcode",
+   "text": "3 Donegall Square West, Belfast BT1 6JH",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q21",
+   "kind": "house_postcode",
+   "text": "8 Market Street, Manchester M1 1PN",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q22",
+   "kind": "house_postcode",
+   "text": "14 The Parade, Leamington Spa CV32 4AA",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q23",
+   "kind": "house_postcode",
+   "text": "5 Castle Street, Hereford HR1 2NW",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q24",
+   "kind": "poi",
+   "text": "Tate Modern",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q25",
+   "kind": "poi",
+   "text": "Edinburgh Castle",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q26",
+   "kind": "poi",
+   "text": "Cardiff Castle",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q27",
+   "kind": "poi",
+   "text": "Royal Albert Hall",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q28",
+   "kind": "poi",
+   "text": "Manchester Piccadilly station",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q29",
+   "kind": "poi",
+   "text": "Bristol Temple Meads station",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q30",
+   "kind": "poi",
+   "text": "Glasgow Central station",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q31",
+   "kind": "poi",
+   "text": "Belfast City Hall",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q32",
+   "kind": "poi",
+   "text": "Leeds Town Hall",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q33",
+   "kind": "poi",
+   "text": "Shetland Museum and Archives",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q34",
+   "kind": "poi",
+   "text": "Eden Project",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q35",
+   "kind": "poi",
+   "text": "Stonehenge visitor centre",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q36",
+   "kind": "poi",
+   "text": "Trafalgar Square",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q37",
+   "kind": "poi",
+   "text": "Liverpool Lime Street station",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q38",
+   "kind": "poi",
+   "text": "Windermere Lake District visitor centre",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q39",
+   "kind": "street",
+   "text": "Oxford Street, London",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q40",
+   "kind": "street",
+   "text": "High Street, Bath",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q41",
+   "kind": "street",
+   "text": "Princes Street, Edinburgh",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q42",
+   "kind": "street",
+   "text": "Queen Street, Cardiff",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q43",
+   "kind": "street",
+   "text": "Donegall Place, Belfast",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q44",
+   "kind": "street",
+   "text": "Deansgate, Manchester",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q45",
+   "kind": "street",
+   "text": "Briggate, Leeds",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q46",
+   "kind": "street",
+   "text": "Colmore Row, Birmingham",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q47",
+   "kind": "street",
+   "text": "Byres Road, Glasgow",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q48",
+   "kind": "street",
+   "text": "Park Street, Bristol",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q49",
+   "kind": "street",
+   "text": "Castle Street, Hereford",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  },
+  {
+   "id": "q50",
+   "kind": "street",
+   "text": "Market Street, Newcastle upon Tyne",
+   "modes": [
+    "online",
+    "offline"
+   ]
+  }
+ ]
+}
