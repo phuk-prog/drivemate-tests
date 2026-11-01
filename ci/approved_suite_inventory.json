@@ -140,6 +140,7 @@
     "categories/08-rerouting/decisions/ReroutingDecisionsTest.kt": "3067accc9677e39fe98fea1b2c494951a25e3a91",
     "categories/08-rerouting/decisions/ReroutingDistractionDecisionsTest.kt": "898933f788a6a7e8c123632e633643fb646f48d4",
     "categories/08-rerouting/screen/RerouteAcceptanceScreenTest.kt": "f8b094da2bf21e14a7ee9233654db313f63235e9",
+    "categories/09-traffic/decisions/Category19DecisionsTest.kt": "9ee3c81467d5ee864be8905629548024235ac4e5",
     "categories/09-traffic/decisions/TrafficDecisionsTest.kt": "7927e7df392ee6691b52217489ee179a26b4f1fe",
     "categories/10-position-and-gps/decisions/PositionGpsDecisionsTest.kt": "817f74323df8d17e847bbdb2432ede5d2e798585",
     "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626",
