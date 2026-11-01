@@ -24,6 +24,7 @@
     "app-unit/java/com/drivemate/app/data/M03RegionSeamPlanningTest.kt": "061aabe1fcbba9f5be90f4609e61c11e8e254989",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
     "app-unit/java/com/drivemate/app/data/MemoryPreferences.kt": "81b88db08b9e78fe17ec05aef917306b04758ba5",
+    "app-unit/java/com/drivemate/app/data/OfflineAreaLabelTest.kt": "3006e8f858c4f185c6fb99ade63c57cb0f5eb146",
     "app-unit/java/com/drivemate/app/data/PublishedRegionCatalogTest.kt": "cbbffa2fa6265cca4deebff9ca89c3563c5ef0d0",
     "app-unit/java/com/drivemate/app/data/RegionMosaicTest.kt": "ba62184a6b135e785271650beba3fe7f671941fa",
     "app-unit/java/com/drivemate/app/data/RegionPackFilesTest.kt": "796031406db68a02a3e938d4c0beda4ec767a986",
