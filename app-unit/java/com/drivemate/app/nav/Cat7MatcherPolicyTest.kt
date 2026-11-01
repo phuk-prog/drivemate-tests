@@ -1,6 +1,7 @@
 package com.drivemate.app.nav
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -156,5 +157,17 @@ class Cat7MatcherPolicyTest {
         assertNotNull(m.match(fix(0.0, 0.0, t = 1_000), roads))
         val next = m.match(fix(50.0, 0.0, heading = 90.0, t = 2_000), roads)
         assertTrue(next == null || next.roadId == "A")
+    }
+
+    @Test fun networkOnlyFixNeverDrivesOrIsAuthoritativeNavigation() {
+        // 7.2: a network-provider fix is never authoritative navigation, even when it is accepted
+        // while parked; during navigation it is refused outright.
+        val network = LocationSelectionPolicy.Fix(LocationSelectionPolicy.Source.NETWORK, 1_000L, 53.42, -2.26, 10.0)
+        val navigating = LocationSelectionPolicy()
+        assertFalse(navigating.accept(network, 1_000L, navigation = true))
+        assertFalse(navigating.authoritative(1_000L))
+        val parked = LocationSelectionPolicy()
+        parked.accept(network, 1_000L, navigation = false)
+        assertFalse(parked.authoritative(1_000L))
     }
 }
