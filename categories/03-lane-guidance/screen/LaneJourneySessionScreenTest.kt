@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 
 /**
  * Checks the production NavigationSession + navigation engine with a complete controlled
- * journey, simulated GPS fixes and route replacement. No mock lane-policy function replaces
+ * journey, synthetic GPS fixes and route replacement. No mock lane-policy function replaces
  * the live session; the app's actual nav output is read.
  *
  * Route geometry and lane arrows are controlled fixtures, not verified UK road truth.
@@ -71,7 +71,7 @@ class LaneJourneySessionScreenTest {
     private fun fix(at: LatLon): Location = Location("gps").apply {
         latitude = at.lat; longitude = at.lon
         accuracy = 5f
-        speed = 0f // prevent lead extrapolation: simulate a stationary replay at each snapshot
+        speed = 0f // prevent lead extrapolation: use a stationary synthetic replay at each snapshot
         time = System.currentTimeMillis()
         elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
     }

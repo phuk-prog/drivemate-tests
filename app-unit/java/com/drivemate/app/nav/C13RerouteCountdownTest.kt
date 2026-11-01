@@ -30,4 +30,11 @@ class C13RerouteCountdownTest {
         assertFalse("deferred while the position is unsafe", RerouteCountdown.ready(30.0, 5.0, positionSafe = false))
         assertFalse(RerouteCountdown.ready(Double.NaN, 5.0, true))
     }
+
+    @Test fun countdownDoesNotEndInsideAJunction() {
+        assertFalse("roundabout: reroute waits until it is left", RerouteCountdown.ready(30.0, 5.0, positionSafe = true, junctionSafe = RerouteCountdown.junctionClear(200.0, onRoundabout = true)))
+        assertFalse("within 40 m of the next turn", RerouteCountdown.ready(30.0, 5.0, true, RerouteCountdown.junctionClear(39.0, false)))
+        assertFalse("unknown distance to the next turn", RerouteCountdown.ready(30.0, 5.0, true, RerouteCountdown.junctionClear(Double.NaN, false)))
+        assertTrue("clear of junctions and off the route long enough", RerouteCountdown.ready(5.0, 5.0, true, RerouteCountdown.junctionClear(40.0, false)))
+    }
 }

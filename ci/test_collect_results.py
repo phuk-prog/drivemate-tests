@@ -39,6 +39,7 @@ class FixtureDecisionsTest {
             subprocess.run(
                 [sys.executable, str(COLLECTOR), str(output), "https://example.test/run", "app-commit", "tests-commit", "media", str(xml)],
                 cwd=root, check=True, capture_output=True, text=True,
+                env=dict(os.environ, DRIVEMATE_TEST_BATCH='all'),
             )
             return json.loads(output.read_text())
 

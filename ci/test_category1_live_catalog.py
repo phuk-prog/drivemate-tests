@@ -19,10 +19,18 @@ def catalogue():
         ("greater-manchester", "scotland", "wales", "northern-ireland-area")}}
 
 
+def wide_region(name):
+    item = region(name)
+    item["bounds"] = [-8.5, 49.5, 2.0, 61.0]
+    return item
+
+
 class LiveCatalogAuditContract(unittest.TestCase):
     def test_four_nation_metadata_presence_is_not_national_coverage(self):
+        # The narrow fixture covers no UK probe point, so the bounds-level probe check fails.
         result = audit_catalog(catalogue())
-        self.assertEqual("passed", result["status"])
+        self.assertEqual("failed", result["status"])
+        self.assertIn("UK_PROBE_UNCOVERED", result["failures"])
         self.assertEqual("unknown", result["uk_geographic_and_attribute_coverage"])
         self.assertEqual("unknown", result["northern_ireland_border_only"])
         self.assertEqual("published_catalog_metadata_only", result["claim"])
@@ -59,3 +67,20 @@ class LiveCatalogAuditContract(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UkProbeCoverage(unittest.TestCase):
+    def test_bounds_covering_every_probe_pass_the_probe_check(self):
+        document = catalogue()
+        for name in document["regions"]:
+            document["regions"][name] = wide_region(name)
+        result = audit_catalog(document)
+        self.assertEqual("passed", result["status"])
+        self.assertEqual([], result["uk_probe_coverage"]["uncovered"])
+
+    def test_uncovered_probe_points_are_named(self):
+        document = catalogue()
+        result = audit_catalog(document)
+        self.assertEqual(20, result["uk_probe_coverage"]["checked"])
+        self.assertIn("Land's End", result["uk_probe_coverage"]["uncovered"])
+        self.assertIn("Lerwick", result["uk_probe_coverage"]["uncovered"])

@@ -67,4 +67,16 @@ class ImmersiveNavigationDecisionsTest {
         assertFalse(ReplaySafety.allowed(true, false, Double.NaN, 100))
         assertEquals(6, RoundaboutReplayScene.frames.size)
     }
+
+    @Test fun q16_5_renderBudgetFallbackDrivesFlatWithoutPointerOrContinuous3d() {
+        val budget = ImmersiveRenderBudget()
+        repeat(60) { budget.sample(0.08, 0.01) }
+        assertEquals(ImmersiveRenderBudget.Level.FLAT, budget.level)
+        // MapController uses HEADING_UP and no continuous 3D blend once the budget is FLAT.
+        val flat = DrivingCamera.target(MapView.HEADING_UP, 17.0, 45.0, 90.0, null, false, 0.0, null)
+        assertEquals(0.0, flat.tilt, 0.0)
+        assertFalse(JunctionViewPolicy.showPointer(true, false))
+        budget.reset()
+        assertEquals(ImmersiveRenderBudget.Level.FULL, budget.level)
+    }
 }

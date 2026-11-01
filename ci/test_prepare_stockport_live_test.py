@@ -21,7 +21,8 @@ def source():
     for region_id in ("scotland","wales","northern-ireland-area"):
         value["regions"][region_id]={
             "id":region_id,"name":region_id,
-            "bounds":[-5.0,53.0,-4.0,54.0],
+            # Wide bounds so the fixture covers every UK probe point (the scope gate needs it).
+            "bounds":[-8.5,49.5,2.0,61.0],
             "map":{"tag":"map-data-region-"+region_id+"-r123-a1",
                    "bytes":256,"sha256":"d"*64},
             "manifest":{"tag":"map-data-region-"+region_id+"-r123-a1",

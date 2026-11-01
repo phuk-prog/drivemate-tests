@@ -42,6 +42,10 @@ def results(xml_dir, source_items=None):
                 test["status"] = "skipped"
             if bad is not None:
                 test["failure"] = (bad.get("message") or bad.text or "failed").strip()
+                # The first frame in the stack that names a Kotlin source file and line.
+                frame = re.search(r"\(([A-Za-z0-9_]+\.kt:\d+)\)", bad.text or "")
+                if frame:
+                    test["failure"] += " at " + frame.group(1)
             if unmapped:
                 test['status']='failed'; test['failure']='UNMAPPED_TEST_CLASS:'+classname
             yield item, test
@@ -137,6 +141,9 @@ def main():
             kind = source.parts[2]
             if not category or kind not in ('law', 'decisions', 'screen'):
                 raise ValueError('Test source has no recognized category/kind: ' + str(source))
+            if kind == 'screen':
+                # Owner phone checks replace the emulator screen tests; they are not in the gate.
+                continue
             category_id = 'cat' + category.group(1)
             item = f'{CATEGORIES.get(category_id, category_id)}: {kind}'
         else:

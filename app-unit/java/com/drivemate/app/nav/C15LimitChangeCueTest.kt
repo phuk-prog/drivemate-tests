@@ -25,11 +25,15 @@ class C15LimitChangeCueTest {
         assertTrue(LimitChangeCue.shouldSpeak(far, 860.0, speed, false, null))
     }
 
-    @Test fun risesAreSpokenOnlyJustBeforeTheChange() {
-        val speed = 9.0 // 27 m in 3 s, so the 50 m minimum applies
+    @Test fun risesAreSpokenOnlyOnceTheChangePointIsCrossed() {
+        // 12.3: no early cue to speed up. The rise at 2000 m is spoken only after the driver is past it.
         val rise = LimitChangeCue.Change(LimitChangeCue.Kind.RISE, 64.0, 2_000.0)
-        assertFalse("no early cue to speed up", LimitChangeCue.shouldSpeak(rise, 1_900.0, speed, false, null))
-        assertTrue(LimitChangeCue.shouldSpeak(rise, 1_955.0, speed, false, null))
+        assertFalse("not before the change point", LimitChangeCue.shouldSpeak(rise, 1_990.0, 9.0, false, null))
+        assertTrue(LimitChangeCue.shouldSpeak(rise, 2_005.0, 9.0, false, null))
+        val riseLimit = { d: Double -> if (d < 2_000) 48.0 else 64.0 }
+        assertNull("nothing ahead to speak early", LimitChangeCue.firstUnspokenChange(1_950.0, 48.0, 9.0, null, riseLimit))
+        assertNull("not yet crossed", LimitChangeCue.crossedRise(1_990.0, null, riseLimit))
+        assertEquals(64.0, LimitChangeCue.crossedRise(2_005.0, null, riseLimit)!!.limitKmh, 0.0)
         assertEquals("Speed limit rises to 40", LimitChangeCue.phrase(rise, "40"))
     }
 

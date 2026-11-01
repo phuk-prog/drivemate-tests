@@ -90,4 +90,11 @@ class UnmarkedRoundaboutTest {
         assertEquals(listOf("roundabout"), moves.map { it.type })
         assertEquals(3, moves.single().exit)
     }
+
+    @Test fun firstExitIsTheWestArmWhenTheWholeRingIsMarked() {
+        // Going clockwise from the south entry, the west arm is the 1st exit (8.1 exit numbering).
+        val moves = moves(drive(marked = 16, leaveAt = 270.0))
+        assertEquals(listOf("roundabout"), moves.map { it.type })
+        assertEquals(1, moves.single().exit)
+    }
 }

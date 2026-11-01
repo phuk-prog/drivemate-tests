@@ -93,4 +93,14 @@ class TrafficDecisionsTest {
             UkRoadFeeds.clearCache()
         }
     }
+
+    @Test fun q19_3_etaUsesRouteDurationOnceAndDelayOnlyExplainsIt() {
+        val r = route(delay = 120.0, duration = 600.0)
+        assertTrue(r.trafficCurrent(now))
+        assertEquals(600_000L, ClosureArrivalPolicy.arrivalAt(r, r.distance, 0L))
+        assertEquals(300_000L, ClosureArrivalPolicy.arrivalAt(r, r.distance / 2, 0L))
+        val line = TrafficDetails.journeyLine(600.0, 120.0, true)
+        assertTrue(line.startsWith("Journey time 10 min"))
+        assertFalse(line.contains("12 min"))
+    }
 }
