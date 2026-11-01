@@ -183,7 +183,7 @@
     "app-unit/java/com/drivemate/app/nav/Immersive3dFailoverTest.kt": "b0a06fa4d790af141c22983db3d11db4bd67ac40",
     "app-unit/java/com/drivemate/app/nav/Category8UnmappedExitTest.kt": "6f3ff7a7b742b7077b8aa84699741423ce61312f",
     "app-unit/java/com/drivemate/app/ui/C23ParkedPolicyTest.kt": "66d1db8538fe8cac53c34c1ebdce8ca38d74d331",
-    "app-unit/java/com/drivemate/app/nav/C23ReferenceAttachmentTest.kt": "f35de67d057eeca3cf614281c032f0d52ed362e3",
+    "app-unit/java/com/drivemate/app/nav/C23ReferenceAttachmentTest.kt": "6f2d33851b483311b33c7d4b24e92e44f3068942",
     "app-unit/java/com/drivemate/app/osm/C23RetractionTest.kt": "0516168efbae9d6d5d1fadae3cf8a2d30febf19b",
     "app-unit/java/com/drivemate/app/nav/Category8ExitNumberingTest.kt": "be9641b674ae7e6a794501d36261e5c96ce08bbc",
     "app-unit/java/com/drivemate/app/nav/Category8RingGeometryTest.kt": "ccb02852c20b9b268d3ea0f33536c841d311305c",
