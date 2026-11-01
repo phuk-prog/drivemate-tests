@@ -1,0 +1,12 @@
+{
+  "android_execution_accepted": false,
+  "baseline_commit": "ff8844847f00bd77ee7b72757a2831c1d9b328db",
+  "discoverable_test_methods": 845,
+  "inventory_sha256": "11d3f468925c55199947d9e87892844d54f51c36f94f836fc479f827e72d2157",
+  "release_allowed": false,
+  "schema": 1,
+  "scope": "approved_source_inventory_only",
+  "source_files": 179,
+  "status": "verified_source_identity",
+  "test_class_files": 178
+}
