@@ -177,6 +177,9 @@
     "categories/18-map-downloads-and-storage/screen/C01OfflineMapResumeScreenTest.kt": "4016c10d44cbc9625a23628ab1f7f8d068967740",
     "categories/18-map-downloads-and-storage/screen/HttpServiceConsumerScreenTest.kt": "ac545ce7aac362c52fdd0e691550bf4b9405c83f",
     "app-unit/java/com/drivemate/app/nav/Immersive3dFailoverTest.kt": "b0a06fa4d790af141c22983db3d11db4bd67ac40",
-    "app-unit/java/com/drivemate/app/nav/Category8UnmappedExitTest.kt": "6f3ff7a7b742b7077b8aa84699741423ce61312f"
+    "app-unit/java/com/drivemate/app/nav/Category8UnmappedExitTest.kt": "6f3ff7a7b742b7077b8aa84699741423ce61312f",
+    "app-unit/java/com/drivemate/app/ui/C23ParkedPolicyTest.kt": "66d1db8538fe8cac53c34c1ebdce8ca38d74d331",
+    "app-unit/java/com/drivemate/app/nav/C23ReferenceAttachmentTest.kt": "f35de67d057eeca3cf614281c032f0d52ed362e3",
+    "app-unit/java/com/drivemate/app/osm/C23RetractionTest.kt": "0516168efbae9d6d5d1fadae3cf8a2d30febf19b"
   }
 }
