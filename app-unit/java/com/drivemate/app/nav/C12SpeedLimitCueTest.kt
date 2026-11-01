@@ -43,4 +43,10 @@ class C12SpeedLimitCueTest {
         assertTrue(LimitChangeCue.shouldSpeak(drop, 950.0, 13.0, false, riseSpokenAt))
         assertFalse(LimitChangeCue.shouldSpeak(drop, 900.0, 13.0, false, riseSpokenAt))
     }
+
+    @Test fun aSpokenRiseIsNotSpokenAgainAndUpcomingRisesWait() {
+        val riseLimit = { d: Double -> if (d < 1_000) 48.0 else 64.0 }
+        assertNull("spoken once at this point", LimitChangeCue.crossedRise(1_040.0, 1_005.0, riseLimit))
+        assertNull("a rise ahead is never spoken before the crossing", LimitChangeCue.firstUnspokenChange(950.0, 48.0, 13.0, null, riseLimit))
+    }
 }
