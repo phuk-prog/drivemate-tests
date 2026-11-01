@@ -37,7 +37,7 @@ class FixTelemetryTest {
         t.onRaw()
         t.onRejected("outlier")
         val text = t.summary()
-        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1 requests=0 requestedMs= deliveredGaps=0 deliveredGapP95Ms=none sourceChanges=0 voiceSteps=0 voiceStepAgeP95Ms=none", text)
+        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1 requests=0 requestedMs= deliveredGaps=0 deliveredGapP95Ms=none sourceChanges=0 voiceSteps=0 voiceStepAgeP95Ms=none matched=0 matchAgeP95Ms=none", text)
         assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
 
@@ -68,7 +68,9 @@ class FixTelemetryTest {
         (1..20).forEach { t.onVoiceStep(it * 10L) }
         t.onVoiceStep(-1L)
         val text = t.summary()
-        assertTrue(text.endsWith("sourceChanges=2 voiceSteps=20 voiceStepAgeP95Ms=190"))
+        assertTrue(text.contains("sourceChanges=2 voiceSteps=20 voiceStepAgeP95Ms=190"))
+        t.onMatched(40L)
+        assertTrue(t.summary().endsWith("matched=1 matchAgeP95Ms=40"))
         assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
 }
