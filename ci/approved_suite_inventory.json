@@ -5,6 +5,7 @@
   "files": {
     "app-unit/java/com/drivemate/app/NavigationLinkTest.kt": "62e67f9dad220d7409522cea6443a47b1638f038",
     "app-unit/java/com/drivemate/app/account/C20BackupRetryTest.kt": "9b2800c5a58bfb9676304390d47e546c32774585",
+    "app-unit/java/com/drivemate/app/account/C20BackupVersionsTest.kt": "f8192e21e5bf8d97af603c261a7c6cb842e9781a",
     "app-unit/java/com/drivemate/app/controller/OnlineRoadDataTest.kt": "aea860b9b9059d81730cd77ee5b8bb8fca28745c",
     "app-unit/java/com/drivemate/app/controller/SearchRouteRegressionTest.kt": "6e99f4bde57bcd51b0fe95d28ef5ce400d9d5075",
     "app-unit/java/com/drivemate/app/data/C08SearchTest.kt": "dc0fecf3d1014068cf30f4828d96eed97485a5ae",
@@ -12,6 +13,9 @@
     "app-unit/java/com/drivemate/app/data/C20SettingsMergeTest.kt": "37f274bc275b1da134529ddbef60ca74fc69188c",
     "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "7bb8aaa6ed15dd51f36e55c15dfc9bd152b86a7d",
     "app-unit/java/com/drivemate/app/account/C20LifecycleRestoreTest.kt": "02875b0c0117a7eb865b91a6cb2bac476f211baa",
+    "app-unit/java/com/drivemate/app/account/C20RecoveryPassphraseRetryTest.kt": "b12c6899b42886275f59d74ce1722dd7767036a4",
+    "app-unit/java/com/drivemate/app/data/C20BackupCryptoTest.kt": "d4aa42a1b466e48e0f0cf10a3aa928fd8f5ee3cb",
+    "app-unit/java/com/drivemate/app/data/C20RecoveryPassphraseTest.kt": "cc809c6e0f1788c543de39c3625b4286bf7e96c1",
     "app-unit/java/com/drivemate/app/data/C22JourneyEvidenceStoreTest.kt": "de40ad86f264379c5f66122e7905a082055d5a9a",
     "app-unit/java/com/drivemate/app/data/C22TripHistoryOptInTest.kt": "b3a1a5b35ada82a7a3e14dcb25ab36c4ae323efe",
     "app-unit/java/com/drivemate/app/ui/C23ParkedGateWhileMovingTest.kt": "48f4ecdd21b0a77153326dbcb4ee2f7aefb80d5b",
