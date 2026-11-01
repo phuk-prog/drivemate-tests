@@ -169,6 +169,7 @@
     "categories/09-traffic/decisions/Category19DecisionsTest.kt": "4247a6a75c01bd7f3e84185e844f4e53148be0e9",
     "categories/09-traffic/decisions/Category19EtaWordingTest.kt": "9575eba4c2a6ccf98546a9bc2af3d2813ab6085d",
     "categories/09-traffic/decisions/Category19OfflineStaleTest.kt": "e583006ab9f00bd45a1345ee8938776bbf5bef0e",
+    "categories/09-traffic/decisions/Category19EtaCompositionTest.kt": "d018b3c78f794db46d312e3ae956da21e9e9e91c",
     "categories/09-traffic/decisions/TrafficDecisionsTest.kt": "7927e7df392ee6691b52217489ee179a26b4f1fe",
     "categories/10-position-and-gps/decisions/PositionGpsDecisionsTest.kt": "817f74323df8d17e847bbdb2432ede5d2e798585",
     "categories/10-position-and-gps/screen/C06LocationServiceToggleScreenTest.kt": "481b340d8b3f891f136921baacad20464ff8a626",
