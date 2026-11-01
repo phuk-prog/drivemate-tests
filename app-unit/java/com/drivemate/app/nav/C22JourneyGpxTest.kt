@@ -33,6 +33,14 @@ class C22JourneyGpxTest {
         assertTrue(Regex("<time>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z</time>").containsMatchIn(gpx))
     }
 
+    @Test fun stopsBecomeWaypointsInTheExport() {
+        val samples = (0..8).map { sample(t + it * 15_000L, 53.40) }
+        val gpx = requireNotNull(JourneyGpx.build(JourneyEvidence("$t", t, null, samples)))
+        assertEquals(1, Regex("<wpt ").findAll(gpx).count())
+        assertTrue(gpx.contains("<name>Stop 1</name>"))
+        assertTrue(gpx.indexOf("<wpt ") < gpx.indexOf("<trk>"))
+    }
+
     @Test fun journeyWithNoUsablePositionGivesNoFile() {
         assertNull(JourneyGpx.build(JourneyEvidence("$t", t, null, emptyList())))
     }

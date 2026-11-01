@@ -30,6 +30,12 @@ class C22JourneyIssueReportTest {
         assertTrue(r.contains("Gaps with no fix over 60 s: 1; longest 2 min"))
     }
 
+    @Test fun stopsAreCountedAsMeasured() {
+        val samples = (0..8).map { sample(t + it * 15_000L, 53.40) }
+        val r = requireNotNull(JourneyIssueReport.build(JourneyEvidence("$t", t, t + 120_000, samples)))
+        assertTrue(r.contains("Stops (within 25 m for at least 1 min): 1; total 2 min"))
+    }
+
     @Test fun partialDriveIsSaid() {
         val journey = JourneyEvidence("$t", t, null, listOf(sample(t, 53.40)))
         assertTrue(requireNotNull(JourneyIssueReport.build(journey)).contains("did not end normally"))
