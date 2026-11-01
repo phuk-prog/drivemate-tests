@@ -11,6 +11,7 @@
     "app-unit/java/com/drivemate/app/data/M03RegionSeamPlanningTest.kt": "061aabe1fcbba9f5be90f4609e61c11e8e254989",
     "app-unit/java/com/drivemate/app/dmn/DmnBarrierRoutingTest.kt": "f49f603d0571d0bb5af1e32029532a5ab1f3b03b",
     "app-unit/java/com/drivemate/app/nav/FixTelemetryTest.kt": "0f3cdd3bede68332ea751be103a377704dcef1fc",
+    "app-unit/java/com/drivemate/app/nav/Category6StaleFixTest.kt": "f144196c8e3f454c8350a0e674449b6f5f227059",
     "app-unit/java/com/drivemate/app/controller/SearchRouteRegressionTest.kt": "836bb355e1c0c3362a18f12c1d0e70ab5abbbfc9",
     "app-unit/java/com/drivemate/app/data/MapPublisherBuildContractTest.kt": "1b7be43c727894f38dc00e35790a94cf3fa07ca2",
     "app-unit/java/com/drivemate/app/data/MemoryPreferences.kt": "81b88db08b9e78fe17ec05aef917306b04758ba5",
