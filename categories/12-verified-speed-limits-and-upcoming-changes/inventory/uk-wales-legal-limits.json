@@ -3,21 +3,92 @@
   "accessed": "2026-11-01",
   "scope": "Ordinary cars and motorcycles, UK/Wales. Vehicle-specific, temporary and per-lane limits are not covered here.",
   "sources": [
-    {"id": "gov-uk-speed-limits", "url": "https://www.gov.uk/speed-limits", "fetched": true},
-    {"id": "gov-wales-default-20mph", "url": "https://www.gov.wales/introducing-default-20mph-speed-limits", "fetched": true},
-    {"id": "gov-wales-20mph-faq", "url": "https://www.gov.wales/20mph-speed-limit-frequently-asked-questions", "fetched": false, "note": "404 when fetched; not relied on"}
+    {
+      "id": "gov-uk-speed-limits",
+      "url": "https://www.gov.uk/speed-limits",
+      "fetched": true
+    },
+    {
+      "id": "gov-wales-default-20mph",
+      "url": "https://www.gov.wales/introducing-default-20mph-speed-limits",
+      "fetched": true
+    },
+    {
+      "id": "gov-wales-20mph-faq",
+      "url": "https://www.gov.wales/20mph-speed-limit-frequently-asked-questions",
+      "fetched": false,
+      "note": "404 when fetched; not relied on"
+    }
   ],
   "legal_limits": [
-    {"road": "single carriageway, national limit", "mph": 60, "kmh": 96, "applies": "England, Scotland, Wales, NI; no street lights; no other sign", "source": "gov-uk-speed-limits", "verified": true},
-    {"road": "dual carriageway, national limit", "mph": 70, "kmh": 112, "applies": "England, Scotland, Wales, NI; no street lights; no other sign", "source": "gov-uk-speed-limits", "verified": true},
-    {"road": "motorway", "mph": 70, "kmh": 112, "applies": "England, Scotland, Wales, NI", "source": "gov-uk-speed-limits", "verified": true},
-    {"road": "street-lit single/dual carriageway, England, Scotland, NI", "mph": 30, "kmh": 48, "applies": "unless signs show otherwise", "source": "gov-uk-speed-limits", "verified": true},
-    {"road": "street-lit single/dual carriageway, Wales", "mph": 20, "kmh": 32, "applies": "unless signs show otherwise; restricted roads (built-up, usually residential) since September 2023; highway-authority 30 mph exceptions exist and are signed", "source": "gov-wales-default-20mph", "verified": true}
+    {
+      "road": "single carriageway, national limit",
+      "mph": 60,
+      "kmh": 96,
+      "applies": "England, Scotland, Wales, NI; no street lights; no other sign",
+      "source": "gov-uk-speed-limits",
+      "verified": true
+    },
+    {
+      "road": "dual carriageway, national limit",
+      "mph": 70,
+      "kmh": 112,
+      "applies": "England, Scotland, Wales, NI; no street lights; no other sign",
+      "source": "gov-uk-speed-limits",
+      "verified": true
+    },
+    {
+      "road": "motorway",
+      "mph": 70,
+      "kmh": 112,
+      "applies": "England, Scotland, Wales, NI",
+      "source": "gov-uk-speed-limits",
+      "verified": true
+    },
+    {
+      "road": "street-lit single/dual carriageway, England, Scotland, NI",
+      "mph": 30,
+      "kmh": 48,
+      "applies": "unless signs show otherwise",
+      "source": "gov-uk-speed-limits",
+      "verified": true
+    },
+    {
+      "road": "street-lit single/dual carriageway, Wales",
+      "mph": 20,
+      "kmh": 32,
+      "applies": "unless signs show otherwise; restricted roads (built-up, usually residential) since September 2023; highway-authority 30 mph exceptions exist and are signed",
+      "source": "gov-wales-default-20mph",
+      "verified": true
+    }
   ],
   "unavailable_or_conflicting": [
-    {"item": "No authoritative national machine-readable legal-limit dataset is used by the app. Limits come from OpenStreetMap-derived data (unverified) plus TomTom route limits (prompt-only, never stored) and National Highways temporary limits.", "effect": "Every app-side limit is unverified unless it is sourced to a legal rule; the app must not label it verified."},
-    {"item": "Wales 20 mph default vs. OSM tags that still say 30 mph (or no tag) on restricted roads.", "effect": "Conflict. LimitComparison shows a '?' only when TomTom disagrees; OSM-only conflicts with the Welsh default are not detected."},
-    {"item": "Signed 30 mph exceptions in Wales are not listed in any source used here.", "effect": "Unknown; must stay unknown or unverified."},
-    {"item": "Temporary limits (roadworks, gantries) change the legal limit without changing the map.", "effect": "Only National Highways temporary feed; coverage is partial."}
-  ]
+    {
+      "item": "No authoritative national machine-readable legal-limit dataset is used by the app. Limits come from OpenStreetMap-derived data (unverified) plus TomTom route limits (prompt-only, never stored) and National Highways temporary limits.",
+      "effect": "Every app-side limit is unverified unless it is sourced to a legal rule; the app must not label it verified."
+    },
+    {
+      "item": "Wales 20 mph default vs. OSM tags that still say 30 mph (or no tag) on restricted roads.",
+      "effect": "Conflict. LimitComparison shows a '?' only when TomTom disagrees; OSM-only conflicts with the Welsh default are not detected."
+    },
+    {
+      "item": "Signed 30 mph exceptions in Wales are not listed in any source used here.",
+      "effect": "Unknown; must stay unknown or unverified."
+    },
+    {
+      "item": "Temporary limits (roadworks, gantries) change the legal limit without changing the map.",
+      "effect": "Only National Highways temporary feed; coverage is partial."
+    }
+  ],
+  "cue_policy": {
+    "register": "12.3 and 12.5",
+    "drop": "Spoken about 10 s ahead (at least 150 m) when the drop is unspoken and no imminent turn.",
+    "rise": "Spoken only once the driver has crossed the change point (no early speech to speed up). The badge keeps the current limit until then.",
+    "once": "Each change point is spoken once (100 m same-point window).",
+    "tests": [
+      "app-unit/java/com/drivemate/app/nav/C12SpeedLimitCueTest.kt",
+      "app-unit/java/com/drivemate/app/nav/C15LimitChangeCueTest.kt"
+    ],
+    "owner_decision": "Owner answered Yes to rises spoken only after the crossing."
+  }
 }
