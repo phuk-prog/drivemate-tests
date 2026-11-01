@@ -13,6 +13,7 @@
     "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "7bb8aaa6ed15dd51f36e55c15dfc9bd152b86a7d",
     "app-unit/java/com/drivemate/app/data/C24FuelPriceAgeTest.kt": "654269c3284e0fd8562a35707a8e21f8ce0386d5",
     "app-unit/java/com/drivemate/app/data/C24ProviderProvenanceTest.kt": "899e4ced0c23860226a160c4b716e2627cb060dd",
+    "app-unit/java/com/drivemate/app/ui/C23ParkedGateWhileMovingTest.kt": "48f4ecdd21b0a77153326dbcb4ee2f7aefb80d5b",
     "app-unit/java/com/drivemate/app/data/C22TripRetentionTest.kt": "929a76d22676eb4ecdec51694cc6da2ed4ee40d7",
     "app-unit/java/com/drivemate/app/data/Cat18SourceHealthTest.kt": "6f5df0f80a6306042b44e65518a63f3aa2bc441b",
     "app-unit/java/com/drivemate/app/data/Cat20BackupSchemaTest.kt": "63615d89d0452894cc26ac4435d63d78a3fe05a5",
