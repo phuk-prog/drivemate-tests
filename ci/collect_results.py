@@ -141,9 +141,6 @@ def main():
             kind = source.parts[2]
             if not category or kind not in ('law', 'decisions', 'screen'):
                 raise ValueError('Test source has no recognized category/kind: ' + str(source))
-            if kind == 'screen':
-                # Owner phone checks replace the emulator screen tests; they are not in the gate.
-                continue
             category_id = 'cat' + category.group(1)
             item = f'{CATEGORIES.get(category_id, category_id)}: {kind}'
         else:
