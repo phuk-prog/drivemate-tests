@@ -35,6 +35,13 @@ class SearchComparisonTests(unittest.TestCase):
         self.assertEqual(('aging', 170), sc.age_label('2026-05-15', TODAY))
         self.assertEqual('stale', sc.age_label('2024-01-01', TODAY)[0])
 
+    def test_future_dates_are_unknown_and_ties_break_by_distance_then_name(self):
+        self.assertEqual(('unknown', None), sc.age_label('2026-11-05', TODAY))
+        tied = [{'name': 'Zed', 'match': 0.5, 'distance_m': 30, 'entrance': 'reachable', 'data_date': None},
+                {'name': 'Able', 'match': 0.5, 'distance_m': 30, 'entrance': 'reachable', 'data_date': None}]
+        self.assertEqual('Able', sc.compare(tied, TODAY)['best_match']['name'])
+        self.assertEqual('Able', sc.compare(tied, TODAY)['closest_reachable']['name'])
+
     def test_validation_reports_bad_rows(self):
         bad = [{'id': 'a', 'kind': 'shop', 'text': '', 'modes': []}]
         problems = sc.validate_queries(bad)

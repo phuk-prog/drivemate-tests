@@ -40,6 +40,8 @@ def age_label(data_date, today):
     if not data_date:
         return 'unknown', None
     days = (today - date.fromisoformat(data_date)).days
+    if days < 0:
+        return 'unknown', None
     if days <= FRESH_DAYS:
         return 'fresh', days
     if days <= AGING_DAYS:
@@ -49,9 +51,9 @@ def age_label(data_date, today):
 
 def compare(candidates, today):
     """Return best match, closest reachable entrance and the age of each record."""
-    best = max(candidates, key=lambda c: c['match'], default=None)
+    best = min(candidates, key=lambda c: (-c['match'], c['distance_m'], c['name']), default=None)
     reachable = [c for c in candidates if c.get('entrance') == 'reachable']
-    closest = min(reachable, key=lambda c: c['distance_m'], default=None)
+    closest = min(reachable, key=lambda c: (c['distance_m'], c['name']), default=None)
     rows = []
     for c in (best, closest):
         if c is None:
