@@ -10,20 +10,20 @@ import org.junit.Test
 /** C14.1/C14.3: arrival only at the real end of the route, from a trustworthy measured fix. */
 class C14ArrivalPolicyTest {
     @Test fun atTheRouteEndOrAtTheDestinationItselfCountsAsArrived() {
-        assertTrue(ArrivalPolicy.arrived(20.0, 10.0, 40.0, estimating = false))
-        assertTrue("at the pin, near the route end", ArrivalPolicy.arrived(120.0, 30.0, 15.0, false))
+        assertTrue(ArrivalPolicy.arrived(20.0, 10.0, 40.0, estimating = false, speedMps = 0.0))
+        assertTrue("at the pin, near the route end", ArrivalPolicy.arrived(120.0, 30.0, 15.0, false, speedMps = 0.0))
     }
 
     @Test fun sixtyYardsShortOrOnANearbyRoadIsNotArrived() {
-        assertFalse("~60 yd short (Menai Grove report)", ArrivalPolicy.arrived(55.0, 5.0, 55.0, false))
-        assertFalse("near the end but on another road", ArrivalPolicy.arrived(20.0, 40.0, 30.0, false))
-        assertFalse("passing the pin on the far carriageway", ArrivalPolicy.arrived(400.0, 5.0, 15.0, false))
+        assertFalse("~60 yd short (Menai Grove report)", ArrivalPolicy.arrived(55.0, 5.0, 55.0, false, speedMps = 0.0))
+        assertFalse("near the end but on another road", ArrivalPolicy.arrived(20.0, 40.0, 30.0, false, speedMps = 0.0))
+        assertFalse("passing the pin on the far carriageway", ArrivalPolicy.arrived(400.0, 5.0, 15.0, false, speedMps = 0.0))
     }
 
     @Test fun neverFromAnEstimateOrAnUnsafeFix() {
-        assertFalse(ArrivalPolicy.arrived(5.0, 2.0, 5.0, estimating = true))
-        assertFalse("GPS gap or rough fix", ArrivalPolicy.arrived(5.0, 2.0, 5.0, false, positionSafe = false))
-        assertFalse(ArrivalPolicy.arrived(Double.NaN, 2.0, 5.0, false))
+        assertFalse(ArrivalPolicy.arrived(5.0, 2.0, 5.0, estimating = true, speedMps = 0.0))
+        assertFalse("GPS gap or rough fix", ArrivalPolicy.arrived(5.0, 2.0, 5.0, false, positionSafe = false, speedMps = 0.0))
+        assertFalse(ArrivalPolicy.arrived(Double.NaN, 2.0, 5.0, false, speedMps = 0.0))
     }
 
     @Test fun sideComesOnlyFromTheArrivalStep() {
