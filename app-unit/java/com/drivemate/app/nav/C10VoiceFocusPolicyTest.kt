@@ -107,4 +107,18 @@ class C10VoiceFocusPolicyTest {
             assertTrue("ducked must stay audible", ducked > 0f)
         }
     }
+
+    /** 10.4: the optional repeat covers plain directions only, and only when the setting is on. */
+    @Test fun q10_4_repeatOnlyForPlainDirectionsWhenEnabled() {
+        assertTrue(RepeatPolicy.eligible(enabled = true, alert = false, answer = false, preview = false))
+        assertFalse("setting off", RepeatPolicy.eligible(enabled = false, alert = false, answer = false, preview = false))
+        assertFalse("warnings never repeat", RepeatPolicy.eligible(enabled = true, alert = true, answer = false, preview = false))
+        assertFalse("answers never repeat", RepeatPolicy.eligible(enabled = true, alert = false, answer = true, preview = false))
+        assertFalse("settings samples never repeat", RepeatPolicy.eligible(enabled = true, alert = false, answer = false, preview = true))
+    }
+
+    /** 10.4: the repeat waits longer than the 10 s same-direction suppression, so it is not dropped as a duplicate. */
+    @Test fun q10_4_repeatDelayIsPastDuplicateSuppression() {
+        assertTrue(RepeatPolicy.DELAY_MS > VoiceMessage.DIRECTION_REPEAT_MS)
+    }
 }
