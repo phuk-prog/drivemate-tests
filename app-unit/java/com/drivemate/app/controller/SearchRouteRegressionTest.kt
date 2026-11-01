@@ -5,6 +5,7 @@ import com.drivemate.app.nav.LatLon
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -53,6 +54,14 @@ class SearchRouteRegressionTest {
         } catch (failed: IOException) {
             assertTrue(failed.message.orEmpty().contains("unreachable"))
         }
+    }
+
+    @Test fun anOfflineOnlyStreetResultIsNotOfferedAsTheDestinationPreview() {
+        // Category 4.5: an offline street result with a house number it does not contain is never
+        // accepted as the destination for a route preview. The route-preview screen is not exercised here.
+        val street = Place("Stone Road", "Trentham, ST4", LatLon(52.96, -2.195))
+        assertFalse("house 8 is not on Stone Road in the list",
+            com.drivemate.app.data.Geocoder.canAutoSelectOnlyResult("8 Stone Road Trentham ST4", street, nearStockport))
     }
 
     @Test fun emptyAnswerStaysEmpty() = runBlocking {

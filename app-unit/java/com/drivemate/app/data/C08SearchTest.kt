@@ -68,6 +68,14 @@ class C08SearchTest {
         assertFalse("SK8 2EZ is not house 2 of anything", Geocoder.canAutoSelectOnlyResult("SK8 2EZ", postcode, stoke))
     }
 
+    @Test fun anUnknownOfflineAddressOrBusinessGivesNoResultNotAGuess() {
+        // Category 4.1: offline cases with no match in the list return a clear no-result, never a guess.
+        val address = "14 Zanzibar Crescent, Quarry Bank"
+        assertTrue("no house is invented for an unknown street", Geocoder.mergeSearch(address, local(offline(address, stockport)), stockport).isEmpty())
+        val business = "Umbrella Bakery Unit 4"
+        assertTrue("no business is invented", Geocoder.mergeSearch(business, local(offline(business, stockport)), stockport).isEmpty())
+    }
+
     @Test fun nothingIsFabricatedForAPostcodeNotInTheList() {
         assertTrue(offline("ZZ9 9ZZ", stockport).none { it.keywords == "postcode" })
         assertTrue(Geocoder.mergeSearch("ZZ9 9ZZ", local(emptyList()), stockport).isEmpty())
