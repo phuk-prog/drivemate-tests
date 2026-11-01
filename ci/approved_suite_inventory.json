@@ -29,6 +29,7 @@
     "app-unit/java/com/drivemate/app/dmn/DmnTilesStampTest.kt": "b829f8dc722edb93db9469283c7d993d702395b6",
     "app-unit/java/com/drivemate/app/dmn/UnmarkedRoundaboutTest.kt": "0ba7b350b5d2bb873bd3bedb00a95582bc5833a5",
     "app-unit/java/com/drivemate/app/map/C17CameraTest.kt": "59474b4e29f8300b930cab93e2b5295a24f0b0d6",
+    "app-unit/java/com/drivemate/app/data/RequestCacheFreshnessTest.kt": "64d20db7b4215551a7c56f71bbd95c7ea6d0b4fe",
     "app-unit/java/com/drivemate/app/map/C17RouteHeadTest.kt": "2e2fc5c539d40c92c3968cfcb7abc249702487f5",
     "app-unit/java/com/drivemate/app/map/C13RouteTrimTest.kt": "476968bcfcaa8475d8a2718a8395ad3b79fa6834",
     "app-unit/java/com/drivemate/app/map/JourneyMapLookTest.kt": "824e5a1b0eb6bbc5935cf8f9d8987743b2f85f00",
