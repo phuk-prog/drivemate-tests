@@ -170,4 +170,36 @@ class Cat7MatcherPolicyTest {
         parked.accept(network, 1_000L, navigation = false)
         assertFalse(parked.authoritative(1_000L))
     }
+
+    // ---- gap cases for 7.3 to 7.5 ----
+
+    @Test fun parallelTieWithUnknownHeadingStaysUnknown() {
+        // 7.3: two equal parallel roads and no heading: nothing may be chosen blindly.
+        val roads = listOf(
+            seg("TWO_A", p(-100.0, 0.0), p(400.0, 0.0)),
+            seg("TWO_B", p(-100.0, 6.0), p(400.0, 6.0)),
+        )
+        assertNull(LocalRoadMatcher().match(fix(100.0, 3.0, heading = null, t = 1_000), roads))
+    }
+
+    @Test fun gapAcrossAnUnconfirmedJunctionIsNeverBridged() {
+        // 7.4: the next road starts 5 m past the end of the last one, with no shared node, so
+        // the junction is unconfirmed and the car may not be placed on the far road.
+        val roads = listOf(
+            seg("MAIN", p(0.0, 0.0), p(100.0, 0.0)),
+            seg("FAR", p(105.0, 0.0), p(200.0, 0.0)),
+        )
+        val m = LocalRoadMatcher()
+        assertNotNull(m.match(fix(90.0, 0.0, t = 1_000), roads))
+        assertNull(m.match(fix(130.0, 0.0, t = 3_000), roads))
+    }
+
+    @Test fun fixFarAlongTheSameRoadWithinOneSecondIsRejectedButANearOneIsAccepted() {
+        // 7.5: 1 s at 12 m/s allows about 37 m of travel; 30 m is accepted, 300 m is a teleport.
+        val roads = listOf(seg("A", p(-100.0, 0.0), p(1_000.0, 0.0)))
+        val near = LocalRoadMatcher().apply { match(fix(0.0, 0.0, t = 1_000), roads) }
+        assertEquals("A", near.match(fix(30.0, 0.0, t = 2_000), roads)?.roadId)
+        val far = LocalRoadMatcher().apply { match(fix(0.0, 0.0, t = 1_000), roads) }
+        assertNull(far.match(fix(300.0, 0.0, t = 2_000), roads))
+    }
 }
