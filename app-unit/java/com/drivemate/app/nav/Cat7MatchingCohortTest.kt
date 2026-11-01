@@ -28,7 +28,7 @@ class Cat7MatchingCohortTest {
             val w = ways.getJSONObject(i)
             val id = w.getLong("id").toString()
             val t = w.getJSONObject("t")
-            val tags = t.keySet().associateWith { t.getString(it) }
+            val tags = t.keys().asSequence().map { it.toString() }.associateWith { t.getString(it) }
             if (!LocalRoadMatcher.drivable(tags)) continue
             val g = w.getJSONArray("g")
             for (j in 0 until g.length() - 1) {
