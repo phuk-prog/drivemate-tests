@@ -95,6 +95,7 @@
     "app-unit/java/com/drivemate/app/nav/Cat7UncertaintyTest.kt": "52cf2bebc70320df6b44e58617986738e0180693",
     "app-unit/java/com/drivemate/app/nav/Cat7TunnelReacquisitionTest.kt": "029b02ecc90e9a9f52f33156c3721ef5105c2524",
     "app-unit/java/com/drivemate/app/nav/Cat7CarriagewayRealPairTest.kt": "0a8c3859bd97f1856e5df8c780f0bb9fe118a216",
+    "app-unit/java/com/drivemate/app/nav/Cat7AccessEligibilityTest.kt": "53759f7eedba0d0dbcdde0ee0dd78a87ac9ad68f",
     "app-unit/java/com/drivemate/app/nav/Category6StaleFixTest.kt": "f144196c8e3f454c8350a0e674449b6f5f227059",
     "app-unit/java/com/drivemate/app/nav/DestinationApproachTest.kt": "ff6ed6901f5865818c469965b1e44f390b90036a",
     "app-unit/java/com/drivemate/app/nav/FixTelemetryTest.kt": "2385b5d71be785caea5c09e38d4fa0c1a6fc22fd",
