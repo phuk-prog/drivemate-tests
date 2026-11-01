@@ -11,7 +11,6 @@
     "app-unit/java/com/drivemate/app/data/C19RoadEventMatchTest.kt": "9d58c3c38d49d9d8e81808eed0439b9b67e5d92c",
     "app-unit/java/com/drivemate/app/data/C20SettingsMergeTest.kt": "37f274bc275b1da134529ddbef60ca74fc69188c",
     "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "7bb8aaa6ed15dd51f36e55c15dfc9bd152b86a7d",
-    "app-unit/java/com/drivemate/app/data/C24FuelPriceAgeTest.kt": "654269c3284e0fd8562a35707a8e21f8ce0386d5",
     "app-unit/java/com/drivemate/app/data/C24ProviderProvenanceTest.kt": "899e4ced0c23860226a160c4b716e2627cb060dd",
     "app-unit/java/com/drivemate/app/account/C20LifecycleRestoreTest.kt": "02875b0c0117a7eb865b91a6cb2bac476f211baa",
     "app-unit/java/com/drivemate/app/data/C24FuelSelectionTest.kt": "8ca537d3012b3d701d3a53c69cdc97b7401fdde1",
