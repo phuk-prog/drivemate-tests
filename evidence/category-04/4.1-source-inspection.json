@@ -1,0 +1,31 @@
+{
+  "category": "4",
+  "subcategory": "4.1",
+  "method": "Static inspection of drivemate-app search code on its branch head, read-only. No device, no emulator, no network calls made.",
+  "app_branch_head_at_inspection": "b194a37",
+  "map_branch_head_at_inspection": "b58a79d",
+  "search_sources": {
+    "LOCAL": "OfflineSearch over the on-phone UK search list (postcodes, streets, places from Ordnance Survey Open Names, OSM addresses, and the national postcode file). Asked when the query is 3+ characters or contains a full postcode.",
+    "OWN": "OwnPlaces.search (DriveMate business list). Asked only when a current position is known.",
+    "online_providers": "None called. Geocoder.kt states that typed text and position are never sent. Photon, Nominatim, postcodes.io and TomTom are not referenced by the search path (the TomTom flag is unused)."
+  },
+  "evidence_refs": [
+    "app/src/main/java/com/drivemate/app/data/Geocoder.kt (source list, collectSearch)",
+    "app/src/main/java/com/drivemate/app/data/ParallelSearch.kt (per-source timeout and partial results)",
+    "app/src/main/java/com/drivemate/app/data/SearchMatch.kt (match kind and quality labels)",
+    "app/src/main/java/com/drivemate/app/data/OwnPlaces.kt"
+  ],
+  "response_availability": {
+    "uk_postcode": "offline list: postcode centre only (kind POSTCODE, labelled as area centre)",
+    "house_number_with_street": "offline list from OSM addresses; labelled Address; missing numbers reported as not found",
+    "house_number_with_postcode_no_street": "map branch 0fd00a5 writes these; app behaviour not yet verified on a device",
+    "business_or_place": "offline list (OS Open Names places, OSM POIs) and OwnPlaces",
+    "online_case": "no online search source exists in the current search path",
+    "offline_case": "the whole search path is offline by design; no separate offline-only result set"
+  },
+  "not_verified": [
+    "Actual result lists on a device or emulator (needs drivemate-tests emulator run)",
+    "Response timing under the per-source timeout"
+  ],
+  "status": "Complete for static reproduction at the commits named; the device-level part is still open"
+}
