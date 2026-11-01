@@ -274,6 +274,7 @@ jobs:
       - name: Run the screen tests on the emulator
         id: screen
         if: (steps.scope.outputs.run_full == 'true') && (steps.install.outputs.has_screen == 'true' && steps.unit.outputs.unit_passed == 'true')
+        timeout-minutes: 20
         # Do not waste an emulator job on a failed Kotlin compile/unit run.
         # The debug build is only installed on the emulator; it is never uploaded.
         uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2.33.0
