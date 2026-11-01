@@ -79,4 +79,32 @@ class C10VoiceFocusPolicyTest {
         assertTrue(com.drivemate.app.nav.SoundModePolicy.plays(com.drivemate.app.data.SoundMode.OFF, alert = false, answer = true))
         assertFalse(com.drivemate.app.nav.SoundModePolicy.plays(com.drivemate.app.data.SoundMode.OFF, alert = false, answer = false))
     }
+
+    /** 10.2: another app's may-duck request lowers guidance speech; it is not cut off. */
+    @Test fun q10_2_mayDuckLossDucksGuidanceInsteadOfCutting() {
+        assertEquals(VoiceFocusAction.DUCK, VoiceFocusChange.action(android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK))
+    }
+
+    /** 10.2: a loss that forbids ducking (full loss or transient loss) still stops guidance speech. */
+    @Test fun q10_2_fullAndTransientLossStillCutSpeech() {
+        assertEquals(VoiceFocusAction.CUT, VoiceFocusChange.action(android.media.AudioManager.AUDIOFOCUS_LOSS))
+        assertEquals(VoiceFocusAction.CUT, VoiceFocusChange.action(android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT))
+    }
+
+    /** 10.2: regaining focus restores full guidance volume; unrelated focus changes do nothing. */
+    @Test fun q10_2_gainRestoresVolumeAndOtherChangesAreIgnored() {
+        assertEquals(VoiceFocusAction.RESTORE, VoiceFocusChange.action(android.media.AudioManager.AUDIOFOCUS_GAIN))
+        assertEquals(VoiceFocusAction.NONE, VoiceFocusChange.action(0))
+    }
+
+    /** 10.2: the ducked level is a quarter of the chosen level, stays in range and keeps silence silent. */
+    @Test fun q10_2_duckedLevelIsQuieterAndBounded() {
+        assertEquals(0.25f, VoiceFocusChange.duckedLevel(1f), 0.0001f)
+        assertEquals(0f, VoiceFocusChange.duckedLevel(0f), 0.0001f)
+        for (level in listOf(0.1f, 0.5f, 1f)) {
+            val ducked = VoiceFocusChange.duckedLevel(level)
+            assertTrue("ducked must be quieter than $level", ducked < level)
+            assertTrue("ducked must stay audible", ducked > 0f)
+        }
+    }
 }
