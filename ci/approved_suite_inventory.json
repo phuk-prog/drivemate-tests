@@ -98,6 +98,7 @@
     "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "ddacc50d8c313401c6de5f42f788fca20557e1c3",
     "app-unit/java/com/drivemate/app/ui/C11DrivingTextCapsTest.kt": "a27390328b3cb36015475c93ba320a7951bdb49d",
     "app-unit/java/com/drivemate/app/ui/C14BannerPriorityTest.kt": "acaeb8a649ee5c8236abd2ad70288b457ce98528",
+    "app-unit/java/com/drivemate/app/ui/C14OverlayPriorityTest.kt": "71df868e69ffb5bf738f22617ce6834a6b33b6f5",
     "app-unit/java/com/drivemate/app/ui/C23ParkedConfirmationTest.kt": "91b966ee308ac3574d34321992f0fe7cd876524c",
     "app-unit/java/com/drivemate/app/ui/JourneyDetailTest.kt": "16853bf1b416090934a4cdae75eaa2c86bf8c105",
     "app-unit/java/com/drivemate/app/ui/WhatsNewTest.kt": "e3f29bb7c00f75aa2ad9e1fde9dc583cae2e4219",
