@@ -134,6 +134,7 @@
     "categories/06-speed-limits/decisions/SpeedLimitsDecisionsTest.kt": "c295c383f3e221acfcb45dd46331614757a9b79d",
     "categories/06-speed-limits/law/SpeedLimitsLawTest.kt": "e001db2e5f7e30c4fb74512928dcf38e17dac256",
     "categories/06-speed-limits/screen/SpeedLimitDisplayScreenTest.kt": "28f4cd88f3ba1cc8a5ff95ee0c253a6af40b3d0d",
+    "categories/07-road-alerts/decisions/Category18DecisionsTest.kt": "a53bde93a846155016bec80e0b32c86199e98aa7",
     "categories/07-road-alerts/decisions/RoadAlertsDecisionsTest.kt": "e3f4dc951aa8c8597a1a7034fa3f02f7a08e4311",
     "categories/07-road-alerts/screen/RoadAlertsSessionScreenTest.kt": "4c701f27675ed320c98267111180686d6e2191a3",
     "categories/08-rerouting/decisions/ReroutingDecisionsTest.kt": "3067accc9677e39fe98fea1b2c494951a25e3a91",
