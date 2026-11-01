@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * C13.1 / C13.2 (pure logic, JVM): a simulated drive along a route with one bend. Follow state,
+ * C13.1 / C13.2 (pure logic, JVM): a synthetic drive along a route with one bend. Follow state,
  * camera heading, zoom, remaining geometry and frame timing are checked per fix. The on-device
  * part (real map, real frames) is left to the owner phone check.
  */

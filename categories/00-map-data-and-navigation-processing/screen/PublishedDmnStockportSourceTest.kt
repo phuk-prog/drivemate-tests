@@ -512,7 +512,7 @@ class PublishedDmnStockportSourceTest {
         // Replay a route made solely from consecutive edges in the authentic graph. A
         // distant outlier is injected between real on-route fixes; progress must recover
         // from the following source-backed fixes. This exercises graph planning and the
-        // production NavigationEngine, while remaining a software simulation.
+        // production NavigationEngine, while remaining a software-only test.
         val progressStart = pair.first
         fun nextSameWay(edge: Int): Int = (graph.outStart[graph.to[edge]] until graph.outStart[graph.to[edge] + 1])
             .asSequence().map { graph.outEdges[it] }
@@ -544,7 +544,7 @@ class PublishedDmnStockportSourceTest {
         val acceptedStart = requireNotNull(gpsFilter.accept(location(routePoints.first(), baseTime)))
         val rejectedOutlier = gpsFilter.accept(location(LatLon(54.2, -1.0), baseTime + 1_000_000_000L))
         val acceptedRecovery = gpsFilter.accept(location(routePoints.last(), baseTime + 8_000_000_000L))
-        assertNull("Production GPS filter must reject the simulated impossible jump", rejectedOutlier)
+        assertNull("Production GPS filter must reject the synthetic impossible jump", rejectedOutlier)
         assertNotNull("Production GPS filter must accept a subsequent plausible source-backed fix", acceptedRecovery)
         val recoveryEngine = com.drivemate.app.nav.NavigationEngine(replayRoute)
         val filteredStart = recoveryEngine.update(LatLon(acceptedStart.latitude, acceptedStart.longitude), speed = 8.0, accuracy = 5.0)
