@@ -34,14 +34,16 @@ class C20BackupRetryTest {
             restoreData = {},
             clearLocalData = { cleared++ },
         )
+        // The app retries the upload itself (3 attempts in total). Fail every one of them in the first call.
         val upload: suspend (String) -> Unit = {
             attempts++
-            if (attempts == 1) throw java.io.IOException("offline")
+            if (attempts <= 3) throw java.io.IOException("offline")
         }
         runCatching { runBlocking { session.backupAndClear(upload = upload) } }
+        assertEquals(3, attempts)
         assertEquals(0, cleared)
         runBlocking { session.backupAndClear(upload = upload) }
-        assertEquals(2, attempts)
+        assertEquals(4, attempts)
         assertEquals(1, cleared)
     }
 

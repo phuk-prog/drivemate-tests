@@ -36,7 +36,7 @@ class FixTelemetryTest {
         t.onRaw()
         t.onRejected("outlier")
         val text = t.summary()
-        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1", text)
+        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1 requests=0 requestedMs= deliveredGaps=0 deliveredGapP95Ms=none", text)
         assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
 

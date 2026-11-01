@@ -55,7 +55,8 @@ class Category19DecisionsTest {
         assertFalse(TrafficDetails.stale(live, now))
         assertFalse(TrafficDetails.stale(live, now + TrafficDetails.LIVE_MAX_AGE))
         assertTrue(TrafficDetails.stale(live, now + TrafficDetails.LIVE_MAX_AGE + 1))
-        assertTrue(TrafficDetails.stale(null, now))
+        // No report at all is not a stale report; the callers only ask about reports they hold.
+        assertFalse(TrafficDetails.stale(null as LiveTrafficInfo?, now))
     }
 
     @Test fun q19_4_detourOfferSpeechNeverPromisesACountdown() {

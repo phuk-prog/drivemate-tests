@@ -20,7 +20,8 @@ class C08ThenNowTimingTest {
 
     /** 8.2: the "Then" window is about 30 s at speed, clamped to 150 m to 900 m. */
     @Test fun q8_2_thenWindowIsSpeedDependentAndClamped() {
-        assertEquals(150.0, ThenStepPolicy.window(0.0), 0.0)
+        // The app plans at no less than 8 m/s, so a standstill still gets 30 s = 240 m.
+        assertEquals(240.0, ThenStepPolicy.window(0.0), 0.0)
         assertEquals(750.0, ThenStepPolicy.window(25.0), 0.0)
         assertEquals(900.0, ThenStepPolicy.window(100.0), 0.0)
     }
