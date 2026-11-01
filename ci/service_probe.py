@@ -49,6 +49,7 @@ ENDPOINTS = {
         Endpoint('tfl_disruptions', 'https://api.tfl.gov.uk/Road/all/Disruption?stripContent=true', (19,), 'array'),
         Endpoint('national_highways_no_key', 'https://api.data.nationalhighways.co.uk/dvms/v1.0/vms?bBox=49.80000,-6.50000,56.00000,2.00000', (19,), 'object'),
         Endpoint('tomtom_no_key', 'https://api.tomtom.com/traffic/services/5/incidentDetails', (19,), 'object'),
+        Endpoint('tomtom_search_no_key', 'https://api.tomtom.com/search/2/search/12%20Example%20Road%20Stoke.json', (4,), 'object'),
         Endpoint('streetworks', 'https://ukpowernetworks.opendatasoft.com/api/explore/v2.1/catalog/datasets/ukpn-open-streetworks/exports/geojson', (19,), 'features'),
         Endpoint('weather_public_manchester', 'https://api.open-meteo.com/v1/forecast?latitude=53.48&longitude=-2.24&hourly=precipitation,weather_code,visibility,temperature_2m,wind_gusts_10m&forecast_hours=1&timezone=UTC&wind_speed_unit=mph', (18,), 'weather'),
         Endpoint('osm_capabilities', 'https://api.openstreetmap.org/api/capabilities', (23,), 'osm'),
