@@ -1,0 +1,671 @@
+{
+ "schema": 1,
+ "source": "Frozen subset of provenance/manchester-lanes/source-samples.json (OSM contributors, ODbL 1.0); recorded by Category 7.1",
+ "source_sha256": "0ab0238e89416df54c6a889d0d6a4fd74c3d1ac47e65f0f50a5d36fc2adcdc13",
+ "ways": [
+  {
+   "id": 930354,
+   "g": [
+    [
+     -2.2199713,
+     53.4782526
+    ],
+    [
+     -2.2198129,
+     53.4782723
+    ],
+    [
+     -2.2189535,
+     53.4781741
+    ],
+    [
+     -2.2189119,
+     53.4781683
+    ],
+    [
+     -2.2188472,
+     53.4781591
+    ]
+   ],
+   "t": {
+    "highway": "trunk",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Great Ancoats Street",
+    "oneway": "yes",
+    "ref": "A665",
+    "turn:lanes": "left;through|through"
+   }
+  },
+  {
+   "id": 4189397,
+   "g": [
+    [
+     -2.2823517,
+     53.4788331
+    ],
+    [
+     -2.2823894,
+     53.4788029
+    ],
+    [
+     -2.2824158,
+     53.4787707
+    ],
+    [
+     -2.2825142,
+     53.4785968
+    ],
+    [
+     -2.2826281,
+     53.4783892
+    ],
+    [
+     -2.2827198,
+     53.4781968
+    ],
+    [
+     -2.2827611,
+     53.4780945
+    ],
+    [
+     -2.2827991,
+     53.4779847
+    ],
+    [
+     -2.2828818,
+     53.4777082
+    ],
+    [
+     -2.282924,
+     53.4774896
+    ],
+    [
+     -2.2829285,
+     53.4774597
+    ]
+   ],
+   "t": {
+    "highway": "trunk",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Trafford Road",
+    "oneway": "yes",
+    "ref": "A5063",
+    "turn:lanes": "through|through;slight_right"
+   }
+  },
+  {
+   "id": 4368336,
+   "g": [
+    [
+     -2.2164878,
+     53.3729013
+    ],
+    [
+     -2.2164828,
+     53.3728281
+    ],
+    [
+     -2.2164761,
+     53.3727287
+    ]
+   ],
+   "t": {
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Wilmslow Road",
+    "oneway": "yes",
+    "ref": "B5358",
+    "turn:lanes": "through|through|right"
+   }
+  },
+  {
+   "id": 4375293,
+   "g": [
+    [
+     -2.2414059,
+     53.469914
+    ],
+    [
+     -2.2414633,
+     53.4699495
+    ],
+    [
+     -2.2415585,
+     53.4699928
+    ],
+    [
+     -2.241687,
+     53.4700344
+    ],
+    [
+     -2.2418,
+     53.4700651
+    ],
+    [
+     -2.2418243,
+     53.4700743
+    ],
+    [
+     -2.2420253,
+     53.4701502
+    ]
+   ],
+   "t": {
+    "highway": "primary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Cambridge Street",
+    "oneway": "yes",
+    "ref": "A5067",
+    "turn:lanes": "left|through|right"
+   }
+  },
+  {
+   "id": 4415024,
+   "g": [
+    [
+     -2.2454804,
+     53.4431283
+    ],
+    [
+     -2.2451954,
+     53.4431603
+    ],
+    [
+     -2.2446677,
+     53.4431683
+    ],
+    [
+     -2.2446118,
+     53.4431691
+    ]
+   ],
+   "t": {
+    "highway": "trunk",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Wilbraham Road",
+    "oneway": "yes",
+    "ref": "A6010",
+    "turn:lanes": "left;through|through|right"
+   }
+  },
+  {
+   "id": 4415025,
+   "g": [
+    [
+     -2.2441576,
+     53.4431016
+    ],
+    [
+     -2.2442385,
+     53.4430989
+    ],
+    [
+     -2.2443743,
+     53.4430943
+    ]
+   ],
+   "t": {
+    "highway": "trunk",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Wilbraham Road",
+    "oneway": "yes",
+    "ref": "A6010",
+    "turn:lanes": "through|through|right"
+   }
+  },
+  {
+   "id": 4419705,
+   "g": [
+    [
+     -2.2840183,
+     53.4633371
+    ],
+    [
+     -2.2840512,
+     53.4634665
+    ],
+    [
+     -2.2841664,
+     53.4636948
+    ]
+   ],
+   "t": {
+    "bridge": "yes",
+    "highway": "trunk",
+    "lanes": "3",
+    "layer": "1",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "White City Circle",
+    "oneway": "yes",
+    "ref": "A5063",
+    "turn:lanes": "through|through|through;right"
+   }
+  },
+  {
+   "id": 4419709,
+   "g": [
+    [
+     -2.2838222,
+     53.4658835
+    ],
+    [
+     -2.2839346,
+     53.4649779
+    ]
+   ],
+   "t": {
+    "bridge": "yes",
+    "highway": "trunk",
+    "lanes": "4",
+    "layer": "1",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Trafford Road",
+    "oneway": "yes",
+    "ref": "A5063",
+    "turn:lanes": "through|through|through;right|right"
+   }
+  },
+  {
+   "id": 4448208,
+   "g": [
+    [
+     -2.2804812,
+     53.478568
+    ],
+    [
+     -2.2813844,
+     53.4788284
+    ],
+    [
+     -2.2814617,
+     53.4788526
+    ],
+    [
+     -2.2815044,
+     53.4788628
+    ],
+    [
+     -2.2817198,
+     53.4789143
+    ],
+    [
+     -2.2819375,
+     53.4789407
+    ]
+   ],
+   "t": {
+    "highway": "trunk_link",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "40 mph",
+    "name": "Regent Road",
+    "oneway": "yes",
+    "ref": "A57",
+    "turn:lanes": "left|left|through"
+   }
+  },
+  {
+   "id": 4448241,
+   "g": [
+    [
+     -2.2839315,
+     53.4766525
+    ],
+    [
+     -2.2836582,
+     53.4768206
+    ],
+    [
+     -2.2835575,
+     53.4768871
+    ],
+    [
+     -2.2834591,
+     53.4769714
+    ],
+    [
+     -2.2834214,
+     53.4770085
+    ],
+    [
+     -2.2834002,
+     53.4770319
+    ],
+    [
+     -2.2833492,
+     53.4770884
+    ],
+    [
+     -2.2833238,
+     53.4771176
+    ],
+    [
+     -2.283231,
+     53.4772335
+    ],
+    [
+     -2.2831698,
+     53.477314
+    ]
+   ],
+   "t": {
+    "highway": "primary_link",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Broadway",
+    "oneway": "yes",
+    "ref": "A5186",
+    "turn:lanes": "left|left"
+   }
+  },
+  {
+   "id": 4448270,
+   "g": [
+    [
+     -2.2854439,
+     53.4759713
+    ],
+    [
+     -2.2855143,
+     53.4759166
+    ],
+    [
+     -2.2856002,
+     53.4758791
+    ],
+    [
+     -2.2856914,
+     53.475862
+    ],
+    [
+     -2.2860012,
+     53.4758022
+    ],
+    [
+     -2.2860562,
+     53.475784
+    ],
+    [
+     -2.2861477,
+     53.4757533
+    ],
+    [
+     -2.2862426,
+     53.4757231
+    ]
+   ],
+   "t": {
+    "highway": "primary",
+    "lanes": "2",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Broadway",
+    "oneway": "yes",
+    "ref": "A5186",
+    "turn:lanes": "left|through"
+   }
+  },
+  {
+   "id": 4542409,
+   "g": [
+    [
+     -2.1447461,
+     53.4162271
+    ],
+    [
+     -2.1449716,
+     53.416183
+    ],
+    [
+     -2.1454996,
+     53.4161304
+    ],
+    [
+     -2.1455713,
+     53.4161229
+    ],
+    [
+     -2.1456349,
+     53.4161155
+    ],
+    [
+     -2.145798,
+     53.4160982
+    ]
+   ],
+   "t": {
+    "highway": "secondary",
+    "lanes": "3",
+    "lit": "yes",
+    "maxspeed": "30 mph",
+    "name": "Carrington Road",
+    "oneway": "yes",
+    "ref": "B6104",
+    "turn:lanes": "through|right"
+   }
+  }
+ ],
+ "cases": [
+  {
+   "id": "c7-01-930354",
+   "kind": "urban_trunk",
+   "note": "ordinary carriageway, one-way, no bridge",
+   "intended_way_id": 930354,
+   "fix": {
+    "lat": 53.4782625,
+    "lon": -2.2198921,
+    "heading": 78.2,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-02-4189397",
+   "kind": "near_other_road",
+   "note": "Trafford Road surface carriageway; Regent Road and Broadway link lie about 23-30 m away",
+   "intended_way_id": 4189397,
+   "fix": {
+    "lat": 53.478818,
+    "lon": -2.2823705,
+    "heading": 216.6,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-03-4368336",
+   "kind": "urban_road",
+   "note": "ordinary urban road",
+   "intended_way_id": 4368336,
+   "fix": {
+    "lat": 53.3728647,
+    "lon": -2.2164853,
+    "heading": 177.7,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-04-4375293",
+   "kind": "urban_road",
+   "note": "ordinary urban road",
+   "intended_way_id": 4375293,
+   "fix": {
+    "lat": 53.4699318,
+    "lon": -2.2414346,
+    "heading": 316.1,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-05-4415024",
+   "kind": "split_carriageway_piece",
+   "note": "Wilbraham Road piece 1; piece 2 is 17.8 m away",
+   "intended_way_id": 4415024,
+   "fix": {
+    "lat": 53.4431443,
+    "lon": -2.2453379,
+    "heading": 79.3,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-06-4415025",
+   "kind": "split_carriageway_piece",
+   "note": "Wilbraham Road piece 2",
+   "intended_way_id": 4415025,
+   "fix": {
+    "lat": 53.4431003,
+    "lon": -2.244198,
+    "heading": 266.8,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-07-4419705",
+   "kind": "bridge_overpass",
+   "note": "White City Circle bridge layer 1",
+   "intended_way_id": 4419705,
+   "fix": {
+    "lat": 53.4634018,
+    "lon": -2.2840348,
+    "heading": 351.4,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-08-4419709",
+   "kind": "bridge_overpass",
+   "note": "Trafford Road bridge layer 1 (A5063)",
+   "intended_way_id": 4419709,
+   "fix": {
+    "lat": 53.4654307,
+    "lon": -2.2838784,
+    "heading": 184.2,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-09-4448208",
+   "kind": "slip_road",
+   "note": "Regent Road trunk_link",
+   "intended_way_id": 4448208,
+   "fix": {
+    "lat": 53.4786982,
+    "lon": -2.2809328,
+    "heading": 295.8,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-10-4448241",
+   "kind": "slip_road",
+   "note": "Broadway primary_link",
+   "intended_way_id": 4448241,
+   "fix": {
+    "lat": 53.4767365,
+    "lon": -2.2837949,
+    "heading": 44.1,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-11-4448270",
+   "kind": "primary_road",
+   "note": "Broadway primary, joined to the link",
+   "intended_way_id": 4448270,
+   "fix": {
+    "lat": 53.475944,
+    "lon": -2.2854791,
+    "heading": 217.5,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  },
+  {
+   "id": "c7-12-4542409",
+   "kind": "urban_road",
+   "note": "ordinary urban road",
+   "intended_way_id": 4542409,
+   "fix": {
+    "lat": 53.4162051,
+    "lon": -2.1448588,
+    "heading": 251.8,
+    "accuracy_m": 8.0,
+    "speed_mps": 12.0,
+    "elapsed_ms": 10000
+   },
+   "observed": "correct"
+  }
+ ],
+ "not_in_sourced_data": [
+  {
+   "kind": "roundabout",
+   "outcome": "unknown",
+   "note": "no roundabout (junction=roundabout) way in the sourced sample"
+  },
+  {
+   "kind": "tunnel",
+   "outcome": "unknown",
+   "note": "no tunnel way in the sourced sample"
+  },
+  {
+   "kind": "stopped_signal",
+   "outcome": "unknown",
+   "note": "no stopped-at-signal fix sequence in the sourced sample"
+  },
+  {
+   "kind": "opposite_carriageway",
+   "outcome": "unknown",
+   "note": "no opposite-direction parallel pair in the sourced sample"
+  }
+ ],
+ "limits": [
+  "Single-fix snapshots from downloaded OSM geometry; no real drive, no live GPS, no legality or road-marking truth."
+ ],
+ "recorded_outcome_note": "observed = matcher outcome on the fixture when recorded by Category 7.1 (correct: matched way equals intended_way_id; fail: matched a different way; unknown: no match)"
+}
