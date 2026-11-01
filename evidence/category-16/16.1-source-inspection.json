@@ -1,0 +1,30 @@
+{
+  "category": "16",
+  "subcategory": "16.1",
+  "method": "Static inspection of drivemate-app assets and drivemate-map schema, read-only. No device, no emulator.",
+  "app_branch_head_at_inspection": "3647779",
+  "map_branch_head_at_inspection": "cfe5038",
+  "terrain_or_dem_source": "none found: no raster-dem source, no terrain key in any app style asset, no DEM/elevation/hillshade pipeline in drivemate-map",
+  "height_source": "OpenStreetMap explicit metre height tags only (schema buildings layer: height_known true only when height matches a metre value; storeys are not used)",
+  "attribution": "OpenStreetMap contributors (ODbL) via drivemate-map; not separately verified against the published credit text",
+  "style_layouts": {
+    "OWN (own-day.json, own-night.json, archive drivemate-v1.pmtiles)": {
+      "extrusion_source_layer": "buildings",
+      "extrusion_height_property": "height",
+      "gated_on_height_known": true,
+      "matches_map_schema": true
+    },
+    "LEGACY (day.json, night.json, archive drivemate.pmtiles)": {
+      "extrusion_source_layer": "building",
+      "extrusion_height_property": "render_height",
+      "gated_on_height_known": true,
+      "matches_map_schema": false,
+      "finding": "render_height is not produced anywhere in drivemate-map; whether legacy archives carry it is unverified. Unknown heights render as 0 (flat), so extrusions may be invisible here."
+    }
+  },
+  "open_items": [
+    "Confirm whether legacy drivemate.pmtiles carries height_known and render_height (owner or map repo decision).",
+    "Pixel 8 renderer compatibility for fill-extrusion at tilt 60: not measured (no physical device here).",
+    "Accuracy of OSM heights against real buildings: not measured."
+  ]
+}
