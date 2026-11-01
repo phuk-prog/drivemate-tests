@@ -1,6 +1,5 @@
 package com.drivemate.app.nav
 
-import com.drivemate.app.data.TripSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

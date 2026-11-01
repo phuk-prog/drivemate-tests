@@ -1,6 +1,7 @@
 package com.drivemate.app.data
 
 import com.drivemate.app.nav.LatLon
+import com.drivemate.app.nav.TripHistory
 import com.drivemate.app.nav.TripSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
