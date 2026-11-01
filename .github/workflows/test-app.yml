@@ -253,6 +253,13 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Keep unit test reports for the run artifact
+        if: always() && (steps.scope.outputs.run_full == 'true')
+        run: |
+          mkdir -p results/unit-results
+          cp app-src/app/build/test-results/testDebugUnitTest/*.xml results/unit-results/ 2>/dev/null || echo "no unit XML reports"
+          ls results/unit-results | wc -l
+
       - name: Run the screen tests on the emulator
         id: screen
         if: steps.install.outputs.has_screen == 'true' && steps.unit.outputs.unit_passed == 'true'
@@ -389,6 +396,7 @@ jobs:
           name: ${{ (inputs.batch == '' || inputs.batch == 'all') && format('drivemate-tests-{0}', steps.install.outputs.app_sha) || format('drivemate-batch-{0}-{1}', inputs.batch, steps.install.outputs.app_sha) }}
           path: |
             results/full-app.json
+            results/unit-results/
             results/summary.json
             results/run-report.html
             results/process-summary.json
