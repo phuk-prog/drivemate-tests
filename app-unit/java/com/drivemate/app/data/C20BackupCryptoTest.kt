@@ -9,15 +9,23 @@ import org.junit.Test
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
-/** Category 20.3: cloud backups are sealed with a device key; plain version 1 backups still open unchanged. */
+/**
+ * Category 20.3: cloud backups are sealed with the device key by default, or with a recovery passphrase so they
+ * restore on another phone. Plain version 1 backups still open unchanged.
+ */
 class C20BackupCryptoTest {
     private val plain = """{"format":"DriveMate backup","version":1,"preferences":{}}"""
     private val key: SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
     private val otherKey: SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    private val passphrase = "correct horse battery"
+    // Lower than the shipped default so the JVM check stays quick; the envelope records the count it used.
+    private val fastIterations = 100_000
+
+    private fun open(text: String, device: SecretKey? = null, pass: CharArray? = null) =
+        BackupCrypto.open(text, { device }, { pass })
 
     @Test fun sealedBackupOpensBackToTheExactPlainText() {
-        val sealed = BackupCrypto.seal(plain, key)
-        assertEquals(plain, BackupCrypto.open(sealed) { key })
+        assertEquals(plain, open(BackupCrypto.seal(plain, key), device = key))
     }
 
     @Test fun sealedTextDoesNotContainThePlainPayload() {
@@ -32,30 +40,29 @@ class C20BackupCryptoTest {
         assertFalse(BackupCrypto.seal(plain, key) == BackupCrypto.seal(plain, key))
     }
 
-    @Test fun plainVersionOneBackupIsReturnedUnchangedWithoutTheKey() {
-        var asked = 0
-        val out = BackupCrypto.open(plain) { asked++; key }
+    @Test fun plainVersionOneBackupIsReturnedUnchangedWithoutAnyKey() {
+        var deviceAsked = 0
+        var passAsked = 0
+        val out = BackupCrypto.open(plain, { deviceAsked++; key }, { passAsked++; null })
         assertEquals(plain, out)
-        assertEquals("the key must not be needed for a plain backup", 0, asked)
+        assertEquals(0, deviceAsked + passAsked)
     }
 
     @Test fun backupSealedWithAnotherKeyIsRejected() {
-        val sealed = BackupCrypto.seal(plain, otherKey)
         try {
-            BackupCrypto.open(sealed) { key }
+            open(BackupCrypto.seal(plain, otherKey), device = key)
             fail("a backup sealed with another key must not open")
         } catch (expected: IllegalArgumentException) {
-            assertFalse(expected.message!!.contains("preferences"))
+            assertTrue(expected.message!!.contains("could not be verified"))
         }
     }
 
     @Test fun missingDeviceKeyGivesAClearErrorAndNothingIsOpened() {
-        val sealed = BackupCrypto.seal(plain, key)
         try {
-            BackupCrypto.open(sealed) { null }
+            open(BackupCrypto.seal(plain, key), device = null)
             fail("without the device key the backup must not open")
         } catch (expected: IllegalArgumentException) {
-            assertTrue(expected.message!!.contains("another phone"))
+            assertTrue(expected.message!!.contains("recovery passphrase"))
         }
     }
 
@@ -65,7 +72,7 @@ class C20BackupCryptoTest {
         data[0] = (data[0].toInt() xor 1).toByte()
         root.put("data", java.util.Base64.getEncoder().encodeToString(data))
         try {
-            BackupCrypto.open(root.toString()) { key }
+            open(root.toString(), device = key)
             fail("tampered data must not be restored")
         } catch (expected: IllegalArgumentException) {
             assertTrue(expected.message!!.contains("could not be verified"))
@@ -76,10 +83,57 @@ class C20BackupCryptoTest {
         val root = JSONObject(BackupCrypto.seal(plain, key))
         root.put("version", 3)
         try {
-            BackupCrypto.open(root.toString()) { key }
+            open(root.toString(), device = key)
             fail("a changed envelope version must not open")
         } catch (expected: IllegalArgumentException) {
             assertTrue(expected.message != null)
+        }
+    }
+
+    @Test fun passphraseBackupRestoresWithoutAnyDeviceKey() {
+        val sealed = BackupCrypto.sealWithPassphrase(plain, passphrase.toCharArray(), fastIterations)
+        assertFalse(sealed.contains("DriveMate backup"))
+        assertEquals("passphrase", JSONObject(sealed).getString("key"))
+        assertEquals(plain, open(sealed, device = null, pass = passphrase.toCharArray()))
+    }
+
+    @Test fun wrongPassphraseIsRejected() {
+        val sealed = BackupCrypto.sealWithPassphrase(plain, passphrase.toCharArray(), fastIterations)
+        try {
+            open(sealed, pass = "not the passphrase".toCharArray())
+            fail("a wrong passphrase must not restore")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("Check the passphrase"))
+        }
+    }
+
+    @Test fun passphraseBackupWithoutPassphraseAsksForIt() {
+        val sealed = BackupCrypto.sealWithPassphrase(plain, passphrase.toCharArray(), fastIterations)
+        try {
+            open(sealed, device = key, pass = null)
+            fail("a passphrase backup must not open with the device key alone")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("Enter that passphrase"))
+        }
+    }
+
+    @Test fun passphraseHeaderIsAuthenticated() {
+        val root = JSONObject(BackupCrypto.sealWithPassphrase(plain, passphrase.toCharArray(), fastIterations))
+        root.put("iterations", fastIterations + 1)
+        try {
+            open(root.toString(), pass = passphrase.toCharArray())
+            fail("changed key-derivation settings must not open")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("could not be verified"))
+        }
+    }
+
+    @Test fun shortPassphraseIsRefused() {
+        try {
+            BackupCrypto.sealWithPassphrase(plain, "short".toCharArray(), fastIterations)
+            fail("a short recovery passphrase must be refused")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("at least ${BackupCrypto.MIN_PASSPHRASE_CHARS}"))
         }
     }
 }
