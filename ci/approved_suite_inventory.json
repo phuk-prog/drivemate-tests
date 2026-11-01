@@ -72,6 +72,7 @@
     "app-unit/java/com/drivemate/app/nav/ParkedFixAgeTest.kt": "88643d670146ba89d962256f0102f280984eb2df",
     "app-unit/java/com/drivemate/app/nav/PositionSnapConfidenceTest.kt": "3be447b4518fc55b6120a40ee0c5f82189f998cb",
     "app-unit/java/com/drivemate/app/nav/PositionUncertaintyTest.kt": "530cbd23d98b83da188ca259f96b41edc1eca92e",
+    "app-unit/java/com/drivemate/app/nav/C12LimitComparisonShownTest.kt": "d1dac41cb86950542605ef692f2fb9a16399351e",
     "app-unit/java/com/drivemate/app/osm/C23ApprovalGateTest.kt": "4604690ccdd1bcb6be7ca742cae2e6c547d162b7",
     "app-unit/java/com/drivemate/app/osm/C23ReviewedFeedbackTest.kt": "3ff8faf27e34748b0fb8ef61b93c4526be464808",
     "app-unit/java/com/drivemate/app/ui/C11DrivingBarPolicyTest.kt": "ddacc50d8c313401c6de5f42f788fca20557e1c3",
