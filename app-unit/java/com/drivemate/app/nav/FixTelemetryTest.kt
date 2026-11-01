@@ -3,6 +3,7 @@ package com.drivemate.app.nav
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Category 6.1: counts only, no positions or routes in the telemetry. */
@@ -36,7 +37,7 @@ class FixTelemetryTest {
         t.onRaw()
         t.onRejected("outlier")
         val text = t.summary()
-        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1 requests=0 requestedMs= deliveredGaps=0 deliveredGapP95Ms=none", text)
+        assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1 requests=0 requestedMs= deliveredGaps=0 deliveredGapP95Ms=none sourceChanges=0 voiceSteps=0 voiceStepAgeP95Ms=none", text)
         assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
 
@@ -58,5 +59,16 @@ class FixTelemetryTest {
         assertEquals(10L, r.count)
         // Retained 7, 8, 9, 10: nearest rank ceil(0.95 * 4) = 4th is 10.
         assertEquals(10L, r.p95Ms())
+    }
+
+    @Test fun countsSourceChangesAndVoiceStepAgeWithoutText() {
+        val t = FixTelemetry()
+        t.onSourceChange()
+        t.onSourceChange()
+        (1..20).forEach { t.onVoiceStep(it * 10L) }
+        t.onVoiceStep(-1L)
+        val text = t.summary()
+        assertTrue(text.endsWith("sourceChanges=2 voiceSteps=20 voiceStepAgeP95Ms=190"))
+        assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
 }
