@@ -39,4 +39,24 @@ class FixTelemetryTest {
         assertEquals("raw=1 accepted=0 rejected=1 reasons=outlier:1", text)
         assertFalse(Regex("[0-9]+\\.[0-9]{3,}").containsMatchIn(text))
     }
+
+    @Test fun renderLatencyP95CountsOnlyAndIgnoresInvalidSamples() {
+        val r = RenderLatency()
+        assertNull(r.p95Ms())
+        (1..20).forEach { r.record(it * 10L) }
+        r.record(-5L)
+        r.record(120_000L)
+        assertEquals(20L, r.count)
+        // Nearest rank: ceil(0.95 * 20) = 19th of the sorted 10..200 is 190.
+        assertEquals(190L, r.p95Ms())
+        assertEquals("frames=20 p95Ms=190", r.summary())
+    }
+
+    @Test fun renderLatencyKeepsOnlyTheMostRecentSamples() {
+        val r = RenderLatency(capacity = 4)
+        (1..10).forEach { r.record(it.toLong()) }
+        assertEquals(10L, r.count)
+        // Retained 7, 8, 9, 10: nearest rank ceil(0.95 * 4) = 4th is 10.
+        assertEquals(10L, r.p95Ms())
+    }
 }
