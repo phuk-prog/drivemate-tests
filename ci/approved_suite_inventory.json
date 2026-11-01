@@ -67,7 +67,7 @@
     "app-unit/java/com/drivemate/app/nav/C15ArrivalTimingTest.kt": "e5b39e0e8d053a6330f87bc598eb75652b6b61e3",
     "app-unit/java/com/drivemate/app/nav/C15LimitChangeCueTest.kt": "1b5bb8e108ceafcd170482dcfa4060b7cd237b1f",
     "app-unit/java/com/drivemate/app/nav/C19RouteStabilityTest.kt": "002c62f48780bde4e355b763878129aa997b3e4d",
-    "app-unit/java/com/drivemate/app/nav/C22TripEdgeCasesTest.kt": "381d01fadd0e90e198763fe400ee1b15331c16c6",
+    "app-unit/java/com/drivemate/app/nav/C22TripEdgeCasesTest.kt": "ac9c7722574cc25ee5a6134569cc3a4f9c4f5a6d",
     "app-unit/java/com/drivemate/app/nav/C22TripStatsTest.kt": "78ddedc68a3aa7c63bf0bede57343f9c6b8a7db8",
     "app-unit/java/com/drivemate/app/nav/C23FlaggedSegmentsTest.kt": "78acee19afc728f52e8042b2d2a0eb5016786432",
     "app-unit/java/com/drivemate/app/nav/Cat7MatcherPolicyTest.kt": "03dbdc0b39e69d70ab9ea2ec14e1076f99138e5e",

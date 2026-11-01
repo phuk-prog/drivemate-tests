@@ -2,6 +2,7 @@ package com.drivemate.app.nav
 
 import com.drivemate.app.data.MemoryPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Category 22.1 and 22.2: duplicate and partial trips are kept or removed exactly, never merged or invented. */
@@ -33,6 +34,7 @@ class C22TripEdgeCasesTest {
         val trip = stats.finish(120_000L)
         assertEquals(0.0, trip.metres, 0.0)
         assertEquals(120, trip.seconds)
+        assertTrue("poor fixes must not be listed as speeding", trip.speeding.isEmpty())
     }
 
     @Test fun partialTripKeepsItsRealDurationWithoutInventingDistance() {
