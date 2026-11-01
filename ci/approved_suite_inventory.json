@@ -80,6 +80,7 @@
     "app-unit/java/com/drivemate/app/nav/Category6StaleFixTest.kt": "f144196c8e3f454c8350a0e674449b6f5f227059",
     "app-unit/java/com/drivemate/app/nav/DestinationApproachTest.kt": "ff6ed6901f5865818c469965b1e44f390b90036a",
     "app-unit/java/com/drivemate/app/nav/FixTelemetryTest.kt": "20e9ef3132a9bf78e329875c22410ab888e3f1dd",
+    "app-unit/java/com/drivemate/app/nav/GpsFilterRulesTest.kt": "04d3c48be38c768f5887d2e8c6864c269d611c07",
     "app-unit/java/com/drivemate/app/nav/GpsGapProgressPolicyTest.kt": "7e0ca17a4594562afe310f858a2c4519aad93b19",
     "app-unit/java/com/drivemate/app/nav/ImmersiveMapTest.kt": "8b83d4d32c4e3d1de4eabfd6db1b572637ae1118",
     "app-unit/java/com/drivemate/app/nav/LaneTimingTest.kt": "dba0b15f2c8b716aad3ee984b95221b115ef0772",
