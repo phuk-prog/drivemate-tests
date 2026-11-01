@@ -5,7 +5,6 @@ import com.drivemate.app.nav.TripHistory
 import com.drivemate.app.nav.TripSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -25,7 +24,7 @@ class C22TripLifecycleTest {
     @Test fun savedTripReloadsWithRouteDestinationAndStops() {
         val store = TripStore(folder.newFile("current-trip.json"))
         assertTrue(store.save(route, dest, listOf(Place("Shop", "", here))))
-        val saved = assertNotNull(store.load())
+        val saved = requireNotNull(store.load())
         assertEquals("Work", saved.destination.name)
         assertEquals(1, saved.stops.size)
         assertEquals(2, saved.route!!.points.size)

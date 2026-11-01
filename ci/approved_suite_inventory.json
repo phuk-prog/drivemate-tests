@@ -8,7 +8,7 @@
     "app-unit/java/com/drivemate/app/controller/SearchRouteRegressionTest.kt": "836bb355e1c0c3362a18f12c1d0e70ab5abbbfc9",
     "app-unit/java/com/drivemate/app/data/C08SearchTest.kt": "0001ce309d91625a49a2168e3c1f921bbfe04653",
     "app-unit/java/com/drivemate/app/data/C19RoadEventMatchTest.kt": "9d58c3c38d49d9d8e81808eed0439b9b67e5d92c",
-    "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "6c5b5397c9132257026c3f72e4c80f6cd75070cb",
+    "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "7bb8aaa6ed15dd51f36e55c15dfc9bd152b86a7d",
     "app-unit/java/com/drivemate/app/data/C24FuelPriceAgeTest.kt": "a951f1f5cf1395714c9773910fb498b422f06aa3",
     "app-unit/java/com/drivemate/app/data/Cat18SourceHealthTest.kt": "6f5df0f80a6306042b44e65518a63f3aa2bc441b",
     "app-unit/java/com/drivemate/app/data/Cat20BackupSchemaTest.kt": "63615d89d0452894cc26ac4435d63d78a3fe05a5",
