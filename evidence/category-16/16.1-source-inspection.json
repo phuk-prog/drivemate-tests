@@ -26,5 +26,6 @@
     "Confirm whether legacy drivemate.pmtiles carries height_known and render_height (owner or map repo decision).",
     "Pixel 8 renderer compatibility for fill-extrusion at tilt 60: not measured (no physical device here).",
     "Accuracy of OSM heights against real buildings: not measured."
-  ]
+  ],
+  "owner_decision": "Owner answered Yes: keep the fallback to flat 2D where building-height coverage near the car is missing (category 16.2)."
 }
