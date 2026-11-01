@@ -38,6 +38,7 @@
     "app-unit/java/com/drivemate/app/data/RoadDetailsTest.kt": "8fda79dd97a9144d6ad1ba8edbb24f15698fff1c",
     "app-unit/java/com/drivemate/app/data/UkJoinTest.kt": "fbd2d26cfea9e36c8d010e0529dfc5b1e715911e",
     "app-unit/java/com/drivemate/app/data/WorldMapSourceTest.kt": "b384d906192140925c7fc85a54739cdb51438383",
+    "app-unit/java/com/drivemate/app/data/Cat15WorldOverviewLabelTest.kt": "24aec2bd814f42d36496b2e4257a09b173c416d4",
     "app-unit/java/com/drivemate/app/data/WorldOverviewTest.kt": "8ffa57c6d431bc478b4237d6f29329b740beb547",
     "app-unit/java/com/drivemate/app/data/WorldUkPreviewComposerTest.kt": "1990ec2ac8322cbf629f196e05830c0301fb16e3",
     "app-unit/java/com/drivemate/app/dmn/DmnAmbiguousRoadMatchTest.kt": "40fdbd6d7cfdd0859496f5289259fd2b2aa8004c",
