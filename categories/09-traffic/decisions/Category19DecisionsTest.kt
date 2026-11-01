@@ -1,5 +1,7 @@
 package com.drivemate.tests.cat09
 
+import com.drivemate.app.data.LiveTrafficInfo
+import com.drivemate.app.data.Route
 import com.drivemate.app.data.TrafficDetails
 import com.drivemate.app.data.TrafficLookupStatus
 import com.drivemate.app.data.TrafficSnapshot
@@ -46,5 +48,29 @@ class Category19DecisionsTest {
         assertFalse("same road, not a detour", RouteSwitchPolicy.shouldOffer(1800.0, 600.0, 0.85, emptyList(), false))
         assertFalse("saving below the materiality floor", RouteSwitchPolicy.shouldOffer(1800.0, 130.0, 0.2, emptyList(), false))
         assertTrue(RouteSwitchPolicy.shouldOffer(1800.0, 600.0, 0.2, emptyList(), false))
+    }
+
+    @Test fun q19_1_liveReportAgeIsExactAtTheMaximum() {
+        val live = LiveTrafficInfo("TomTom", now)
+        assertFalse(TrafficDetails.stale(live, now))
+        assertFalse(TrafficDetails.stale(live, now + TrafficDetails.LIVE_MAX_AGE))
+        assertTrue(TrafficDetails.stale(live, now + TrafficDetails.LIVE_MAX_AGE + 1))
+        assertTrue(TrafficDetails.stale(null, now))
+    }
+
+    @Test fun q19_4_detourOfferSpeechNeverPromisesACountdown() {
+        val speech = RouteSwitchPolicy.offerSpeech(" on the M60", 4, alwaysAsk = true)
+        assertTrue(speech.endsWith("Switch or keep?"))
+        assertFalse(speech.contains("second"))
+        assertFalse("an offer is accepted only with current traffic, navigating and a reliable fix",
+            RouteSwitchPolicy.mayAccept(trafficCurrent = true, navigating = true, reliablePosition = false))
+    }
+
+    @Test fun q19_6_currentTrafficRanksFirstAndUntimedRoutesAreNotCompared() {
+        val untimed = Route(emptyList(), 1000.0, 500.0, emptyList(), "synthetic")
+        val timed = Route(emptyList(), 1000.0, 600.0, emptyList(), "synthetic", live = true, trafficDelay = 60.0, trafficCheckedAt = now)
+        val ranked = TrafficTiming.rank(listOf(untimed, timed), now)
+        assertEquals(600.0, ranked.first().duration, 0.0)
+        assertTrue("no untimed route is treated as comparable", TrafficTiming.markComparability(listOf(untimed, timed), now).none { it.comparisonReliable })
     }
 }
