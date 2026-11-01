@@ -27,5 +27,5 @@
     "Actual result lists on a device or emulator (needs drivemate-tests emulator run)",
     "Response timing under the per-source timeout"
   ],
-  "status": "Complete for static reproduction at the commits named; the device-level part is still open"
+  "status": "Part done: static reproduction complete at the commits named; device-level result lists not yet reproduced"
 }
