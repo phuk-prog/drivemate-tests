@@ -42,6 +42,10 @@ def results(xml_dir, source_items=None):
                 test["status"] = "skipped"
             if bad is not None:
                 test["failure"] = (bad.get("message") or bad.text or "failed").strip()
+                # The first frame in the stack that names a Kotlin source file and line.
+                frame = re.search(r"\(([A-Za-z0-9_]+\.kt:\d+)\)", bad.text or "")
+                if frame:
+                    test["failure"] += " at " + frame.group(1)
             if unmapped:
                 test['status']='failed'; test['failure']='UNMAPPED_TEST_CLASS:'+classname
             yield item, test
