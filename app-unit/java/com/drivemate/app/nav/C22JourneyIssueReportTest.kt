@@ -49,5 +49,6 @@ class C22JourneyIssueReportTest {
         val r = requireNotNull(JourneyIssueReport.build(JourneyEvidence("$t", t, t + 1, samples)))
         assertTrue(r.length < JourneyIssueReport.MAX_CHARS)
         assertTrue(r.contains("Not included: planned route, destination"))
+        assertTrue(r.contains("This report makes no comparison."))
     }
 }
