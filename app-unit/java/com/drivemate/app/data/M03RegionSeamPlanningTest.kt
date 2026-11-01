@@ -65,4 +65,31 @@ class M03RegionSeamPlanningTest {
         assertEquals(listOf("base"), plan.packages)
         assertEquals(1, plan.uncoveredPoints)
     }
+
+    @Test fun marginAcrossTheAntiMeridianTakesTheWesternNeighbour() {
+        // Two packages either side of lon 180: the east one contains the point; the
+        // west one (lon -179.9..-179.0) is only reached by wrapping the margin past 180.
+        val eastSide = "region-z8-x9-y2"
+        val westSide = "region-z8-x0-y2"
+        val wrap = RegionalMapManifest.parse(
+            """
+            {
+              "schema": 1, "status": "published", "base_zoom_max": 9, "detail_zoom_min": 10,
+              "source_sha256": "${"a".repeat(64)}",
+              "packages": {
+                "base": {"sha256": "${"b".repeat(64)}", "bytes": 1000, "tiles": 10, "verified_tile_payloads": 10},
+                "$eastSide": {"sha256": "${"c".repeat(64)}", "bytes": 500, "tiles": 5, "verified_tile_payloads": 5,
+                              "bounds": [179.0, 60.0, 179.9, 61.0]},
+                "$westSide": {"sha256": "${"d".repeat(64)}", "bytes": 700, "tiles": 7, "verified_tile_payloads": 7,
+                              "bounds": [-179.9, 60.0, -179.0, 61.0]}
+              }
+            }
+            """.trimIndent(),
+            requirePublished = true,
+        )
+        val plan = RegionDownloadPlanner.around(wrap, 60.5, 179.8, 30.0)
+        assertTrue(eastSide in plan.packages)
+        assertTrue(westSide in plan.packages)
+        assertEquals(0, plan.uncoveredPoints)
+    }
 }
