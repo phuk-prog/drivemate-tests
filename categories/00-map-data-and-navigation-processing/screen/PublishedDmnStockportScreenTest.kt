@@ -23,7 +23,7 @@ import java.security.MessageDigest
  * regional MapPack worker or independently verified road legality is claimed.
  */
 @RunWith(AndroidJUnit4::class)
-class PublishedDmnStockportSourceTest {
+class PublishedDmnStockportScreenTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext.applicationContext as Application
 

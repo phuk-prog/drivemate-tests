@@ -139,7 +139,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if find app-src/app/src/androidTest/java -name 'PublishedDmnStockportSourceTest.kt' | grep -q .; then
+          if find app-src/app/src/androidTest/java -name 'PublishedDmnStockportScreenTest.kt' | grep -q .; then
             python3 ci/prepare_dmn_stockport_android.py \
               --output-dir app-src/app/src/androidTest/assets
           fi
