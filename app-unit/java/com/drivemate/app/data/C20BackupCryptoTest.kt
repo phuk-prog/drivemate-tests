@@ -128,6 +128,38 @@ class C20BackupCryptoTest {
         }
     }
 
+    @Test fun passphraseNeededAndWrongPassphraseHaveTheirOwnTypes() {
+        val sealed = BackupCrypto.sealWithPassphrase(plain, passphrase.toCharArray(), fastIterations)
+        try {
+            open(sealed)
+            fail("no passphrase must give PassphraseNeededException")
+        } catch (expected: BackupCrypto.PassphraseNeededException) {
+            // expected
+        }
+        try {
+            open(sealed, pass = "wrong passphrase here".toCharArray())
+            fail("a wrong passphrase must give WrongPassphraseException")
+        } catch (expected: BackupCrypto.WrongPassphraseException) {
+            // expected
+        }
+    }
+
+    @Test fun damagedDeviceBackupIsNeverReportedAsAWrongPassphrase() {
+        // The app asks for a passphrase only on WrongPassphraseException, so a device-key failure must not be one.
+        val root = JSONObject(BackupCrypto.seal(plain, key))
+        val data = java.util.Base64.getDecoder().decode(root.getString("data"))
+        data[0] = (data[0].toInt() xor 1).toByte()
+        root.put("data", java.util.Base64.getEncoder().encodeToString(data))
+        try {
+            open(root.toString(), device = key)
+            fail("tampered device-key data must not restore")
+        } catch (expected: BackupCrypto.WrongPassphraseException) {
+            fail("a device-key failure must not ask for a passphrase")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("could not be verified"))
+        }
+    }
+
     @Test fun shortPassphraseIsRefused() {
         try {
             BackupCrypto.sealWithPassphrase(plain, "short".toCharArray(), fastIterations)
