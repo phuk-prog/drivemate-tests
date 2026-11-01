@@ -65,6 +65,7 @@
     "app-unit/java/com/drivemate/app/nav/C11RerouteEvidenceTest.kt": "f73208ea9af19efafe363c32496bc45cbd87a4f8",
     "app-unit/java/com/drivemate/app/nav/C11RerouteStopsTest.kt": "da174200a18ff0b7ce179b3eeae550462bfcbe20",
     "app-unit/java/com/drivemate/app/nav/C11RerouteSyncTest.kt": "d209696c93ff37a037fdf0eda9d5758bb6ec0c80",
+    "app-unit/java/com/drivemate/app/nav/C11TrafficDetourModeTest.kt": "e850b61e3491d5e9335587050a450ab68cc18878",
     "app-unit/java/com/drivemate/app/nav/C12LimitComparisonShownTest.kt": "d1dac41cb86950542605ef692f2fb9a16399351e",
     "app-unit/java/com/drivemate/app/nav/C12SpeedLimitCueTest.kt": "ad73acc890b7386ceedbfdc4bdf640d5fcf52f00",
     "app-unit/java/com/drivemate/app/nav/C13MissedExitRuleTest.kt": "ba3c22a2ed11c3f69ba7eeef3b300a18a8919b9c",
