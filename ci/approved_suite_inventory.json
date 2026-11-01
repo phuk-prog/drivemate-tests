@@ -16,6 +16,7 @@
     "app-unit/java/com/drivemate/app/data/C22TripLifecycleTest.kt": "7bb8aaa6ed15dd51f36e55c15dfc9bd152b86a7d",
     "app-unit/java/com/drivemate/app/account/C20LifecycleRestoreTest.kt": "02875b0c0117a7eb865b91a6cb2bac476f211baa",
     "app-unit/java/com/drivemate/app/account/C20RecoveryPassphraseRetryTest.kt": "b12c6899b42886275f59d74ce1722dd7767036a4",
+    "app-unit/java/com/drivemate/app/account/C20TransientFailureTest.kt": "e6d6283bedbb5bc26e2aad14812bdf36d744ff34",
     "app-unit/java/com/drivemate/app/data/C20BackupCryptoTest.kt": "d4aa42a1b466e48e0f0cf10a3aa928fd8f5ee3cb",
     "app-unit/java/com/drivemate/app/data/C20RecoveryPassphraseTest.kt": "cc809c6e0f1788c543de39c3625b4286bf7e96c1",
     "app-unit/java/com/drivemate/app/data/C22JourneyEvidenceStoreTest.kt": "de40ad86f264379c5f66122e7905a082055d5a9a",
