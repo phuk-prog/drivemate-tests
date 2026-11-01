@@ -18,6 +18,10 @@ on:
         type: choice
         options: [all, A, B, C, D, E, F]
         default: all
+      test_class:
+        description: Single test class to run (empty = batch as before)
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -34,6 +38,7 @@ jobs:
     timeout-minutes: 75
     env:
       DRIVEMATE_TEST_BATCH: ${{ inputs.batch || 'all' }}
+      DRIVEMATE_TEST_CLASS: ${{ inputs.test_class }}
     steps:
       - name: Free runner disk for the app build and emulator
         run: |
@@ -212,7 +217,7 @@ jobs:
         working-directory: app-src
         # Build output stays ephemeral. Only bounded error messages enter summary.json.
         run: |
-          if ./gradlew :app:testDebugUnitTest --no-daemon --continue --max-workers=4 > "$RUNNER_TEMP/drivemate-unit.log" 2>&1; then
+          if ./gradlew :app:testDebugUnitTest ${DRIVEMATE_TEST_CLASS:+--tests "*$DRIVEMATE_TEST_CLASS*"} --no-daemon --continue --max-workers=4 > "$RUNNER_TEMP/drivemate-unit.log" 2>&1; then
             echo 0 > "$RUNNER_TEMP/drivemate-unit.exit"
             echo "unit_passed=true" >> "$GITHUB_OUTPUT"
           else
@@ -264,7 +269,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: app-src
           script: |
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
+            ./gradlew :app:connectedDebugAndroidTest ${DRIVEMATE_TEST_CLASS:+--tests "*$DRIVEMATE_TEST_CLASS*"} --no-daemon --continue -Pandroid.testInstrumentationRunnerArguments.package=com.drivemate.tests > "$RUNNER_TEMP/drivemate-screen.log" 2>&1 && echo 0 > "$RUNNER_TEMP/drivemate-screen.exit" || { result=$?; echo "$result" > "$RUNNER_TEMP/drivemate-screen.exit"; echo 'Screen checks failed; summary.json records the reason.'; }
             adb logcat -d -s AndroidRuntime:E libc:F DEBUG:F DM_CAT5_STAGE:I > "$RUNNER_TEMP/drivemate-native.log" 2>&1 || true
             # After the navigation/emulator screens, observe actual device
             # connectivity, not airplane-mode settings or host reachability.
