@@ -5,7 +5,6 @@ import com.drivemate.app.nav.LatLon
 import com.drivemate.app.nav.TripHistory
 import com.drivemate.app.nav.TripSummary
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +20,7 @@ class C22TripRetentionTest {
     @Test fun currentTripSurvivesARestartUntilItIsCleared() {
         val file = folder.newFile("current-trip.json")
         assertEquals(true, TripStore(file).save(route, dest, emptyList()))
-        assertEquals("Work", assertNotNull(TripStore(file).load()).destination.name)
+        assertEquals("Work", requireNotNull(TripStore(file).load()).destination.name)
         assertEquals(true, TripStore(file).clear())
         assertNull(TripStore(file).load())
     }
