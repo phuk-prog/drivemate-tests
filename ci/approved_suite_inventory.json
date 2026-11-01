@@ -18,6 +18,8 @@
     "app-unit/java/com/drivemate/app/data/C20RecoveryPassphraseTest.kt": "cc809c6e0f1788c543de39c3625b4286bf7e96c1",
     "app-unit/java/com/drivemate/app/data/C22JourneyEvidenceStoreTest.kt": "de40ad86f264379c5f66122e7905a082055d5a9a",
     "app-unit/java/com/drivemate/app/data/C22TripHistoryOptInTest.kt": "b3a1a5b35ada82a7a3e14dcb25ab36c4ae323efe",
+    "app-unit/java/com/drivemate/app/nav/C12AheadBoundaryTest.kt": "180c1e55d5e9f81226528092c2887d891ae12ad1",
+    "app-unit/java/com/drivemate/app/nav/C12VerifiedSpeedLimitTest.kt": "60f9ddb22dd8ca96ffae6e5c156e2304dfcb3ad9",
     "app-unit/java/com/drivemate/app/ui/C23ParkedGateWhileMovingTest.kt": "48f4ecdd21b0a77153326dbcb4ee2f7aefb80d5b",
     "app-unit/java/com/drivemate/app/data/C22TripRetentionTest.kt": "908d1d05bd24827ce9b07c47eb5f129731bdf000",
     "app-unit/java/com/drivemate/app/data/Cat18SourceHealthTest.kt": "6f5df0f80a6306042b44e65518a63f3aa2bc441b",
