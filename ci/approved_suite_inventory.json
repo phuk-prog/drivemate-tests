@@ -47,7 +47,7 @@
     "app-unit/java/com/drivemate/app/nav/C11ParkingOfferPolicyTest.kt": "00258f1276d1c15a8aa71c54665691bdfa5ebca9",
     "app-unit/java/com/drivemate/app/nav/C12SpeedLimitCueTest.kt": "ad73acc890b7386ceedbfdc4bdf640d5fcf52f00",
     "app-unit/java/com/drivemate/app/nav/C13MissedExitRuleTest.kt": "ba3c22a2ed11c3f69ba7eeef3b300a18a8919b9c",
-    "app-unit/java/com/drivemate/app/nav/C13RerouteCountdownTest.kt": "5d9cee0109e5f85870c4f105ff77cebd4743cfeb",
+    "app-unit/java/com/drivemate/app/nav/C13RerouteCountdownTest.kt": "5bda7db23e613cbd5c0f1b00de8087b78d194153",
     "app-unit/java/com/drivemate/app/nav/C14ArrivalPolicyTest.kt": "2be765bcd1404b480ff0532d2615692db4f11a7b",
     "app-unit/java/com/drivemate/app/nav/C15LimitChangeCueTest.kt": "1b5bb8e108ceafcd170482dcfa4060b7cd237b1f",
     "app-unit/java/com/drivemate/app/nav/C22TripStatsTest.kt": "242efbb81cbe781fd47291fa1907d2a3838d1411",
