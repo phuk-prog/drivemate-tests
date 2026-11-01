@@ -33,6 +33,8 @@ def install(app):
         if not selected(source): continue
         kind=source.parts[2]
         if kind not in ('law','decisions','screen'): raise ValueError('UNKNOWN_TEST_KIND:' + str(source))
+        # Emulator screen tests are owner phone checks now, not a simulated batch gate.
+        if kind=='screen': continue
         target=app/'app/src'/('androidTest' if kind=='screen' else 'test')/'java/public_categories'/source.relative_to('categories')
         target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,target)
     assets=app/'app/src/androidTest/assets'; assets.mkdir(parents=True,exist_ok=True)
