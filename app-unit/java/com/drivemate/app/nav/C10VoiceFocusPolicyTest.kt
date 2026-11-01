@@ -121,4 +121,16 @@ class C10VoiceFocusPolicyTest {
     @Test fun q10_4_repeatDelayIsPastDuplicateSuppression() {
         assertTrue(RepeatPolicy.DELAY_MS > VoiceMessage.DIRECTION_REPEAT_MS)
     }
+
+    /** 10.3: a repeat scheduled before stop or a new route is dropped when it comes due. */
+    @Test fun q10_3_repeatDroppedAfterStopOrNewRoute() {
+        for (reset in listOf("stop", "newRoute")) {
+            val schedule = VoiceSpeechSchedule()
+            var said = 0
+            val repeat = schedule.delayed { said++ }
+            schedule.supersede()
+            repeat()
+            assertEquals("a repeat pending at $reset must not be said", 0, said)
+        }
+    }
 }
