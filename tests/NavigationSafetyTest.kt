@@ -62,4 +62,32 @@ class NavigationSafetyTest {
         assertEquals(0L, budget.leftForFirst())
         assertEquals(0L, budget.leftForExtras(0))
     }
+
+    @Test fun mergeRestorePreservesExistingSettingsAndAddsMissingValues() {
+        val current = mapOf<String, Any?>("avoidTolls" to true, "voiceTiming" to 2)
+        val backup = mapOf<String, Any>("avoidTolls" to false, "voiceTiming" to 0, "night" to 1)
+        val result = com.drivemate.app.data.BackupRestorePlan.values(
+            com.drivemate.app.data.BackupRestorePlan.Mode.MERGE, current, backup)
+        assertEquals(true, result["avoidTolls"])
+        assertEquals(2, result["voiceTiming"])
+        assertEquals(1, result["night"])
+        assertEquals(mapOf<String, Any?>("avoidTolls" to true, "voiceTiming" to 2), current)
+    }
+
+    @Test fun replaceRestoreDropsValuesMissingFromBackup() {
+        val current = mapOf<String, Any?>("avoidTolls" to true, "voiceTiming" to 2)
+        val backup = mapOf<String, Any>("night" to 1)
+        val result = com.drivemate.app.data.BackupRestorePlan.values(
+            com.drivemate.app.data.BackupRestorePlan.Mode.REPLACE, current, backup)
+        assertEquals(backup, result)
+        assertFalse(result.containsKey("avoidTolls"))
+        assertFalse(result.containsKey("voiceTiming"))
+    }
+
+    @Test fun mergeKeepsLearnedSpeedsWhileReplaceImportsThem() {
+        assertFalse(com.drivemate.app.data.BackupRestorePlan.importLearned(
+            com.drivemate.app.data.BackupRestorePlan.Mode.MERGE))
+        assertTrue(com.drivemate.app.data.BackupRestorePlan.importLearned(
+            com.drivemate.app.data.BackupRestorePlan.Mode.REPLACE))
+    }
 }
