@@ -8,7 +8,7 @@ on:
       app_sha:
         description: Full 40-character app commit SHA
         required: true
-        default: '8e7f5b2f88939692cf3df59f57af7ee63a4197d7'
+        default: '3368359c5b6407d018fede6f6c968c1d2ba700ed'
 permissions:
   contents: read
 jobs:
@@ -30,12 +30,12 @@ jobs:
           path: harness
       - name: Validate app revision
         env:
-          APP_SHA: ${{ inputs.app_sha || '8e7f5b2f88939692cf3df59f57af7ee63a4197d7' }}
+          APP_SHA: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
         run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate
-          ref: ${{ inputs.app_sha || '8e7f5b2f88939692cf3df59f57af7ee63a4197d7' }}
+          ref: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
           token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           persist-credentials: false
           path: app-src
@@ -72,7 +72,7 @@ jobs:
           fi
       - name: Publish counts and exact revisions
         env:
-          APP_SHA: ${{ inputs.app_sha || '8e7f5b2f88939692cf3df59f57af7ee63a4197d7' }}
+          APP_SHA: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
         run: |
           python3 - <<'PY'
           import glob, os, xml.etree.ElementTree as ET
@@ -83,7 +83,7 @@ jobs:
               root = ET.parse(path).getroot()
               for key in totals:
                   totals[key] += int(root.get(key, 0))
-          assert totals['tests'] >= 19 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 27 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write('App commit: ' + os.environ['APP_SHA'] + '\n\n')
               out.write('Harness commit: ' + os.environ['GITHUB_SHA'] + '\n\n')
