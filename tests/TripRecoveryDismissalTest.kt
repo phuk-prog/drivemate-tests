@@ -327,4 +327,53 @@ class TripRecoveryDismissalTest {
         assertEquals(listOf(historyTrip(2)), history.all())
     }
 
+
+    private fun recorderFiles(block: (File, com.drivemate.app.nav.DriveRecorder) -> Unit) {
+        val base = RuntimeEnvironment.getApplication()
+        val root = File(base.cacheDir, "synthetic-drive-report-deletion")
+        assertTrue(root.isDirectory || root.mkdirs())
+        val context = object : android.content.ContextWrapper(base) {
+            override fun getFilesDir(): File = root
+        }
+        val recorder = com.drivemate.app.nav.DriveRecorder(context)
+        try { block(File(root, "drives"), recorder) }
+        finally { recorder.stop(); root.deleteRecursively() }
+    }
+
+    @Test fun driveReportDeletionReportsFilesystemFailure() = recorderFiles { dir, recorder ->
+        val obstruction = File(dir, "summary_synthetic.txt")
+        assertTrue(obstruction.mkdir())
+        File(obstruction, "synthetic-obstruction").writeText("occupied")
+        val result = recorder.deleteOlderThan(0, all = true) as Any
+        assertTrue(obstruction.exists())
+        assertEquals(false, result)
+    }
+
+    @Test fun driveReportDeletionConfirmsSuccessfulRemoval() = recorderFiles { dir, recorder ->
+        val report = File(dir, "summary_synthetic.txt")
+        report.writeText("synthetic aggregate report")
+        val result = recorder.deleteOlderThan(0, all = true) as Any
+        assertFalse(report.exists())
+        assertEquals(true, result)
+    }
+
+    @Test fun driveReportDeletionCannotClaimActiveReportWasRemoved() = recorderFiles { dir, recorder ->
+        recorder.start("Synthetic destination")
+        assertTrue(recorder.recording)
+        val result = recorder.deleteOlderThan(0, all = true) as Any
+        assertTrue(recorder.recording)
+        assertTrue(dir.listFiles()!!.any { it.name.startsWith("summary_") })
+        assertEquals(false, result)
+    }
+
+    @Test fun driveReportRetentionPreservesRecentReports() = recorderFiles { dir, recorder ->
+        val old = File(dir, "summary_old.txt").apply { writeText("synthetic old report") }
+        val recent = File(dir, "summary_recent.txt").apply { writeText("synthetic recent report") }
+        assertTrue(old.setLastModified(System.currentTimeMillis() - 10 * 86_400_000L))
+        val result = recorder.deleteOlderThan(5) as Any
+        assertFalse(old.exists())
+        assertTrue(recent.exists())
+        assertEquals(true, result)
+    }
+
 }
