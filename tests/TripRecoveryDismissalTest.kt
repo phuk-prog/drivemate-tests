@@ -181,4 +181,77 @@ class TripRecoveryDismissalTest {
         assertFalse("Incomplete trip deletion must not report success", store.clear())
     }
 
+
+    private fun historyTrip(index: Int) = com.drivemate.app.nav.TripSummary(
+        "Synthetic journey " + index, 1_700_000_000_000L + index * 1_000L,
+        60 + index, 500.0 + index, index,
+        listOf(com.drivemate.app.nav.SpeedingMoment("Synthetic road", 30, 34, 10)),
+        com.drivemate.app.nav.TripSource.SYNTHETIC)
+
+    private fun historyFixture(block: (android.content.SharedPreferences, com.drivemate.app.nav.TripHistory) -> Unit) {
+        val prefs = RuntimeEnvironment.getApplication().getSharedPreferences("synthetic-history", 0)
+        assertTrue(prefs.edit().clear().commit())
+        try { block(prefs, com.drivemate.app.nav.TripHistory(prefs)) }
+        finally { assertTrue(prefs.edit().clear().commit()) }
+    }
+
+    private fun insertMalformedHistoryEntry(prefs: android.content.SharedPreferences) {
+        val existing = org.json.JSONArray(prefs.getString("tripHistory", "[]"))
+        existing.put(1, org.json.JSONObject().put("dest", "Synthetic incomplete entry"))
+        assertTrue(prefs.edit().putString("tripHistory", existing.toString()).commit())
+    }
+
+    @Test fun malformedHistoryEntryDoesNotHideOtherJourneys() = historyFixture { prefs, history ->
+        val older = historyTrip(1)
+        val newer = historyTrip(2)
+        history.add(older)
+        history.add(historyTrip(0))
+        history.add(newer)
+        insertMalformedHistoryEntry(prefs)
+        assertEquals(listOf(newer, older), history.all())
+    }
+
+    @Test fun addingJourneyAfterMalformedEntryPreservesValidHistory() = historyFixture { prefs, history ->
+        val older = historyTrip(1)
+        val newer = historyTrip(2)
+        history.add(older)
+        history.add(historyTrip(0))
+        history.add(newer)
+        insertMalformedHistoryEntry(prefs)
+        val latest = historyTrip(3)
+        history.add(latest)
+        assertEquals(listOf(latest, newer, older), history.all())
+    }
+
+    @Test fun deletingJourneyAfterMalformedEntryPreservesOtherValidHistory() = historyFixture { prefs, history ->
+        val older = historyTrip(1)
+        val newer = historyTrip(2)
+        history.add(older)
+        history.add(historyTrip(0))
+        history.add(newer)
+        insertMalformedHistoryEntry(prefs)
+        history.delete(newer)
+        assertEquals(listOf(older), history.all())
+    }
+
+    @Test fun historyRoundTripPreservesSourceAndSpeedingSummary() = historyFixture { _, history ->
+        val trip = historyTrip(1)
+        history.add(trip)
+        assertEquals(listOf(trip), history.all())
+    }
+
+    @Test fun legacyHistoryWithoutSourceRemainsRecorded() = historyFixture { prefs, history ->
+        val trip = historyTrip(1)
+        history.add(trip)
+        val rows = org.json.JSONArray(prefs.getString("tripHistory", "[]"))
+        rows.getJSONObject(0).remove("src")
+        assertTrue(prefs.edit().putString("tripHistory", rows.toString()).commit())
+        assertEquals(listOf(trip.copy(source = com.drivemate.app.nav.TripSource.RECORDED)), history.all())
+    }
+
+    @Test fun historyStillKeepsNewestFiftyJourneys() = historyFixture { _, history ->
+        (0..50).forEach { history.add(historyTrip(it)) }
+        assertEquals((50 downTo 1).map { historyTrip(it) }, history.all())
+    }
+
 }
