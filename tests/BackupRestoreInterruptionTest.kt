@@ -11,6 +11,7 @@ import com.drivemate.app.data.SettingsRepository
 import com.drivemate.app.data.SettingsStore
 import com.drivemate.app.nav.LearnedSpeeds
 import kotlinx.coroutines.*
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -29,7 +30,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], manifest = Config.NONE, application = Application::class)
 class BackupRestoreInterruptionTest {
-    private enum class Cut { NONE, AFTER_PREFERENCES, BEFORE_AUTHORITY, AFTER_AUTHORITY, REJECT_AUTHORITY }
+    private enum class Cut { NONE, AFTER_PREFERENCES, BEFORE_AUTHORITY, AFTER_AUTHORITY, REJECT_AUTHORITY, RECOVERY_PREFERENCES }
     private class AbruptStop : Error()
 
     private class Fixture {
@@ -55,9 +56,13 @@ class BackupRestoreInterruptionTest {
                 return object : SharedPreferences.Editor by delegate {
                     override fun commit(): Boolean {
                         val saved = delegate.commit()
-                        if (saved && armed && cut == Cut.AFTER_PREFERENCES &&
+                        val stopAfterIncoming = cut == Cut.AFTER_PREFERENCES &&
                             actual.getBoolean("avoidTolls", false) &&
-                            actual.getString("parking", null) == newParking) {
+                            actual.getString("parking", null) == newParking
+                        val stopDuringRecovery = cut == Cut.RECOVERY_PREFERENCES &&
+                            !actual.getBoolean("avoidTolls", false) &&
+                            actual.getString("parking", null) == oldParking
+                        if (saved && armed && (stopAfterIncoming || stopDuringRecovery)) {
                             armed = false
                             throw AbruptStop()
                         }
@@ -132,7 +137,7 @@ class BackupRestoreInterruptionTest {
         suspend fun invalidRestore(): Boolean =
             withTimeout(15_000) { controller.restoreCloud("{}", learned) }
 
-        suspend fun restart() {
+        private suspend fun recreate() {
             sessionScope.cancel()
             withTimeout(15_000) { sessionScope.coroutineContext[Job]!!.join() }
             learned.close()
@@ -140,7 +145,42 @@ class BackupRestoreInterruptionTest {
             stopped = CompletableDeferred()
             sessionScope = scope()
             controller = controller()
+        }
+
+        suspend fun restart() {
+            recreate()
             withTimeout(15_000) { controller.loadSettings(oldSettings) }
+        }
+
+        suspend fun interruptRecovery(point: Cut) {
+            cut = point
+            armed = true
+            recreate()
+            val pending = sessionScope.async { controller.loadSettings(oldSettings) }
+            withTimeout(15_000) { stopped.await() }
+            sessionScope.cancel()
+            withTimeout(15_000) { sessionScope.coroutineContext[Job]!!.join() }
+            pending.cancel()
+            assertFalse("Interruption hook was not consumed", armed)
+        }
+
+        suspend fun checkCorruptCheckpoint() {
+            val checkpoint = File(context.noBackupFilesDir, "portable-restore.rollback")
+            checkpoint.writeText("{")
+            try {
+                try {
+                    restart()
+                    fail("Corrupt recovery checkpoint was ignored")
+                } catch (_: IllegalArgumentException) {
+                    // Rejected before the portable stores or settings authority are changed.
+                }
+                assertFalse(withTimeout(15_000) { controller.restoreCloud(backup(), learned) })
+                assertState(old = true)
+                assertTrue("Corrupt checkpoint must remain available for recovery", checkpoint.exists())
+                assertEquals("{", checkpoint.readText())
+            } finally {
+                checkpoint.delete()
+            }
         }
 
         fun assertState(old: Boolean) {
@@ -201,4 +241,36 @@ class BackupRestoreInterruptionTest {
         f.restart()
         f.assertState(old = true)
     }
+
+    @Test fun interruptedPreferenceRecoveryCanRetryWithoutLosingOriginalState() = scenario { f ->
+        f.interrupt(Cut.BEFORE_AUTHORITY)
+        f.interruptRecovery(Cut.RECOVERY_PREFERENCES)
+        f.restart()
+        f.assertState(old = true)
+        f.restart()
+        f.assertState(old = true)
+    }
+
+    @Test fun interruptedRecoveryBeforeAuthorityCanRetryWithoutLosingOriginalState() = scenario { f ->
+        f.interrupt(Cut.BEFORE_AUTHORITY)
+        f.interruptRecovery(Cut.BEFORE_AUTHORITY)
+        f.restart()
+        f.assertState(old = true)
+        f.restart()
+        f.assertState(old = true)
+    }
+
+    @Test fun interruptedRecoveryAfterAuthorityCanRetryWithoutLosingOriginalState() = scenario { f ->
+        f.interrupt(Cut.BEFORE_AUTHORITY)
+        f.interruptRecovery(Cut.AFTER_AUTHORITY)
+        f.restart()
+        f.assertState(old = true)
+        f.restart()
+        f.assertState(old = true)
+    }
+
+    @Test fun corruptCheckpointBlocksRestoreWithoutChangingExistingData() = scenario { f ->
+        f.checkCorruptCheckpoint()
+    }
+
 }

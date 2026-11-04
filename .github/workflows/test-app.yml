@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "DriveMate verification: ${{ inputs.app_sha || '10aaf2cb52a385f208156a6f71704e36bf0c94fd' }}"
+run-name: "DriveMate verification: ${{ inputs.app_sha || 'd532df432afcdbd9c8334c40673d71a58505b4cb' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '10aaf2cb52a385f208156a6f71704e36bf0c94fd'
+        default: 'd532df432afcdbd9c8334c40673d71a58505b4cb'
 permissions:
   contents: read
 jobs:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || '10aaf2cb52a385f208156a6f71704e36bf0c94fd' }}
+      APP_SHA: ${{ inputs.app_sha || 'd532df432afcdbd9c8334c40673d71a58505b4cb' }}
     steps:
       - name: Require private-source read access
         env:
@@ -139,7 +139,7 @@ jobs:
                   private_tests = list(app.glob('app/src/test/**/*.*')) + list(app.glob('app/src/androidTest/**/*.*'))
                   self.assertFalse([p for p in private_tests if p.is_file()])
                   count = sum(len(re.findall(r'@Test\s+fun ', p.read_text())) for p in (harness / 'tests').glob('*.kt'))
-                  self.assertGreaterEqual(count, 39)
+                  self.assertGreaterEqual(count, 43)
 
           result = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowContracts))
           counts = {'tests': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors)}
@@ -223,7 +223,7 @@ jobs:
           assert reports, 'No test results'
           totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
                     for key in ('tests', 'failures', 'errors', 'skipped')}
-          assert totals['tests'] >= 39 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 43 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           issues = ET.parse('app-src/app/build/reports/lint-results-release.xml').getroot().findall('issue')
           lint = {'errors': sum(i.get('severity') in ('Error', 'Fatal') for i in issues),
                   'warnings': sum(i.get('severity') == 'Warning' for i in issues)}
