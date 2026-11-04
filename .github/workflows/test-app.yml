@@ -190,7 +190,12 @@ jobs:
                               and name.startswith(prefixes) and re.fullmatch(r'[A-Za-z0-9_.$]+', name)})
               lines = sorted({int(line) for line in
                               re.findall(r'BackupRestoreInterruptionTest\.kt:([0-9]+)', text)})
-              return {'exception_types': types, 'public_test_lines': lines}
+              recovery = sorted({filename + ':' + line for filename, line in
+                                 re.findall(r'(PersonalDataController\.kt|BackupManager\.kt):([0-9]+)', text)})
+              cast_types = sorted({name for name in re.findall(r'(?:class )?((?:java|javax|kotlin|android)\.[A-Za-z0-9_.$]+)', node.get('message', ''))
+                                   if len(name) <= 160})
+              return {'exception_types': types, 'public_test_lines': lines,
+                      'known_recovery_lines': recovery, 'standard_cast_types': cast_types}
           reports = glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')
           if not reports:
               print('::error::Build failed before test reports; private compiler output withheld.')
