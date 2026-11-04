@@ -21,6 +21,9 @@ on:
         default: ''
 permissions:
   contents: read
+concurrency:
+  group: test-app-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   verify:
     if: github.ref == 'refs/heads/main'
@@ -256,6 +259,13 @@ jobs:
         with:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Restore emulator system image cache
+        if: env.CHECK_MODE == 'full'
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: ${{ env.ANDROID_HOME }}/system-images/android-28
+          key: android-28-x86_64-default-v1
       - name: Install and boot public Android emulator
         if: env.CHECK_MODE == 'full'
         timeout-minutes: 12
