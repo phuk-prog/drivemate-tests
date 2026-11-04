@@ -3,6 +3,8 @@ package com.drivemate.app
 import com.drivemate.app.controller.NavigationReadiness
 import com.drivemate.app.controller.TripRecovery
 import com.drivemate.app.data.Place
+import com.drivemate.app.data.Route
+import com.drivemate.app.data.RouteStep
 import com.drivemate.app.data.TripStore
 import com.drivemate.app.nav.LatLon
 import org.junit.Assert.*
@@ -58,5 +60,62 @@ class TripRecoveryDismissalTest {
     @Test fun invalidSavedTripCannotBeDismissedAsArrived() {
         val expired = TripStore.Saved(null, destination, emptyList(), now - TripRecovery.MAX_AGE_MS - 1)
         assertFalse(TripRecovery.canDismissAsArrived(expired, destination.pos, 10.0, now, ready()))
+    }
+
+    private val pendingStop = Place("Synthetic stop", "", LatLon(53.49, -2.24))
+
+    private fun routeWithPendingStop(): Route {
+        val start = LatLon(53.50, -2.24)
+        return Route(listOf(start, pendingStop.pos, destination.pos), 2_000.0, 120.0,
+            listOf(
+                RouteStep("Continue", "depart", "", "", 1_000.0, start, duration = 60.0),
+                RouteStep("Stop", "stop", "", "Synthetic stop", 1_000.0, pendingStop.pos, duration = 60.0),
+                RouteStep("Arrive", "arrive", "", "", 0.0, destination.pos)
+            ), "Synthetic route")
+    }
+
+    private fun assertReplansPendingStops(trip: TripStore.Saved, accuracy: Double = 10.0) {
+        val result = TripRecovery.plan(trip, destination.pos, accuracy, now)
+        assertTrue("Unvisited stops must prevent completing the recovered trip", result is TripRecovery.Resume.Replan)
+        result as TripRecovery.Resume.Replan
+        assertEquals(trip.stops, result.stops)
+        assertNull("An ended saved route must not bypass remaining stops", result.fallback)
+    }
+
+    @Test fun pendingStopsAtDestinationRequireReplan() {
+        val trip = TripStore.Saved(null, destination, listOf(pendingStop), saved.savedAt)
+        for (accuracy in listOf(0.1, 10.0, 50.0)) assertReplansPendingStops(trip, accuracy)
+    }
+
+    @Test fun pendingStopsKeepTheirOrderAndRepeatedVisits() {
+        val second = Place("Another synthetic stop", "", LatLon(53.495, -2.245))
+        val trip = TripStore.Saved(null, destination, listOf(pendingStop, second, pendingStop), saved.savedAt)
+        assertReplansPendingStops(trip)
+    }
+
+    @Test fun savedRouteMustNotBypassPendingStopsNearDestination() {
+        val trip = TripStore.Saved(routeWithPendingStop(), destination, listOf(pendingStop), saved.savedAt)
+        assertReplansPendingStops(trip)
+    }
+
+    @Test fun pendingStopsPreventStartupDismissal() {
+        val trip = TripStore.Saved(null, destination, listOf(pendingStop), saved.savedAt)
+        assertFalse(TripRecovery.canDismissAsArrived(trip, destination.pos, 10.0, now, positionReady = true))
+    }
+
+    @Test fun pendingStopAtDestinationIsNotAssumedVisited() {
+        val trip = TripStore.Saved(null, destination, listOf(destination), saved.savedAt)
+        assertReplansPendingStops(trip)
+    }
+
+    @Test fun savedRouteAwayFromDestinationStillResumesNormally() {
+        val route = routeWithPendingStop()
+        val trip = TripStore.Saved(route, destination, listOf(pendingStop), saved.savedAt)
+        val result = TripRecovery.plan(trip, route.points.first(), 10.0, now)
+        assertTrue(result is TripRecovery.Resume.FollowSaved)
+        result as TripRecovery.Resume.FollowSaved
+        assertSame(route, result.route)
+        assertEquals(listOf(pendingStop), result.stops)
+        assertEquals(0, result.stopsPassedOnRoute)
     }
 }
