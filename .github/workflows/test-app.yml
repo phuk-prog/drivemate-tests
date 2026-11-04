@@ -1,3 +1,4 @@
+# Exact restore-recovery verification requested after the previous merge produced no Actions run.
 name: Verify exact DriveMate source without APK packaging
 run-name: "DriveMate verification: ${{ inputs.app_sha || 'd532df432afcdbd9c8334c40673d71a58505b4cb' }}"
 on:
