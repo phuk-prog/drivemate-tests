@@ -323,6 +323,18 @@ jobs:
                       reports.append(text)
                   except Exception:
                       result[flag] = False
+              # The app's own startup-step marker: step name and exception class only.
+              try:
+                  step_text = adb('exec-out', 'run-as', PACKAGE, 'cat',
+                                  'no_backup/private-diagnostics/startup_step.txt', timeout=10)
+                  for line in step_text.splitlines():
+                      key, _, value = line.partition('=')
+                      if key == 'startup_failed_step' and re.fullmatch(r'[a-z_]{1,40}', value):
+                          result['startup_failed_step'] = value
+                      if key == 'exception' and re.fullmatch(r'[A-Za-z0-9_.$]{1,200}', value):
+                          result['startup_exception_class'] = value
+              except Exception:
+                  pass
               try:
                   logs = adb('logcat', '-d', '-t', '4000', '-v', 'brief', timeout=10)
                   result['native_fatal_signal'] = any(text in logs for text in
