@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '6eafee892f9f7a6551486bb505c249d8fbbeddfd' }}"
+run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,6 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '6eafee892f9f7a6551486bb505c249d8fbbeddfd'
       check_mode:
         description: Full verification or focused reproduction (focused never qualifies for an APK)
         type: choice
@@ -27,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || '6eafee892f9f7a6551486bb505c249d8fbbeddfd' }}
+      APP_SHA: ${{ inputs.app_sha }}
       CHECK_MODE: ${{ inputs.check_mode || 'full' }}
       TEST_FILTERS: ${{ inputs.test_filters || '' }}
     steps:
@@ -44,7 +43,12 @@ jobs:
           persist-credentials: false
           path: harness
       - name: Validate exact app revision
-        run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
+        run: |
+          if [ -z "$APP_SHA" ]; then
+            echo "::error::app_sha input is required: dispatch this workflow with the full 40-character app commit SHA. Push runs have no app revision to verify."
+            exit 1
+          fi
+          [[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::app_sha must be a full 40-character lowercase hex commit SHA."; exit 1; }
       - name: Validate verification mode and public test selectors
         run: |
           python3 - <<'PY_SELECTION'

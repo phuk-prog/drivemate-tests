@@ -1,5 +1,5 @@
 name: Verify settings 1.1 with a disposable test APK
-run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '41898662578' }}"
+run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run }}"
 on:
   push:
     branches: [main]
@@ -10,7 +10,6 @@ on:
         description: Successful trusted public full-verification run for the merged app source
         type: string
         required: true
-        default: '41898662578'
 permissions:
   contents: read
   actions: read
@@ -20,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      PUBLIC_RUN_ID: ${{ inputs.verification_run || '41898662578' }}
+      PUBLIC_RUN_ID: ${{ inputs.verification_run }}
     steps:
       - name: Validate trusted full verification and merged source
         id: verified
@@ -28,6 +27,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           APP_TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
         run: |
+          if [ -z "$PUBLIC_RUN_ID" ]; then
+            echo "::error::verification_run input is required: dispatch this workflow with the run ID of a successful public full verification. Push runs have no run to verify."
+            exit 1
+          fi
           python3 - <<'PY_PREREQUISITE'
           import ast, base64, json, os, re, textwrap, urllib.request, urllib.error
           
