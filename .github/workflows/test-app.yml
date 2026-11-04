@@ -1,4 +1,5 @@
-name: Test exact DriveMate app commit
+name: Verify exact DriveMate source without APK packaging
+run-name: "DriveMate verification: ${{ inputs.app_sha || '493d4a3ade88e36092be2416d6465a267e6be22d' }}"
 on:
   push:
     branches: [main]
@@ -6,39 +7,149 @@ on:
   workflow_dispatch:
     inputs:
       app_sha:
-        description: Full 40-character app commit SHA
+        description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '3368359c5b6407d018fede6f6c968c1d2ba700ed'
+        default: '493d4a3ade88e36092be2416d6465a267e6be22d'
 permissions:
   contents: read
 jobs:
-  test:
+  verify:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      APP_SHA: ${{ inputs.app_sha || '493d4a3ade88e36092be2416d6465a267e6be22d' }}
     steps:
       - name: Require private-source read access
         env:
           TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "::error::Set DRIVEMATE_APP_TOKEN to a read-only token restricted to phuk-prog/drivemate contents."
+            echo "::error::A read-only token restricted to private app contents is required."
             exit 1
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
           path: harness
-      - name: Validate app revision
-        env:
-          APP_SHA: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
+      - name: Validate exact app revision
         run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate
-          ref: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
+          ref: ${{ env.APP_SHA }}
           token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           persist-credentials: false
           path: app-src
+      - name: Check workflow contracts
+        run: |
+          python3 - <<'PY_CONTRACTS'
+          import copy, io, json, os, pathlib, re, textwrap, unittest
+
+          app = pathlib.Path('app-src')
+          harness = pathlib.Path('harness')
+          gate_sources = []
+          private_workflows = []
+          for filename in ('build-apk.yml', 'release-apk.yml'):
+              source = (app / '.github/workflows' / filename).read_text()
+              private_workflows.append(source)
+              match = re.search(r"          python3 - <<'PY_VERIFY'\n(.*?)          PY_VERIFY(?:\n|$)", source, re.S)
+              if not match:
+                  raise SystemExit('::error::Private APK verification gate is missing')
+              gate_sources.append(textwrap.dedent(match.group(1)))
+          namespace = {'__name__': 'workflow_contract_test'}
+          exec(compile(gate_sources[0], '<private-apk-verification-gate>', 'exec'), namespace)
+          validate = namespace['validate_public_run']
+          required_steps = namespace['REQUIRED_STEPS']
+
+          def fixture():
+              run = {'id': 123, 'run_attempt': 1, 'repository': {'full_name': 'phuk-prog/drivemate-tests'},
+                     'status': 'completed', 'conclusion': 'success', 'head_branch': 'main', 'event': 'push',
+                     'path': '.github/workflows/test-app.yml', 'display_title': 'DriveMate verification: ' + '1' * 40,
+                     'head_sha': '2' * 40}
+              jobs = {'total_count': 1, 'jobs': [{'name': 'verify', 'conclusion': 'success', 'run_id': 123,
+                      'head_sha': '2' * 40, 'steps': [{'name': name, 'status': 'completed', 'conclusion': 'success'}
+                                                   for name in required_steps]}]}
+              return run, jobs
+
+          class WorkflowContracts(unittest.TestCase):
+              def test_accepts_exact_successful_source(self):
+                  self.assertEqual(validate(*fixture()), ('1' * 40, '2' * 40))
+              def test_rejects_failed_pending_cancelled_or_skipped_runs(self):
+                  for status, conclusion in [('in_progress', None), ('completed', 'failure'),
+                                             ('completed', 'cancelled'), ('completed', 'skipped')]:
+                      run, jobs = fixture(); run.update(status=status, conclusion=conclusion)
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_other_repository(self):
+                  run, jobs = fixture(); run['repository']['full_name'] = 'other/repository'
+                  with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_other_branch_or_untrusted_event(self):
+                  for key, value in [('head_branch', 'unreviewed'), ('event', 'pull_request'), ('event', 'pull_request_target')]:
+                      run, jobs = fixture(); run[key] = value
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_other_workflow(self):
+                  run, jobs = fixture(); run['path'] = '.github/workflows/other.yml'
+                  with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_missing_malformed_or_injected_source_revision(self):
+                  for title in ['', 'DriveMate verification: ' + '1' * 39, 'DriveMate verification: ' + 'A' * 40,
+                                'DriveMate verification: ' + '1' * 40 + '; command']:
+                      run, jobs = fixture(); run['display_title'] = title
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_invalid_harness_revision_or_attempt(self):
+                  for key, value in [('head_sha', 'bad'), ('run_attempt', 0), ('id', -1)]:
+                      run, jobs = fixture(); run[key] = value
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_missing_or_incomplete_jobs(self):
+                  for jobs in [{'total_count': 0, 'jobs': []}, {'total_count': 2, 'jobs': fixture()[1]['jobs']}]:
+                      with self.assertRaises(ValueError): validate(fixture()[0], jobs)
+              def test_rejects_job_from_different_source_or_run(self):
+                  for key, value in [('head_sha', '3' * 40), ('run_id', 124), ('name', 'other'), ('conclusion', 'failure')]:
+                      run, jobs = fixture(); jobs['jobs'][0][key] = value
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_requires_every_public_gate_to_pass(self):
+                  for name in required_steps:
+                      run, jobs = fixture()
+                      next(s for s in jobs['jobs'][0]['steps'] if s['name'] == name)['conclusion'] = 'skipped'
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_rejects_missing_or_duplicate_gate_steps(self):
+                  for duplicate in (False, True):
+                      run, jobs = fixture(); steps = jobs['jobs'][0]['steps']
+                      steps.append(copy.deepcopy(steps[0])) if duplicate else steps.pop()
+                      with self.assertRaises(ValueError): validate(run, jobs)
+              def test_private_apk_workflows_are_manual_and_identical_gates(self):
+                  self.assertTrue(gate_sources[0] == gate_sources[1])
+                  for source in private_workflows:
+                      self.assertTrue(re.search(r'^on:\n  workflow_dispatch:', source, re.M) is not None)
+                      self.assertFalse(re.search(r'^  (push|pull_request|pull_request_target|schedule|workflow_run|repository_dispatch):', source, re.M))
+                      self.assertNotIn(':app:lint', source)
+                      self.assertNotIn(':app:test', source)
+                      self.assertIn('git merge-base --is-ancestor "$APP_SHA" origin/main', source)
+                      self.assertIn('ref: ${{ steps.verify.outputs.app_sha }}', source)
+              def test_public_workflow_has_no_packaging_tasks_or_untrusted_events(self):
+                  source = (harness / '.github/workflows/test-app.yml').read_text()
+                  self.assertFalse(re.search(r':app:(?:assemble|bundle|package)[A-Za-z]*', source))
+                  event_header = source.split('\njobs:\n', 1)[0]
+                  self.assertNotIn('pull_request_target:', event_header)
+                  self.assertNotIn('pull_request:', event_header)
+                  self.assertIn("if: github.ref == 'refs/heads/main'", source.split('    steps:', 1)[0])
+                  test_step = source.split('      - name: Run tests and lint without publishing private output\n', 1)[1]
+                  test_step = test_step.split('      - name: Confirm no APK was created\n', 1)[0]
+                  self.assertIn(':app:testDebugUnitTest :app:lintRelease', test_step)
+              def test_all_test_sources_are_public(self):
+                  private_tests = list(app.glob('app/src/test/**/*.*')) + list(app.glob('app/src/androidTest/**/*.*'))
+                  self.assertFalse([p for p in private_tests if p.is_file()])
+                  count = sum(len(re.findall(r'@Test\s+fun ', p.read_text())) for p in (harness / 'tests').glob('*.kt'))
+                  self.assertGreaterEqual(count, 27)
+
+          result = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowContracts))
+          counts = {'tests': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors)}
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'contract-results.json').write_text(json.dumps(counts))
+          print('Workflow contract checks: ' + json.dumps(counts))
+          if not result.wasSuccessful():
+              for case, _ in result.failures + result.errors:
+                  print('::error::Workflow contract failed: ' + case.id().split('.')[-1])
+              raise SystemExit(1)
+          PY_CONTRACTS
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin
@@ -52,45 +163,70 @@ jobs:
           mkdir -p app-src/app/src/test/java/com/drivemate/app
           cp harness/tests/*.kt app-src/app/src/test/java/com/drivemate/app/
           printf '\ndependencies { testImplementation("junit:junit:4.13.2") }\n' >> app-src/app/build.gradle.kts
-      - name: Run tests without publishing private compiler output
+      - name: Run tests and lint without publishing private output
         working-directory: app-src
         run: |
-          if ! ./gradlew :app:testDebugUnitTest --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-test-build.log" 2>&1; then
-            python3 - <<'PY_FAILURE'
+          if ! ./gradlew :app:testDebugUnitTest :app:lintRelease --continue --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-verification.log" 2>&1; then
+          python3 - <<'PY_FAILURE'
           import glob, re, xml.etree.ElementTree as ET
           reports = glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')
           if not reports:
-              print('::error::Build failed before producing test reports; private compiler output withheld.')
+              print('::error::Build failed before test reports; private compiler output withheld.')
           for path in reports:
               for case in ET.parse(path).getroot().iter('testcase'):
                   if case.find('failure') is not None or case.find('error') is not None:
                       name = case.get('name', '')
                       if re.fullmatch(r'[A-Za-z0-9_]+', name):
                           print('::error::Regression failed: ' + name)
+          lint = glob.glob('app/build/reports/lint-results-release.xml')
+          if lint:
+              issues = ET.parse(lint[0]).getroot().findall('issue')
+              errors = sum(i.get('severity') in ('Error', 'Fatal') for i in issues)
+              print('Lint error count: ' + str(errors))
+          else:
+              print('Lint report unavailable; private compiler output withheld.')
           PY_FAILURE
             exit 1
           fi
-      - name: Publish counts and exact revisions
-        env:
-          APP_SHA: ${{ inputs.app_sha || '3368359c5b6407d018fede6f6c968c1d2ba700ed' }}
+      - name: Confirm no APK was created
         run: |
-          python3 - <<'PY'
-          import glob, os, xml.etree.ElementTree as ET
+          python3 - <<'PY_NO_APK'
+          import pathlib
+          assert not any(pathlib.Path('app-src').rglob('*.apk')), 'Unexpected APK: public verification must not package APKs'
+          PY_NO_APK
+      - name: Publish sanitized results
+        run: |
+          python3 - <<'PY_RESULTS'
+          import glob, json, os, pathlib, xml.etree.ElementTree as ET
           reports = glob.glob('app-src/app/build/test-results/testDebugUnitTest/TEST-*.xml')
           assert reports, 'No test results'
-          totals = {k: 0 for k in ('tests', 'failures', 'errors', 'skipped')}
-          for path in reports:
-              root = ET.parse(path).getroot()
-              for key in totals:
-                  totals[key] += int(root.get(key, 0))
+          totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
+                    for key in ('tests', 'failures', 'errors', 'skipped')}
           assert totals['tests'] >= 27 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write('App commit: ' + os.environ['APP_SHA'] + '\n\n')
-              out.write('Harness commit: ' + os.environ['GITHUB_SHA'] + '\n\n')
-              out.write(str(totals) + '\n')
-          PY
-      - name: Remove private checkout and build output
+          issues = ET.parse('app-src/app/build/reports/lint-results-release.xml').getroot().findall('issue')
+          lint = {'errors': sum(i.get('severity') in ('Error', 'Fatal') for i in issues),
+                  'warnings': sum(i.get('severity') == 'Warning' for i in issues)}
+          assert lint['errors'] == 0, lint
+          contracts = json.loads(pathlib.Path(os.environ['RUNNER_TEMP'], 'contract-results.json').read_text())
+          assert contracts['tests'] >= 14 and contracts['failures'] == contracts['errors'] == 0, contracts
+          result = {'app_sha': os.environ['APP_SHA'], 'harness_sha': os.environ['GITHUB_SHA'],
+                    'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                    'unit_tests': totals, 'workflow_contracts': contracts, 'lint': lint, 'apk_created': False}
+          pathlib.Path('public-results').mkdir(exist_ok=True)
+          pathlib.Path('public-results/verification-result.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, sort_keys=True))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('```json\n' + json.dumps(result, indent=2) + '\n```\n')
+          PY_RESULTS
+      - name: Upload sanitized results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DriveMate-verification-results
+          path: public-results/verification-result.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove private checkout and compiler output
         if: always()
         run: |
           rm -rf "$GITHUB_WORKSPACE/app-src"
-          rm -f "$RUNNER_TEMP/private-test-build.log"
+          rm -f "$RUNNER_TEMP/private-verification.log"
