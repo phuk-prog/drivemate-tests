@@ -9,7 +9,15 @@ import com.drivemate.app.data.TripStore
 import com.drivemate.app.nav.LatLon
 import org.junit.Assert.*
 import org.junit.Test
+import android.app.Application
+import java.io.File
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = Application::class)
 class TripRecoveryDismissalTest {
     private val now = 1_001_000L
     private val destination = Place("Synthetic destination", "", LatLon(53.48, -2.24))
@@ -118,4 +126,59 @@ class TripRecoveryDismissalTest {
         assertEquals(listOf(pendingStop), result.stops)
         assertEquals(0, result.stopsPassedOnRoute)
     }
+
+    private fun tripFiles(block: (File, TripStore) -> Unit) {
+        val directory = File(RuntimeEnvironment.getApplication().cacheDir, "synthetic-trip-persistence")
+        assertTrue(directory.isDirectory || directory.mkdirs())
+        val file = File(directory, "current-trip.json")
+        try { block(file, TripStore(file)) } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun clearingStoppedTripRemovesInterruptedStagingFile() = tripFiles { file, store ->
+        val staging = File(file.path + ".part")
+        staging.writeText("synthetic unfinished trip data")
+        assertTrue(store.clear())
+        assertFalse("Ended-trip staging data must be removed", staging.exists())
+        assertNull(store.load())
+    }
+
+    @Test fun failedTripSaveDoesNotRetainPrivateStagingData() = tripFiles { file, store ->
+        // A nonempty destination directory deterministically rejects rename without root/permissions tricks.
+        assertTrue(file.mkdir())
+        File(file, "synthetic obstruction").writeText("occupied")
+        assertFalse(store.save(routeWithPendingStop(), destination, listOf(pendingStop)))
+        assertFalse("Failed saves must clean their staging data", File(file.path + ".part").exists())
+    }
+
+    @Test fun ordinaryTripSaveAndClearPreserveRecoveryUntilCleared() = tripFiles { file, store ->
+        val stops = listOf(pendingStop, destination, pendingStop)
+        assertTrue(store.save(routeWithPendingStop(), destination, stops))
+        val loaded = store.load()
+        assertNotNull(loaded)
+        assertEquals(destination, loaded!!.destination)
+        assertEquals(stops, loaded.stops)
+        assertEquals(routeWithPendingStop().points, loaded.route!!.points)
+        assertFalse(File(file.path + ".part").exists())
+        assertTrue(store.clear())
+        assertNull(store.load())
+        assertFalse(file.exists())
+    }
+
+    @Test fun failedStagingWritePreservesPreviousRecoverableTrip() = tripFiles { file, store ->
+        assertTrue(store.save(routeWithPendingStop(), destination, listOf(pendingStop)))
+        val staging = File(file.path + ".part")
+        assertTrue(staging.mkdir())
+        File(staging, "synthetic obstruction").writeText("occupied")
+        assertFalse(store.save(routeWithPendingStop(), pendingStop, emptyList()))
+        assertEquals(destination, store.load()!!.destination)
+        assertEquals(listOf(pendingStop), store.load()!!.stops)
+    }
+
+    @Test fun clearReportsFailureIfStagingDataCannotBeRemoved() = tripFiles { file, store ->
+        val staging = File(file.path + ".part")
+        assertTrue(staging.mkdir())
+        File(staging, "synthetic obstruction").writeText("occupied")
+        assertFalse("Incomplete trip deletion must not report success", store.clear())
+    }
+
 }
