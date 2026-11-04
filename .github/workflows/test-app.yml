@@ -128,6 +128,22 @@ jobs:
           exec(compile(ast.Module(body=[emulator_function], type_ignores=[]), '<emulator-evidence-gate>', 'exec'), emulator_namespace)
           validate_emulator = emulator_namespace['validate_emulator_result']
 
+          PACKAGING = re.compile(r'\b(?:assemble|bundle|package)[A-Z][A-Za-z]*|build/outputs/(?:apk|bundle)\b')
+          # Reviewed exceptions only. Each entry must name a real APK-producing workflow and state why.
+          PACKAGING_ALLOWLIST = {
+              'settings-ui.yml': 'Intentional: builds one disposable debug test APK for the Settings 1.1 emulator check; '
+                                 'the APK is deleted in the same run and never published (debug-variant assemble task).',
+          }
+          def packaging_hits(text):
+              return sorted({match.group(0) for match in PACKAGING.finditer(text)})
+          def packaging_violations(files, allowlist):
+              found = {}
+              for name, text in files.items():
+                  hits = packaging_hits(text)
+                  if hits and name not in allowlist:
+                      found[name] = hits
+              return found
+
           class WorkflowContracts(unittest.TestCase):
               def test_accepts_booted_emulator_without_claiming_app_acceptance(self):
                   evidence = {'api_level': 28, 'abi': 'x86_64', 'boot_completed': True,
@@ -238,6 +254,24 @@ jobs:
                   self.assertFalse([p for p in private_tests if p.is_file()])
                   count = sum(len(re.findall(r'@Test\s+fun ', p.read_text())) for p in (harness / 'tests').glob('*.kt'))
                   self.assertGreaterEqual(count, 62)
+              def test_apk_packaging_only_in_reviewed_allowlisted_workflows(self):
+                  paths = sorted((harness / '.github/workflows').glob('*.yml'))
+                  self.assertTrue(paths)
+                  files = {path.name: path.read_text() for path in paths}
+                  self.assertEqual(packaging_violations(files, PACKAGING_ALLOWLIST), {})
+                  for name, reason in PACKAGING_ALLOWLIST.items():
+                      self.assertTrue(reason.strip())
+                      self.assertTrue(packaging_hits(files.get(name, '')), 'Stale packaging allowlist entry: ' + name)
+              def test_packaging_self_test_rejects_fixture_and_accepts_allowlisted_file(self):
+                  # Tokens are split so this workflow file does not match its own scanner.
+                  fixtures = ['run: ./gradlew :app:' + 'assemble' + 'Debug', 'run: ./gradlew :app:' + 'assemble' + 'Release',
+                              'run: ./gradlew :app:' + 'bundle' + 'Release', 'run: ./gradlew :app:' + 'package' + 'Debug',
+                              'path: app/build/outputs/' + 'apk/debug/app-debug.apk']
+                  for text in fixtures:
+                      self.assertEqual(packaging_violations({'fixture.yml': text}, PACKAGING_ALLOWLIST), {'fixture.yml': packaging_hits(text)})
+                      self.assertTrue(packaging_hits(text))
+                  self.assertEqual(packaging_violations({'settings-ui.yml': fixtures[0]}, PACKAGING_ALLOWLIST), {})
+                  self.assertEqual(packaging_violations({'clean.yml': 'run: ./gradlew :app:testDebugUnitTest\n'}, PACKAGING_ALLOWLIST), {})
 
           result = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowContracts))
           counts = {'tests': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors)}
