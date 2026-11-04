@@ -396,4 +396,49 @@ class BackupRestoreInterruptionTest {
         }
     }
 
+
+    private suspend fun acceptedSettingsChange(controller: PersonalDataController, requested: Settings): Settings {
+        val result = CompletableDeferred<Settings>()
+        controller.saveSettings(requested,
+            onSaved = { result.complete(it) },
+            onFailed = { result.completeExceptionally(AssertionError("Synthetic settings change was rejected")) })
+        return withTimeout(15_000) { result.await() }
+    }
+
+    @Test fun settingToggleCanChangeAndChangeBackWithoutChangingOtherFields() = runBlocking {
+        settingsWriteFailureFixture { controller, _, authority, _ ->
+            val before = controller.currentSettings()
+            val changed = before.copy(autoZoom = !before.autoZoom)
+            assertEquals(changed, acceptedSettingsChange(controller, changed))
+            assertEquals(changed, controller.currentSettings())
+            assertEquals(changed, authority())
+            assertEquals(before, acceptedSettingsChange(controller, before))
+            assertEquals(before, controller.currentSettings())
+            assertEquals(before, authority())
+        }
+    }
+
+    @Test fun settingChoiceAcceptsSelectedValueWithoutChangingOtherFields() = runBlocking {
+        settingsWriteFailureFixture { controller, _, authority, _ ->
+            val before = controller.currentSettings()
+            val changed = before.copy(mapView = com.drivemate.app.data.MapView.NORTH_UP)
+            assertNotEquals(before.mapView, changed.mapView)
+            assertEquals(changed, acceptedSettingsChange(controller, changed))
+            assertEquals(changed, controller.currentSettings())
+            assertEquals(changed, authority())
+        }
+    }
+
+    @Test fun numericSettingAcceptsEachChosenValueWithoutChangingOtherFields() = runBlocking {
+        settingsWriteFailureFixture { controller, _, authority, _ ->
+            val before = controller.currentSettings()
+            for (timing in listOf(0, 2)) {
+                val changed = before.copy(voiceTiming = timing)
+                assertEquals(changed, acceptedSettingsChange(controller, changed))
+                assertEquals(changed, controller.currentSettings())
+                assertEquals(changed, authority())
+            }
+        }
+    }
+
 }

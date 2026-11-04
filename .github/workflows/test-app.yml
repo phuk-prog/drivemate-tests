@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || 'abcc7dc69d864efe2fb52d256fd10dfedd95d8e8' }}"
+run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '6eafee892f9f7a6551486bb505c249d8fbbeddfd' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: 'abcc7dc69d864efe2fb52d256fd10dfedd95d8e8'
+        default: '6eafee892f9f7a6551486bb505c249d8fbbeddfd'
       check_mode:
         description: Full verification or focused reproduction (focused never qualifies for an APK)
         type: choice
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || 'abcc7dc69d864efe2fb52d256fd10dfedd95d8e8' }}
+      APP_SHA: ${{ inputs.app_sha || '6eafee892f9f7a6551486bb505c249d8fbbeddfd' }}
       CHECK_MODE: ${{ inputs.check_mode || 'full' }}
       TEST_FILTERS: ${{ inputs.test_filters || '' }}
     steps:
@@ -447,7 +447,7 @@ jobs:
           assert reports, 'No test results'
           totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
                     for key in ('tests', 'failures', 'errors', 'skipped')}
-          assert totals['tests'] >= 70 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 73 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           issues = ET.parse('app-src/app/build/reports/lint-results-release.xml').getroot().findall('issue')
           lint = {'errors': sum(i.get('severity') in ('Error', 'Fatal') for i in issues),
                   'warnings': sum(i.get('severity') == 'Warning' for i in issues)}
