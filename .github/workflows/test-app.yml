@@ -8,7 +8,7 @@ on:
       app_sha:
         description: Full 40-character app commit SHA
         required: true
-        default: '4d87cdceeae2a252472f7ccbd410d1f44dc053c6'
+        default: 'fcaeae616229f52f495743cf2d846d5fc8d5b799'
 permissions:
   contents: read
 jobs:
@@ -30,12 +30,12 @@ jobs:
           path: harness
       - name: Validate app revision
         env:
-          APP_SHA: ${{ inputs.app_sha || '4d87cdceeae2a252472f7ccbd410d1f44dc053c6' }}
+          APP_SHA: ${{ inputs.app_sha || 'fcaeae616229f52f495743cf2d846d5fc8d5b799' }}
         run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate
-          ref: ${{ inputs.app_sha || '4d87cdceeae2a252472f7ccbd410d1f44dc053c6' }}
+          ref: ${{ inputs.app_sha || 'fcaeae616229f52f495743cf2d846d5fc8d5b799' }}
           token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
           persist-credentials: false
           path: app-src
@@ -72,7 +72,7 @@ jobs:
           fi
       - name: Publish counts and exact revisions
         env:
-          APP_SHA: ${{ inputs.app_sha || '4d87cdceeae2a252472f7ccbd410d1f44dc053c6' }}
+          APP_SHA: ${{ inputs.app_sha || 'fcaeae616229f52f495743cf2d846d5fc8d5b799' }}
         run: |
           python3 - <<'PY'
           import glob, os, xml.etree.ElementTree as ET
