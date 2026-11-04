@@ -340,6 +340,9 @@ class BackupRestoreInterruptionTest {
             rejectedSettingsWrite(controller, changed)
             assertEquals(changed, authority())
             assertEquals(changed, controller.currentSettings())
+            assertFalse(Settings.load(context.getSharedPreferences("drivemate", 0)).avoidTolls)
+            assertTrue(runCatching { withTimeout(15_000) { controller.flush() } }
+                .exceptionOrNull() is IllegalStateException)
             reject(false, false)
             withTimeout(15_000) { controller.flush() }
             assertTrue(Settings.load(context.getSharedPreferences("drivemate", 0)).avoidTolls)
