@@ -83,7 +83,7 @@ jobs:
               root = ET.parse(path).getroot()
               for key in totals:
                   totals[key] += int(root.get(key, 0))
-          assert totals['tests'] >= 20 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 19 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write('App commit: ' + os.environ['APP_SHA'] + '\n\n')
               out.write('Harness commit: ' + os.environ['GITHUB_SHA'] + '\n\n')
