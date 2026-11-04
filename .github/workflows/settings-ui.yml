@@ -376,11 +376,14 @@ jobs:
               result['known_startup_lines'] = sorted({name + ':' + line for name, line in
                   re.findall(r'com\.drivemate\.app\.(MainActivity|controller\.NavigationSession|map\.MapController)\.[A-Za-z0-9_.$<>-]+(?:\([^:\n]+:|:)([0-9]{1,5})', combined)})
               # Class names only (no methods, lines or messages) for the first app frames in the crash.
+              # Any com.drivemate package, with or without a leading "at"; counts show whether frames were found.
+              drivemate_frames = re.findall(r'(com\.drivemate\.[A-Za-z0-9_.$]{1,200})\.[A-Za-z0-9_$<>-]{1,120}\(', combined)
               app_frames = []
-              for frame in re.findall(r'\bat (com\.drivemate\.app\.[A-Za-z0-9_.$]{1,200})\.[A-Za-z0-9_$<>-]{1,120}\(', combined):
+              for frame in drivemate_frames:
                   if frame not in app_frames:
                       app_frames.append(frame)
               result['crash_app_frame_classes'] = app_frames[:5]
+              result['crash_drivemate_frame_count'] = len(drivemate_frames)
               try:
                   memory = adb('shell', 'cat', '/proc/meminfo', timeout=10)
                   for field, name in [('MemTotal', 'guest_total_mb'), ('MemAvailable', 'guest_available_mb')]:
