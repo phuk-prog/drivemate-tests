@@ -1,9 +1,6 @@
 name: Verify settings 1.1 with a disposable test APK
 run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '41898662578' }}"
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/settings-ui.yml']
   workflow_dispatch:
     inputs:
       verification_run:
