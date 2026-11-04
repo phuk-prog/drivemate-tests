@@ -21,8 +21,6 @@ jobs:
     timeout-minutes: 35
     env:
       PUBLIC_RUN_ID: ${{ inputs.verification_run || '41898662578' }}
-      ANDROID_USER_HOME: ${{ runner.temp }}/settings-ui-home
-      ANDROID_AVD_HOME: ${{ runner.temp }}/settings-ui-home/avd
     steps:
       - name: Validate trusted full verification and merged source
         id: verified
@@ -116,6 +114,10 @@ jobs:
               except Exception:
                   raise SystemExit('::error::UI prerequisite validation failed; details withheld')
           PY_PREREQUISITE
+      - name: Prepare disposable Android workspace
+        run: |
+          echo "ANDROID_USER_HOME=$RUNNER_TEMP/settings-ui-home" >> "$GITHUB_ENV"
+          echo "ANDROID_AVD_HOME=$RUNNER_TEMP/settings-ui-home/avd" >> "$GITHUB_ENV"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate
@@ -406,7 +408,7 @@ jobs:
         run: |
           set -euo pipefail
           log="$RUNNER_TEMP/settings-ui-cleanup.log"
-          if [ -n "${ANDROID_HOME:-}" ]; then
+          if [ -f "$RUNNER_TEMP/settings-ui-emulator.pid" ] && [ -n "${ANDROID_HOME:-}" ]; then
             timeout 20 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 uninstall com.drivemate.app >> "$log" 2>&1 || true
             timeout 10 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill >> "$log" 2>&1 || true
           fi
@@ -414,7 +416,7 @@ jobs:
             pid="$(cat "$RUNNER_TEMP/settings-ui-emulator.pid")"
             if [[ "$pid" =~ ^[0-9]+$ ]]; then kill "$pid" 2>/dev/null || true; fi
           fi
-          if ! rm -rf "$GITHUB_WORKSPACE/app-src" "$ANDROID_USER_HOME" >> "$log" 2>&1; then
+          if ! rm -rf "$GITHUB_WORKSPACE/app-src" "$RUNNER_TEMP/settings-ui-home" >> "$log" 2>&1; then
             echo "::error::Private UI output cleanup failed; raw output withheld"
             exit 1
           fi
