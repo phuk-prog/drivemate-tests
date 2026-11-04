@@ -194,10 +194,16 @@ jobs:
           SERIAL = 'emulator-5554'
           phase = 'initialization'
           
+          class AdbCommandError(RuntimeError):
+              def __init__(self, code, output):
+                  super().__init__('ADB command failed')
+                  self.code = code
+                  self.output = output
+          
           def adb(*args, timeout=35):
               result = subprocess.run([ADB, '-s', SERIAL, *args], capture_output=True, timeout=timeout)
               if result.returncode != 0:
-                  raise RuntimeError('ADB command failed')
+                  raise AdbCommandError(result.returncode, (result.stdout + result.stderr).decode('utf-8', errors='replace'))
               return result.stdout.decode('utf-8', errors='replace')
           
           def dump():
@@ -276,9 +282,19 @@ jobs:
           def unchanged(before, after, keys):
               return all(key in before and key in after and before[key] == after[key] for key in keys)
           
-          def safe_diagnostics():
+          def safe_diagnostics(error=None):
               result = {'ui_dump_available': False, 'app_process_running': False,
                         'ui_auto_zoom': None, 'ui_battery_saver': None, 'saved_auto_zoom': None}
+              if isinstance(error, subprocess.TimeoutExpired):
+                  result['failure_kind'] = 'command_timeout'
+              elif isinstance(error, AdbCommandError):
+                  result['failure_kind'] = 'adb_exit'
+                  result['command_exit_code'] = error.code
+                  result['activity_not_found'] = 'Error type 3' in error.output
+              elif isinstance(error, AssertionError):
+                  result['failure_kind'] = 'assertion'
+              else:
+                  result['failure_kind'] = 'other'
               try:
                   root = dump()
                   result['ui_dump_available'] = True
@@ -300,13 +316,65 @@ jobs:
                   result['app_process_running'] = bool(adb('shell', 'pidof', PACKAGE, timeout=10).strip())
               except Exception:
                   pass
+              reports = []
+              for filename, flag in [('last_crash.txt', 'private_crash_report_present'),
+                                     ('last_freeze.txt', 'private_freeze_report_present')]:
+                  try:
+                      text = adb('exec-out', 'run-as', PACKAGE, 'cat',
+                                 'no_backup/private-diagnostics/' + filename, timeout=10)
+                      result[flag] = 'Report kind:' in text
+                      reports.append(text)
+                  except Exception:
+                      result[flag] = False
+              try:
+                  logs = adb('logcat', '-d', '-t', '4000', '-v', 'brief', timeout=10)
+                  result['native_fatal_signal'] = any(text in logs for text in
+                                                     ('Fatal signal 6 ', 'Fatal signal 7 ', 'Fatal signal 11 '))
+                  result['app_kill_observed'] = any(PACKAGE in line and ('Killing ' in line or 'has died' in line)
+                                                    for line in logs.splitlines())
+                  result['app_low_memory_kill'] = any('com.drivemate' in line and
+                      any(label in line.lower() for label in ('lowmemorykiller', 'lmkd', 'low memory'))
+                      for line in logs.splitlines())
+                  reports.append(logs)
+              except Exception:
+                  pass
               try:
                   crash = adb('logcat', '-b', 'crash', '-d', '-v', 'brief', timeout=10)
-                  allowed = ('java.lang.IllegalStateException', 'java.lang.RuntimeException',
-                             'java.lang.NullPointerException', 'java.lang.SecurityException',
-                             'java.lang.UnsatisfiedLinkError', 'java.lang.OutOfMemoryError',
-                             'java.lang.ExceptionInInitializerError', 'java.lang.VerifyError')
-                  result['standard_crash_types'] = [name for name in allowed if name in crash]
+                  reports.append(crash)
+              except Exception:
+                  pass
+              try:
+                  anr = adb('shell', 'dumpsys', 'activity', 'lastanr', timeout=10)
+                  result['app_anr_recorded'] = PACKAGE in anr and 'ANR' in anr
+                  reports.append(anr)
+              except Exception:
+                  pass
+              combined = '\n'.join(reports)
+              allowed = ('java.lang.IllegalStateException', 'java.lang.RuntimeException',
+                         'java.lang.NullPointerException', 'java.lang.SecurityException',
+                         'java.lang.IllegalArgumentException', 'java.lang.UnsupportedOperationException',
+                         'java.lang.UnsatisfiedLinkError', 'java.lang.OutOfMemoryError',
+                         'java.lang.ExceptionInInitializerError', 'java.lang.VerifyError',
+                         'java.lang.NoSuchMethodError', 'java.lang.NoClassDefFoundError',
+                         'java.lang.ClassCastException', 'java.lang.AbstractMethodError',
+                         'java.lang.IncompatibleClassChangeError', 'java.lang.IllegalAccessError',
+                         'org.maplibre.android.exceptions.MapLibreConfigurationException',
+                         'org.maplibre.android.exceptions.CalledFromWorkerThreadException',
+                         'android.view.InflateException',
+                         'android.content.res.Resources$NotFoundException',
+                         'android.os.NetworkOnMainThreadException', 'java.util.concurrent.TimeoutException',
+                         'kotlin.UninitializedPropertyAccessException')
+              result['standard_crash_types'] = [name for name in allowed if name in combined]
+              libraries = ('libmaplibre.so', 'libmapbox-gl.so', 'libEGL.so', 'libGLESv2.so', 'libvulkan.so')
+              result['known_native_libraries'] = [name for name in libraries if name in combined]
+              result['known_startup_lines'] = sorted({name + ':' + line for name, line in
+                  re.findall(r'com\.drivemate\.app\.(MainActivity|controller\.NavigationSession|map\.MapController)\.[A-Za-z0-9_.$<>-]+(?:\([^:\n]+:|:)([0-9]{1,5})', combined)})
+              try:
+                  memory = adb('shell', 'cat', '/proc/meminfo', timeout=10)
+                  for field, name in [('MemTotal', 'guest_total_mb'), ('MemAvailable', 'guest_available_mb')]:
+                      match = re.search(r'^' + field + r':\s+([0-9]+)', memory, re.M)
+                      if match:
+                          result[name] = int(match.group(1)) // 1024
               except Exception:
                   pass
               return result
@@ -398,8 +466,8 @@ jobs:
           if __name__ == '__main__':
               try:
                   main()
-              except Exception:
-                  print('Safe UI diagnostics: ' + json.dumps(safe_diagnostics(), sort_keys=True))
+              except Exception as error:
+                  print('Safe UI diagnostics: ' + json.dumps(safe_diagnostics(error), sort_keys=True))
                   print('::error::Settings UI 1.1 failed during ' + phase + '; raw output withheld')
                   raise SystemExit(1)
           PY_SETTINGS_UI
