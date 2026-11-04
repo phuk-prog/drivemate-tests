@@ -273,4 +273,115 @@ class BackupRestoreInterruptionTest {
         f.checkCorruptCheckpoint()
     }
 
+
+    private suspend fun settingsWriteFailureFixture(block: suspend (
+        PersonalDataController, (Boolean, Boolean) -> Unit, () -> Settings, Context
+    ) -> Unit) {
+        val base = RuntimeEnvironment.getApplication()
+        val actual = base.getSharedPreferences("drivemate", Context.MODE_PRIVATE)
+        assertTrue(actual.edit().clear().commit())
+        var rejectMirror = false
+        var rejectAuthority = false
+        var authoritative = Settings()
+        val hooked = object : SharedPreferences by actual {
+            override fun edit(): SharedPreferences.Editor {
+                val delegate = actual.edit()
+                return object : SharedPreferences.Editor by delegate {
+                    override fun commit(): Boolean = if (rejectMirror) false else delegate.commit()
+                }
+            }
+        }
+        val context = object : ContextWrapper(base) {
+            override fun getApplicationContext(): Context = this
+            override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
+                if (name == "drivemate") hooked else super.getSharedPreferences(name, mode)
+        }
+        val authority = object : SettingsStore {
+            override suspend fun load(fallback: Settings) = authoritative
+            override suspend fun save(settings: Settings) {
+                check(!rejectAuthority) { "Synthetic rejected authority write" }
+                authoritative = settings
+            }
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val controller = PersonalDataController(context, scope, {}, authority)
+        try {
+            withTimeout(15_000) { controller.loadSettings(Settings()) }
+            block(controller, { mirror, store -> rejectMirror = mirror; rejectAuthority = store },
+                { authoritative }, context)
+        } finally {
+            scope.cancel()
+            withTimeout(15_000) { scope.coroutineContext[Job]!!.join() }
+            assertTrue(actual.edit().clear().commit())
+        }
+    }
+
+    private suspend fun rejectedSettingsWrite(controller: PersonalDataController, settings: Settings) {
+        val rejected = CompletableDeferred<Unit>()
+        controller.saveSettings(settings,
+            onSaved = { rejected.completeExceptionally(AssertionError("Expected a rejected partial write")) },
+            onFailed = { rejected.complete(Unit) })
+        withTimeout(15_000) { rejected.await() }
+    }
+
+    @Test fun committedSettingsMirrorCanBeRepairedByFlush() = runBlocking {
+        settingsWriteFailureFixture { controller, reject, authority, context ->
+            val changed = Settings(avoidTolls = true)
+            reject(true, false)
+            rejectedSettingsWrite(controller, changed)
+            assertEquals(changed, authority())
+            assertEquals(changed, controller.currentSettings())
+            reject(false, false)
+            withTimeout(15_000) { controller.flush() }
+            assertTrue(Settings.load(context.getSharedPreferences("drivemate", 0)).avoidTolls)
+        }
+    }
+
+    @Test fun cloudBackupRetriesMirrorAfterCommittedSettingsWrite() = runBlocking {
+        settingsWriteFailureFixture { controller, reject, authority, context ->
+            val changed = Settings(avoidMotorways = true)
+            reject(true, false)
+            rejectedSettingsWrite(controller, changed)
+            assertEquals(changed, authority())
+            reject(false, false)
+            val learned = LearnedSpeeds(context)
+            try {
+                val text = withTimeout(15_000) { controller.exportCloud(learned) }
+                assertTrue(JSONObject(text).getJSONObject("preferences")
+                    .getJSONObject("avoidMotorways").getBoolean("v"))
+            } finally { learned.close() }
+        }
+    }
+
+    @Test fun rejectedAuthoritativeSettingsStillBlockFlushAndBackup() = runBlocking {
+        settingsWriteFailureFixture { controller, reject, authority, context ->
+            val before = authority()
+            reject(false, true)
+            rejectedSettingsWrite(controller, Settings(avoidTolls = true))
+            assertEquals(before, authority())
+            assertEquals(before, controller.currentSettings())
+            reject(false, false)
+            assertTrue(runCatching { withTimeout(15_000) { controller.flush() } }.exceptionOrNull() is IllegalStateException)
+            val learned = LearnedSpeeds(context)
+            try {
+                assertTrue(runCatching { withTimeout(15_000) { controller.exportCloud(learned) } }
+                    .exceptionOrNull() is IllegalStateException)
+            } finally { learned.close() }
+        }
+    }
+
+    @Test fun successfulSettingsRetryClearsAuthoritativeFailure() = runBlocking {
+        settingsWriteFailureFixture { controller, reject, authority, _ ->
+            val changed = Settings(avoidTolls = true)
+            reject(false, true)
+            rejectedSettingsWrite(controller, changed)
+            reject(false, false)
+            val accepted = CompletableDeferred<Unit>()
+            controller.saveSettings(changed, onSaved = { accepted.complete(Unit) },
+                onFailed = { accepted.completeExceptionally(AssertionError("Retry must succeed")) })
+            withTimeout(15_000) { accepted.await(); controller.flush() }
+            assertEquals(changed, authority())
+        }
+    }
+
 }
