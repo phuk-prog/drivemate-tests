@@ -168,16 +168,36 @@ jobs:
         run: |
           if ! ./gradlew :app:testDebugUnitTest :app:lintRelease --continue --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-verification.log" 2>&1; then
           python3 - <<'PY_FAILURE'
-          import glob, re, xml.etree.ElementTree as ET
+          import glob, json, re, xml.etree.ElementTree as ET
+          def safe_failure(node):
+              kinds = {'org.junit.ComparisonFailure': 'ComparisonFailure',
+                       'java.lang.AssertionError': 'AssertionError',
+                       'kotlinx.coroutines.TimeoutCancellationException': 'Timeout',
+                       'java.lang.IllegalStateException': 'IllegalStateException'}
+              kind = kinds.get(node.get('type', ''), 'Other')
+              message = node.get('message', '')
+              labels = ('Authoritative setting', 'Preference mirror', 'Portable personal data',
+                        'Learned-speed rows', 'Interruption hook was not consumed')
+              label = next((label for label in labels
+                            if message == label or message.startswith(label + ' expected')), 'Unclassified')
+              return kind, label
           reports = glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')
           if not reports:
               print('::error::Build failed before test reports; private compiler output withheld.')
+          if reports:
+              totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
+                        for key in ('tests', 'failures', 'errors', 'skipped')}
+              print('Failed-run test counts: ' + json.dumps(totals, sort_keys=True))
           for path in reports:
               for case in ET.parse(path).getroot().iter('testcase'):
                   if case.find('failure') is not None or case.find('error') is not None:
                       name = case.get('name', '')
                       if re.fullmatch(r'[A-Za-z0-9_]+', name):
-                          print('::error::Regression failed: ' + name)
+                          node = case.find('failure')
+                          if node is None:
+                              node = case.find('error')
+                          kind, label = safe_failure(node)
+                          print('::error::Regression failed: ' + name + '; kind=' + kind + '; check=' + label)
           lint = glob.glob('app/build/reports/lint-results-release.xml')
           if lint:
               issues = ET.parse(lint[0]).getroot().findall('issue')
@@ -189,6 +209,7 @@ jobs:
             exit 1
           fi
       - name: Confirm no APK was created
+        if: always()
         run: |
           python3 - <<'PY_NO_APK'
           import pathlib
