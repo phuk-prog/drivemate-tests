@@ -254,4 +254,77 @@ class TripRecoveryDismissalTest {
         assertEquals((50 downTo 1).map { historyTrip(it) }, history.all())
     }
 
+
+    @Test fun unreadableHistoryContainerSurvivesArrivalAdd() = historyFixture { prefs, history ->
+        for (raw in listOf("{", "not JSON", "{}")) {
+            assertTrue(prefs.edit().putString("tripHistory", raw).commit())
+            history.add(historyTrip(1))
+            assertEquals("Unreadable history must survive an arrival update", raw, prefs.getString("tripHistory", null))
+        }
+    }
+
+    @Test fun unreadableHistoryContainerSurvivesSelectiveDelete() = historyFixture { prefs, history ->
+        val raw = "{synthetic unreadable history"
+        assertTrue(prefs.edit().putString("tripHistory", raw).commit())
+        history.delete(historyTrip(1))
+        assertEquals(raw, prefs.getString("tripHistory", null))
+    }
+
+    @Test fun unreadableHistoryContainerSurvivesRetentionCleanup() = historyFixture { prefs, history ->
+        val raw = "{synthetic unreadable history"
+        assertTrue(prefs.edit().putString("tripHistory", raw).commit())
+        history.deleteOlderThan(30)
+        assertEquals(raw, prefs.getString("tripHistory", null))
+    }
+
+    @Test fun explicitDeleteAllCanResetUnreadableHistory() = historyFixture { prefs, history ->
+        assertTrue(prefs.edit().putString("tripHistory", "{synthetic unreadable history").commit())
+        history.deleteOlderThan(0, all = true)
+        assertEquals("[]", prefs.getString("tripHistory", null))
+        assertTrue(history.all().isEmpty())
+    }
+
+    @Test fun wrongTypedHistoryValueSurvivesArrivalAdd() = historyFixture { prefs, history ->
+        assertTrue(prefs.edit().putBoolean("tripHistory", true).commit())
+        history.add(historyTrip(1))
+        assertEquals(true, prefs.all["tripHistory"])
+    }
+
+    @Test fun historyEditorFailureIsReportedWithoutThrowing() = historyFixture { prefs, history ->
+        val before = historyTrip(1)
+        history.add(before)
+        val rejecting = object : android.content.SharedPreferences by prefs {
+            override fun edit(): android.content.SharedPreferences.Editor {
+                val delegate = prefs.edit()
+                return object : android.content.SharedPreferences.Editor by delegate {
+                    override fun putString(key: String, value: String?): android.content.SharedPreferences.Editor {
+                        delegate.putString(key, value)
+                        return this
+                    }
+                    override fun apply() { throw IllegalStateException("Synthetic rejected history write") }
+                }
+            }
+        }
+        val guarded = com.drivemate.app.nav.TripHistory(rejecting)
+        assertEquals(false, guarded.add(historyTrip(2)) as Any)
+        assertEquals(listOf(before), history.all())
+    }
+
+    @Test fun invalidHistorySummaryIsReportedWithoutThrowing() = historyFixture { _, history ->
+        val before = historyTrip(1)
+        history.add(before)
+        assertEquals(false, history.add(historyTrip(2).copy(metres = Double.NaN)) as Any)
+        assertEquals(listOf(before), history.all())
+    }
+
+    @Test fun historyUpdateOutcomesDistinguishAcceptedAndRejectedWrites() = historyFixture { prefs, history ->
+        assertEquals(true, history.add(historyTrip(1)) as Any)
+        assertTrue(prefs.edit().putString("tripHistory", "{synthetic unreadable history").commit())
+        assertEquals(false, history.delete(historyTrip(1)) as Any)
+        assertEquals(false, history.deleteOlderThan(30) as Any)
+        assertEquals(true, history.deleteOlderThan(0, all = true) as Any)
+        assertEquals(true, history.add(historyTrip(2)) as Any)
+        assertEquals(listOf(historyTrip(2)), history.all())
+    }
+
 }
