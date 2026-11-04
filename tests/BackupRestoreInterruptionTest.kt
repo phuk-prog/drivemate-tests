@@ -287,6 +287,15 @@ class BackupRestoreInterruptionTest {
             override fun edit(): SharedPreferences.Editor {
                 val delegate = actual.edit()
                 return object : SharedPreferences.Editor by delegate {
+                    override fun putString(key: String, value: String?): SharedPreferences.Editor {
+                        delegate.putString(key, value); return this
+                    }
+                    override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
+                        delegate.putBoolean(key, value); return this
+                    }
+                    override fun putInt(key: String, value: Int): SharedPreferences.Editor {
+                        delegate.putInt(key, value); return this
+                    }
                     override fun commit(): Boolean = if (rejectMirror) false else delegate.commit()
                 }
             }
