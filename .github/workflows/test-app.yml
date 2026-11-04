@@ -82,7 +82,7 @@ jobs:
       - name: Check workflow contracts
         run: |
           python3 - <<'PY_CONTRACTS'
-          import copy, io, json, os, pathlib, re, textwrap, unittest
+          import ast, copy, io, json, os, pathlib, re, textwrap, unittest
 
           app = pathlib.Path('app-src')
           harness = pathlib.Path('harness')
@@ -118,7 +118,31 @@ jobs:
           exec(compile(textwrap.dedent(selection_match.group(1)), '<selection-contract>', 'exec'), selection_namespace)
           validate_selection = selection_namespace['validate_selection']
 
+          result_match = re.search(r"          python3 - <<'PY_RESULTS'\n(.*?)          PY_RESULTS(?:\n|$)", selection_source, re.S)
+          if not result_match:
+              raise SystemExit('::error::Sanitized publication gate is missing')
+          publication_tree = ast.parse(textwrap.dedent(result_match.group(1)))
+          emulator_function = next(node for node in publication_tree.body
+                                   if isinstance(node, ast.FunctionDef) and node.name == 'validate_emulator_result')
+          emulator_namespace = {}
+          exec(compile(ast.Module(body=[emulator_function], type_ignores=[]), '<emulator-evidence-gate>', 'exec'), emulator_namespace)
+          validate_emulator = emulator_namespace['validate_emulator_result']
+
           class WorkflowContracts(unittest.TestCase):
+              def test_accepts_booted_emulator_without_claiming_app_acceptance(self):
+                  evidence = {'api_level': 28, 'abi': 'x86_64', 'boot_completed': True,
+                              'hardware_acceleration': True, 'app_installed': False, 'app_acceptance': False}
+                  self.assertEqual(validate_emulator(evidence), evidence)
+              def test_rejects_missing_wrong_or_overclaimed_emulator_evidence(self):
+                  evidence = {'api_level': 28, 'abi': 'x86_64', 'boot_completed': True,
+                              'hardware_acceleration': True, 'app_installed': False, 'app_acceptance': False}
+                  for key, value in [('api_level', 27), ('boot_completed', False),
+                                     ('hardware_acceleration', False), ('app_installed', True),
+                                     ('app_acceptance', True), ('boot_completed', 1), ('private_text', 'private-marker')]:
+                      bad = dict(evidence); bad[key] = value
+                      with self.assertRaises(ValueError): validate_emulator(bad)
+                  for bad in (None, {}, []):
+                      with self.assertRaises(ValueError): validate_emulator(bad)
               def test_accepts_exact_successful_source(self):
                   self.assertEqual(validate(*fixture()), ('1' * 40, '2' * 40))
               def test_rejects_failed_pending_cancelled_or_skipped_runs(self):
@@ -232,6 +256,52 @@ jobs:
         with:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Install and boot public Android emulator
+        if: env.CHECK_MODE == 'full'
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          phase=prerequisites
+          emulator_pid=
+          export ANDROID_USER_HOME="$RUNNER_TEMP/public-emulator-home"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          log="$RUNNER_TEMP/emulator-bootstrap.log"
+          adb="$ANDROID_HOME/platform-tools/adb"
+          cleanup() {
+            "$adb" -s emulator-5554 emu kill >> "$log" 2>&1 || true
+            if [ -n "$emulator_pid" ]; then kill "$emulator_pid" 2>/dev/null || true; fi
+            rm -rf "$ANDROID_USER_HOME"
+          }
+          trap cleanup EXIT
+          trap 'echo "::error::Emulator bootstrap failed during $phase; raw output withheld."' ERR
+          test -e /dev/kvm
+          sudo chown "$(id -u)" /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          mkdir -p "$ANDROID_AVD_HOME"
+          phase=installation
+          sdkmanager 'emulator' 'system-images;android-28;default;x86_64' > "$log" 2>&1
+          printf 'no\n' | avdmanager create avd --force --name public-api28 --package 'system-images;android-28;default;x86_64' >> "$log" 2>&1
+          phase=boot
+          "$ANDROID_HOME/emulator/emulator" -avd public-api28 -port 5554 -accel on -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 >> "$log" 2>&1 &
+          emulator_pid=$!
+          timeout 240 "$adb" -s emulator-5554 wait-for-device >> "$log" 2>&1
+          deadline=$((SECONDS + 240))
+          until [ "$("$adb" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
+            test "$SECONDS" -lt "$deadline"
+            kill -0 "$emulator_pid"
+            sleep 5
+          done
+          phase=verification
+          test "$("$adb" -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" = 28
+          test "$("$adb" -s emulator-5554 shell getprop ro.product.cpu.abi | tr -d '\r')" = x86_64
+          python3 - <<'PY_EMULATOR'
+          import json, os, pathlib
+          result = {'api_level': 28, 'abi': 'x86_64', 'boot_completed': True,
+                    'hardware_acceleration': True, 'app_installed': False, 'app_acceptance': False}
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'emulator-result.json').write_text(json.dumps(result))
+          print('Emulator tooling smoke check: ' + json.dumps(result, sort_keys=True))
+          PY_EMULATOR
       - name: Install public suite in ephemeral app checkout
         run: |
           mkdir -p app-src/app/src/test/java/com/drivemate/app
@@ -364,6 +434,15 @@ jobs:
         run: |
           python3 - <<'PY_RESULTS'
           import glob, json, os, pathlib, xml.etree.ElementTree as ET
+          def validate_emulator_result(value):
+              expected = {'api_level': 28, 'abi': 'x86_64', 'boot_completed': True,
+                          'hardware_acceleration': True, 'app_installed': False, 'app_acceptance': False}
+              if (type(value) is not dict or set(value) != set(expected)
+                      or any(type(value[key]) is not type(item) or value[key] != item
+                             for key, item in expected.items())):
+                  raise ValueError('Missing or invalid emulator tooling evidence')
+              return value
+          emulator = validate_emulator_result(json.loads(pathlib.Path(os.environ['RUNNER_TEMP'], 'emulator-result.json').read_text()))
           reports = glob.glob('app-src/app/build/test-results/testDebugUnitTest/TEST-*.xml')
           assert reports, 'No test results'
           totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
@@ -374,10 +453,11 @@ jobs:
                   'warnings': sum(i.get('severity') == 'Warning' for i in issues)}
           assert lint['errors'] == 0, lint
           contracts = json.loads(pathlib.Path(os.environ['RUNNER_TEMP'], 'contract-results.json').read_text())
-          assert contracts['tests'] >= 18 and contracts['failures'] == contracts['errors'] == 0, contracts
+          assert contracts['tests'] >= 20 and contracts['failures'] == contracts['errors'] == 0, contracts
           result = {'app_sha': os.environ['APP_SHA'], 'harness_sha': os.environ['GITHUB_SHA'],
                     'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
-                    'unit_tests': totals, 'workflow_contracts': contracts, 'lint': lint, 'apk_created': False}
+                    'unit_tests': totals, 'workflow_contracts': contracts, 'lint': lint, 'apk_created': False,
+                    'emulator_smoke': emulator}
           pathlib.Path('public-results').mkdir(exist_ok=True)
           pathlib.Path('public-results/verification-result.json').write_text(json.dumps(result, indent=2) + '\n')
           print(json.dumps(result, sort_keys=True))
