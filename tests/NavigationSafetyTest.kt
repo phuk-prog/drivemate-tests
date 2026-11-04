@@ -57,10 +57,10 @@ class NavigationSafetyTest {
         val budget = RouteRequest.Budget(firstMs = 1000, totalMs = 2000, clock = { now })
         now = 600L
         assertEquals(500L, budget.leftForFirst())
-        assertEquals(1500L, budget.leftForExtras(0))
+        assertEquals(1500L, budget.leftForExtras())
         now = 3100L
         assertEquals(0L, budget.leftForFirst())
-        assertEquals(0L, budget.leftForExtras(0))
+        assertEquals(0L, budget.leftForExtras())
     }
 
     @Test fun mergeRestorePreservesExistingSettingsAndAddsMissingValues() {
@@ -108,5 +108,78 @@ class NavigationSafetyTest {
             assertEquals(com.drivemate.app.controller.TripRecovery.Resume.AlreadyThere,
                 com.drivemate.app.controller.TripRecovery.plan(saved, destination.pos, accuracy, 1_001_000L))
         }
+    }
+
+    @Test fun optionalRoutingWorkCannotExtendTotalBudget() {
+        var now = 0L
+        val budget = RouteRequest.Budget(firstMs = 1_000, totalMs = 2_000, clock = { now })
+        now = 1_750
+        assertEquals(250L, budget.leftForExtras())
+        now = 2_001
+        assertEquals(0L, budget.leftForExtras())
+    }
+
+    @Test fun expiredDmnRequestDoesNotOpenRoadData() {
+        val dmn = com.drivemate.app.dmn.Dmn
+        val original = dmn.source
+        var opens = 0
+        try {
+            dmn.forget()
+            dmn.source = { opens++; throw java.io.IOException("Synthetic unavailable data") }
+            assertTrue(dmn.route(listOf(LatLon(53.48, -2.24), LatLon(53.49, -2.23)),
+                null, deadlineNanos = System.nanoTime() - 1).isEmpty())
+            assertEquals(0, opens)
+        } finally {
+            dmn.source = original
+            dmn.forget()
+        }
+    }
+
+    private fun shortRoadRouter(): com.drivemate.app.dmn.DmnRouter {
+        val p = com.drivemate.app.dmn.DmnPack(
+            lat = doubleArrayOf(53.48, 53.481, 53.482),
+            lon = doubleArrayOf(-2.24, -2.24, -2.24),
+            nodeId = longArrayOf(1, 2, 3),
+            wayId = longArrayOf(10),
+            wayRoundabout = booleanArrayOf(false),
+            wayName = arrayOf("Synthetic road"),
+            wayRef = arrayOf(""),
+            wayHighway = arrayOf("residential"),
+            from = intArrayOf(0, 1), to = intArrayOf(1, 2),
+            metres = floatArrayOf(100f, 100f), kph = floatArrayOf(30f, 30f),
+            access = byteArrayOf(0, 0), startAccess = byteArrayOf(0, 0),
+            finishAccess = byteArrayOf(0, 0), restricted = booleanArrayOf(false, false),
+            way = intArrayOf(0, 0), banPairs = longArrayOf(), sequences = emptyList(),
+            uturnNode = booleanArrayOf(false, false, false), metadata = "synthetic test")
+        return com.drivemate.app.dmn.DmnRouter(p)
+    }
+
+    @Test fun cancelledSearchStopsEvenOnShortRoadGraph() {
+        try {
+            shortRoadRouter().plan(0, 1, stop = { true })
+            fail("Cancelled search returned a route")
+        } catch (e: com.drivemate.app.dmn.DmnRouter.NoRoute) {
+            assertEquals("Cancelled", e.message)
+        }
+    }
+
+    @Test fun interruptedSearchStopsEvenOnShortRoadGraph() {
+        val router = shortRoadRouter()
+        try {
+            Thread.currentThread().interrupt()
+            try {
+                router.plan(0, 1)
+                fail("Interrupted search returned a route")
+            } catch (e: com.drivemate.app.dmn.DmnRouter.NoRoute) {
+                assertEquals("Cancelled", e.message)
+            }
+        } finally { Thread.interrupted() }
+    }
+
+    @Test fun uncancelledShortRoadSearchStillFindsRoute() {
+        val route = shortRoadRouter().plan(0, 1)
+        assertArrayEquals(intArrayOf(1), route.edges)
+        assertTrue(route.metres > 0)
+        assertTrue(route.seconds.isFinite() && route.seconds > 0)
     }
 }
