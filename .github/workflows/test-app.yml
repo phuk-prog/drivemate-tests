@@ -55,8 +55,19 @@ jobs:
       - name: Run tests without publishing private compiler output
         working-directory: app-src
         run: |
-          if ! ./gradlew :app:testDebugUnitTest --tests com.drivemate.app.NavigationSafetyTest --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-test-build.log" 2>&1; then
-            echo "::error::App compilation or navigation regression tests failed. Private build output is not published."
+          if ! ./gradlew :app:testDebugUnitTest --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-test-build.log" 2>&1; then
+            python3 - <<'PY_FAILURE'
+          import glob, re, xml.etree.ElementTree as ET
+          reports = glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')
+          if not reports:
+              print('::error::Build failed before producing test reports; private compiler output withheld.')
+          for path in reports:
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  if case.find('failure') is not None or case.find('error') is not None:
+                      name = case.get('name', '')
+                      if re.fullmatch(r'[A-Za-z0-9_]+', name):
+                          print('::error::Regression failed: ' + name)
+          PY_FAILURE
             exit 1
           fi
       - name: Publish counts and exact revisions
@@ -72,7 +83,7 @@ jobs:
               root = ET.parse(path).getroot()
               for key in totals:
                   totals[key] += int(root.get(key, 0))
-          assert totals['tests'] >= 9 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 14 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write('App commit: ' + os.environ['APP_SHA'] + '\n\n')
               out.write('Harness commit: ' + os.environ['GITHUB_SHA'] + '\n\n')

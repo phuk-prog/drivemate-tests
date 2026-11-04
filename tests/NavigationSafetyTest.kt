@@ -90,4 +90,23 @@ class NavigationSafetyTest {
         assertTrue(com.drivemate.app.data.BackupRestorePlan.importLearned(
             com.drivemate.app.data.BackupRestorePlan.Mode.REPLACE))
     }
+
+    @Test fun invalidRecoveryAccuracyCannotCompleteSavedTrip() {
+        val destination = com.drivemate.app.data.Place("Test destination", "", LatLon(53.48, -2.24))
+        val saved = com.drivemate.app.data.TripStore.Saved(null, destination, emptyList(), 1_000_000L)
+        for (accuracy in listOf(-1.0, 0.0, Double.NaN, Double.POSITIVE_INFINITY, 51.0)) {
+            val result = com.drivemate.app.controller.TripRecovery.plan(saved, destination.pos, accuracy, 1_001_000L)
+            assertTrue("Invalid accuracy must preserve a recoverable trip",
+                result is com.drivemate.app.controller.TripRecovery.Resume.Replan)
+        }
+    }
+
+    @Test fun validRecoveryAccuracyStillRecognizesDestination() {
+        val destination = com.drivemate.app.data.Place("Test destination", "", LatLon(53.48, -2.24))
+        val saved = com.drivemate.app.data.TripStore.Saved(null, destination, emptyList(), 1_000_000L)
+        for (accuracy in listOf(0.1, 10.0, 50.0)) {
+            assertEquals(com.drivemate.app.controller.TripRecovery.Resume.AlreadyThere,
+                com.drivemate.app.controller.TripRecovery.plan(saved, destination.pos, accuracy, 1_001_000L))
+        }
+    }
 }
