@@ -298,8 +298,17 @@ jobs:
                                  re.findall(r'(PersonalDataController\.kt|BackupManager\.kt):([0-9]+)', text)})
               cast_types = sorted({name for name in re.findall(r'(?:class )?((?:java|javax|kotlin|android)\.[A-Za-z0-9_.$]+)', node.get('message', ''))
                                    if len(name) <= 160})
+              dependency_failure = ('org.robolectric.internal.dependency.' in text
+                                    or 'Failed to fetch maven artifact' in text)
+              network_causes = [label for needle, label in (
+                  ('response code: 429', 'HTTP_429'), ('response code: 503', 'HTTP_503'),
+                  ('UnknownHostException', 'DNS'), ('SSLHandshakeException', 'TLS'),
+                  ('Read timed out', 'READ_TIMEOUT'), ('Connection refused', 'CONNECTION_REFUSED'))
+                  if needle in text]
               return {'exception_types': types, 'public_test_lines': lines,
-                      'known_recovery_lines': recovery, 'standard_cast_types': cast_types}
+                      'known_recovery_lines': recovery, 'standard_cast_types': cast_types,
+                      'robolectric_dependency_failure': dependency_failure,
+                      'network_causes': network_causes}
           reports = glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')
           if not reports:
               print('::error::Build failed before test reports; private compiler output withheld.')
