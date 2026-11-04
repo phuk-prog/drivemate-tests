@@ -1,0 +1,498 @@
+name: Verify settings 1.1 with a disposable test APK
+run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '41898662578' }}"
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/settings-ui.yml']
+  workflow_dispatch:
+    inputs:
+      verification_run:
+        description: Successful trusted public full-verification run for the merged app source
+        type: string
+        required: true
+        default: '41898662578'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  settings-ui:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PUBLIC_RUN_ID: ${{ inputs.verification_run || '41898662578' }}
+      ANDROID_USER_HOME: ${{ runner.temp }}/settings-ui-home
+      ANDROID_AVD_HOME: ${{ runner.temp }}/settings-ui-home/avd
+    steps:
+      - name: Validate trusted full verification and merged source
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TOKEN: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+        run: |
+          python3 - <<'PY_PREREQUISITE'
+          import ast, base64, json, os, re, textwrap, urllib.request, urllib.error
+          
+          PUBLIC_REPO = 'phuk-prog/drivemate-tests'
+          PRIVATE_REPO = 'phuk-prog/drivemate'
+          
+          def fetch_json(url, token):
+              request = urllib.request.Request(url, headers={
+                  'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token,
+                  'X-GitHub-Api-Version': '2022-11-28'})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          
+          def public_identity(run, run_id):
+              if (str(run.get('id')) != run_id
+                      or run.get('repository', {}).get('full_name') != PUBLIC_REPO
+                      or run.get('status') != 'completed' or run.get('conclusion') != 'success'
+                      or run.get('head_branch') != 'main'
+                      or run.get('event') not in ('push', 'workflow_dispatch')
+                      or run.get('path') != '.github/workflows/test-app.yml'):
+                  raise ValueError('Untrusted public verification')
+              match = re.fullmatch(r'DriveMate verification: ([0-9a-f]{40})', run.get('display_title', ''))
+              if (not match or not re.fullmatch(r'[0-9a-f]{40}', run.get('head_sha', ''))
+                      or type(run.get('run_attempt')) is not int or run['run_attempt'] < 1):
+                  raise ValueError('Invalid public identity')
+              return match.group(1), run['head_sha'], run['run_attempt']
+          
+          def require_ancestor(comparison, app_sha):
+              if (comparison.get('status') not in ('ahead', 'identical')
+                      or comparison.get('merge_base_commit', {}).get('sha') != app_sha):
+                  raise ValueError('Test source is not merged')
+          
+          def canonical_validator(source):
+              match = re.search(r"python3 - <<'PY_VERIFY'\n(.*?)          PY_VERIFY(?:\n|$)", source, re.S)
+              if not match:
+                  raise ValueError('Canonical gate missing')
+              tree = ast.parse(textwrap.dedent(match.group(1)))
+              namespace = {'re': re}
+              for node in tree.body:
+                  if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                      name = node.targets[0].id
+                      if name in ('PUBLIC_REPO', 'REQUIRED_STEPS'):
+                          namespace[name] = ast.literal_eval(node.value)
+              function = next(node for node in tree.body
+                              if isinstance(node, ast.FunctionDef) and node.name == 'validate_public_run')
+              exec(compile(ast.Module(body=[function], type_ignores=[]), '<canonical-private-gate>', 'exec'), namespace)
+              return namespace['validate_public_run']
+          
+          def require_emulator_gate(jobs):
+              matches = [step for job in jobs.get('jobs', []) for step in job.get('steps', [])
+                         if step.get('name') == 'Install and boot public Android emulator']
+              if len(matches) != 1 or matches[0].get('status') != 'completed' or matches[0].get('conclusion') != 'success':
+                  raise ValueError('Emulator qualification missing')
+          
+          def main():
+              run_id = os.environ['PUBLIC_RUN_ID']
+              if not re.fullmatch(r'[1-9][0-9]{0,19}', run_id):
+                  raise ValueError('Invalid run ID')
+              if not os.environ.get('APP_TOKEN') or not os.environ.get('GH_TOKEN'):
+                  raise ValueError('Read access missing')
+              public_base = 'https://api.github.com/repos/' + PUBLIC_REPO + '/actions/runs/' + run_id
+              run = fetch_json(public_base, os.environ['GH_TOKEN'])
+              app_sha, harness_sha, attempt = public_identity(run, run_id)
+              jobs = fetch_json(public_base + '/attempts/' + str(attempt) + '/jobs?per_page=100', os.environ['GH_TOKEN'])
+              private_base = 'https://api.github.com/repos/' + PRIVATE_REPO
+              comparison = fetch_json(private_base + '/compare/' + app_sha + '...main', os.environ['APP_TOKEN'])
+              require_ancestor(comparison, app_sha)
+              gate_file = fetch_json(private_base + '/contents/.github/workflows/build-apk.yml?ref=' + app_sha, os.environ['APP_TOKEN'])
+              gate = canonical_validator(base64.b64decode(gate_file['content']).decode('utf-8'))
+              if gate(run, jobs) != (app_sha, harness_sha):
+                  raise ValueError('Canonical identity mismatch')
+              require_emulator_gate(jobs)
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+                  output.write('app_sha=' + app_sha + '\nharness_sha=' + harness_sha + '\n')
+                  output.write('verification_attempt=' + str(attempt) + '\n')
+              print(json.dumps({'app_sha': app_sha, 'verification_harness_sha': harness_sha,
+                                'verification_run_id': run_id, 'verification_attempt': attempt}, sort_keys=True))
+          
+          if __name__ == '__main__':
+              try:
+                  main()
+              except urllib.error.HTTPError as error:
+                  raise SystemExit('::error::UI prerequisite API request failed; HTTP status ' + str(error.code))
+              except Exception:
+                  raise SystemExit('::error::UI prerequisite validation failed; details withheld')
+          PY_PREREQUISITE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate
+          ref: ${{ steps.verified.outputs.app_sha }}
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          persist-credentials: false
+          path: app-src
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          log-accepted-android-sdk-licenses: false
+      - name: Install emulator and build tooling
+        run: |
+          if ! sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'emulator' 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/settings-ui-sdk.log" 2>&1; then
+            echo "::error::Settings UI tooling installation failed; raw output withheld"
+            exit 1
+          fi
+      - name: Build disposable debug test APK
+        working-directory: app-src
+        env:
+          DRIVEMATE_KEYSTORE_PATH: ''
+          DRIVEMATE_KEYSTORE_PASSWORD: ''
+          DRIVEMATE_KEY_ALIAS: ''
+          DRIVEMATE_KEY_PASSWORD: ''
+        run: |
+          if ! ./gradlew :app:assembleDebug --no-daemon --max-workers=4 > "$RUNNER_TEMP/settings-ui-build.log" 2>&1; then
+            echo "::error::Temporary debug APK build failed; private compiler output withheld"
+            exit 1
+          fi
+      - name: Boot isolated Android emulator
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          phase=kvm
+          trap 'echo "::error::Settings UI emulator failed during $phase; raw output withheld"' ERR
+          test -e /dev/kvm
+          sudo chown "$(id -u)" /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          mkdir -p "$ANDROID_AVD_HOME"
+          phase=avd
+          printf 'no\n' | avdmanager create avd --force --name settings-ui-api28 --device pixel_2 --package 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/settings-ui-avd.log" 2>&1
+          phase=boot
+          nohup "$ANDROID_HOME/emulator/emulator" -avd settings-ui-api28 -port 5554 -accel on -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 > "$RUNNER_TEMP/settings-ui-emulator.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/settings-ui-emulator.pid"
+          adb="$ANDROID_HOME/platform-tools/adb"
+          timeout 240 "$adb" -s emulator-5554 wait-for-device >> "$RUNNER_TEMP/settings-ui-emulator.log" 2>&1
+          deadline=$((SECONDS + 240))
+          until [ "$("$adb" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
+            test "$SECONDS" -lt "$deadline"
+            kill -0 "$(cat "$RUNNER_TEMP/settings-ui-emulator.pid")"
+            sleep 5
+          done
+          phase=identity
+          test "$("$adb" -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" = 28
+          test "$("$adb" -s emulator-5554 shell getprop ro.product.cpu.abi | tr -d '\r')" = x86_64
+          echo "Settings UI emulator ready: API 28, x86_64, KVM"
+      - name: Exercise real Settings Auto-zoom control
+        timeout-minutes: 10
+        env:
+          APP_SHA: ${{ steps.verified.outputs.app_sha }}
+          VERIFIED_HARNESS_SHA: ${{ steps.verified.outputs.harness_sha }}
+          VERIFICATION_ATTEMPT: ${{ steps.verified.outputs.verification_attempt }}
+        run: |
+          python3 - <<'PY_SETTINGS_UI'
+          import hashlib, json, os, pathlib, re, subprocess, time, xml.etree.ElementTree as ET
+          
+          PACKAGE = 'com.drivemate.app'
+          AUTO = 'Auto-zoom (out on fast roads, in for turns)'
+          BATTERY = 'Battery saver while driving (map drawn less often, screen a little dimmer)'
+          ADB = os.path.join(os.environ['ANDROID_HOME'], 'platform-tools', 'adb')
+          SERIAL = 'emulator-5554'
+          phase = 'initialization'
+          
+          def adb(*args, timeout=35):
+              result = subprocess.run([ADB, '-s', SERIAL, *args], capture_output=True, timeout=timeout)
+              if result.returncode != 0:
+                  raise RuntimeError('ADB command failed')
+              return result.stdout.decode('utf-8', errors='replace')
+          
+          def dump():
+              adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/settings-ui.xml')
+              return ET.fromstring(adb('exec-out', 'cat', '/sdcard/settings-ui.xml'))
+          
+          def labels(root, text):
+              return [node for node in root.iter('node') if node.get('package') == PACKAGE
+                      and (node.get('text') == text or text in node.get('content-desc', '').split('\n'))]
+          
+          def bounds_center(node):
+              match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
+              if not match:
+                  raise ValueError('Invalid UI bounds')
+              left, top, right, bottom = map(int, match.groups())
+              if not (0 <= left < right <= 4096 and 0 <= top < bottom <= 4096):
+                  raise ValueError('Invalid UI bounds')
+              return (left + right) // 2, (top + bottom) // 2
+          
+          def tap(node):
+              x, y = bounds_center(node)
+              adb('shell', 'input', 'tap', str(x), str(y))
+          
+          def wait_for(action, timeout=75):
+              deadline = time.monotonic() + timeout
+              while time.monotonic() < deadline:
+                  try:
+                      value = action()
+                      if value is not None:
+                          return value
+                  except (RuntimeError, ET.ParseError, subprocess.TimeoutExpired):
+                      pass
+                  time.sleep(1)
+              raise AssertionError('UI condition did not pass')
+          
+          def label(text):
+              matches = labels(dump(), text)
+              return matches[-1] if matches else None
+          
+          def switch_node(root, text):
+              parents = {child: parent for parent in root.iter() for child in parent}
+              for candidate in labels(root, text):
+                  node = candidate
+                  while node is not None:
+                      if node.get('checkable') == 'true':
+                          return node
+                      node = parents.get(node)
+                  for node in candidate.iter('node'):
+                      if node.get('checkable') == 'true':
+                          return node
+              return None
+          
+          def switch_state(root, text):
+              node = switch_node(root, text)
+              if node is None or node.get('checked') not in ('true', 'false'):
+                  return None
+              return node.get('checked') == 'true'
+          
+          def wait_switch(text, expected):
+              def read():
+                  root = dump()
+                  node = switch_node(root, text)
+                  return node if node is not None and switch_state(root, text) is expected else None
+              return wait_for(read)
+          
+          def prefs():
+              root = ET.fromstring(adb('exec-out', 'run-as', PACKAGE, 'cat', 'shared_prefs/drivemate.xml'))
+              return {node.get('name'): (node.tag, node.get('value', node.text or '')) for node in root}
+          
+          def wait_saved(expected):
+              def read():
+                  values = prefs()
+                  return values if values.get('autoZoom') == ('boolean', 'true' if expected else 'false') else None
+              return wait_for(read)
+          
+          def unchanged(before, after, keys):
+              return all(key in before and key in after and before[key] == after[key] for key in keys)
+          
+          def safe_diagnostics():
+              result = {'ui_dump_available': False, 'app_process_running': False,
+                        'ui_auto_zoom': None, 'ui_battery_saver': None, 'saved_auto_zoom': None}
+              try:
+                  root = dump()
+                  result['ui_dump_available'] = True
+                  for name, text in [('notice_visible', 'Not now'), ('menu_visible', 'Main menu'),
+                                     ('settings_visible', 'Search settings'), ('driving_visible', 'Driving view'),
+                                     ('sign_in_visible', 'Sign in to DriveMate')]:
+                      result[name] = bool(labels(root, text))
+                  result['ui_auto_zoom'] = switch_state(root, AUTO)
+                  result['ui_battery_saver'] = switch_state(root, BATTERY)
+              except Exception:
+                  pass
+              try:
+                  value = prefs().get('autoZoom')
+                  if value in (('boolean', 'true'), ('boolean', 'false')):
+                      result['saved_auto_zoom'] = value[1] == 'true'
+              except Exception:
+                  pass
+              try:
+                  result['app_process_running'] = bool(adb('shell', 'pidof', PACKAGE, timeout=10).strip())
+              except Exception:
+                  pass
+              try:
+                  crash = adb('logcat', '-b', 'crash', '-d', '-v', 'brief', timeout=10)
+                  allowed = ('java.lang.IllegalStateException', 'java.lang.RuntimeException',
+                             'java.lang.NullPointerException', 'java.lang.SecurityException',
+                             'java.lang.UnsatisfiedLinkError', 'java.lang.OutOfMemoryError',
+                             'java.lang.ExceptionInInitializerError', 'java.lang.VerifyError')
+                  result['standard_crash_types'] = [name for name in allowed if name in crash]
+              except Exception:
+                  pass
+              return result
+          
+          def main():
+              global phase
+              checkout = pathlib.Path('app-src')
+              phase = 'fixture_validation'
+              strings = ET.parse(checkout / 'app/src/main/res/values/strings.xml').getroot()
+              client = strings.find("string[@name='google_web_client_id']")
+              if client is None or (client.text or '').strip():
+                  raise AssertionError('Fresh-install local mode required')
+              source = (checkout / 'app/src/main/java/com/drivemate/app/data/Settings.kt').read_text()
+              save_body = source.split('fun save(', 1)[1].split('companion object', 1)[0]
+              keys = set(re.findall(r'\.put(?:String|Boolean|Int)\("([^"]+)"', save_body))
+              if 'autoZoom' not in keys or len(keys) < 20:
+                  raise AssertionError('Settings schema missing')
+              other_keys = keys - {'autoZoom'}
+              phase = 'apk_identity'
+              apk = checkout / 'app/build/outputs/apk/debug/app-debug.apk'
+              digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+              phase = 'install'
+              adb('install', '-r', str(apk), timeout=120)
+              phase = 'fresh_fixture'
+              adb('shell', 'pm', 'clear', PACKAGE)
+              for key in ('window_animation_scale', 'transition_animation_scale', 'animator_duration_scale'):
+                  adb('shell', 'settings', 'put', 'global', key, '0')
+              phase = 'launch'
+              adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity', timeout=90)
+              phase = 'main_menu'
+              def open_menu():
+                  root = dump()
+                  notice = labels(root, 'Not now')
+                  if notice:
+                      tap(notice[-1])
+                      return None
+                  menu = labels(root, 'Main menu')
+                  if menu:
+                      tap(menu[-1])
+                      return True
+                  return None
+              wait_for(open_menu)
+              phase = 'settings_navigation'
+              wait_for(lambda: label('Saved places'))
+              tap(wait_for(lambda: label('Settings')))
+              wait_for(lambda: label('Search settings'))
+              tap(wait_for(lambda: label('Driving view')))
+              phase = 'baseline'
+              wait_switch(AUTO, True)
+              before = wait_saved(True)
+              if not keys.issubset(before):
+                  raise AssertionError('Settings initialization incomplete')
+              battery_before = switch_state(dump(), BATTERY)
+              if battery_before is None:
+                  raise AssertionError('Unrelated control unavailable')
+              phase = 'toggle_off'
+              tap(wait_switch(AUTO, True))
+              wait_switch(AUTO, False)
+              after_off = wait_saved(False)
+              if not unchanged(before, after_off, other_keys):
+                  raise AssertionError('Unrelated settings changed')
+              if switch_state(dump(), BATTERY) is not battery_before:
+                  raise AssertionError('Unrelated control changed')
+              phase = 'toggle_on'
+              tap(wait_switch(AUTO, False))
+              wait_switch(AUTO, True)
+              after_on = wait_saved(True)
+              if not unchanged(before, after_on, other_keys):
+                  raise AssertionError('Unrelated settings changed')
+              if switch_state(dump(), BATTERY) is not battery_before:
+                  raise AssertionError('Unrelated control changed')
+              phase = 'result'
+              result = {'subcategory': '1.1', 'app_sha': os.environ['APP_SHA'],
+                        'ui_harness_sha': os.environ['GITHUB_SHA'],
+                        'verification_run_id': os.environ['PUBLIC_RUN_ID'],
+                        'verification_harness_sha': os.environ['VERIFIED_HARNESS_SHA'],
+                        'verification_attempt': int(os.environ['VERIFICATION_ATTEMPT']),
+                        'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                        'api_level': 28, 'abi': 'x86_64', 'apk_sha256': digest,
+                        'checks': {'settings_navigation': True, 'off_ui_and_saved_value': True,
+                                   'on_ui_and_saved_value': True, 'unrelated_control_unchanged': True,
+                                   'unrelated_saved_settings_unchanged': True},
+                        'test_apk_created': True, 'test_apk_published': False, 'release_acceptance': False}
+              output = pathlib.Path('public-ui-results')
+              output.mkdir(exist_ok=True)
+              (output / 'settings-ui-result.json').write_text(json.dumps(result, sort_keys=True) + '\n')
+              print(json.dumps(result, sort_keys=True))
+          
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception:
+                  print('Safe UI diagnostics: ' + json.dumps(safe_diagnostics(), sort_keys=True))
+                  print('::error::Settings UI 1.1 failed during ' + phase + '; raw output withheld')
+                  raise SystemExit(1)
+          PY_SETTINGS_UI
+      - name: Delete test APK and private outputs
+        if: always()
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/settings-ui-cleanup.log"
+          if [ -n "${ANDROID_HOME:-}" ]; then
+            timeout 20 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 uninstall com.drivemate.app >> "$log" 2>&1 || true
+            timeout 10 "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill >> "$log" 2>&1 || true
+          fi
+          if [ -f "$RUNNER_TEMP/settings-ui-emulator.pid" ]; then
+            pid="$(cat "$RUNNER_TEMP/settings-ui-emulator.pid")"
+            if [[ "$pid" =~ ^[0-9]+$ ]]; then kill "$pid" 2>/dev/null || true; fi
+          fi
+          if ! rm -rf "$GITHUB_WORKSPACE/app-src" "$ANDROID_USER_HOME" >> "$log" 2>&1; then
+            echo "::error::Private UI output cleanup failed; raw output withheld"
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/settings-ui-build.log" "$RUNNER_TEMP/settings-ui-sdk.log" "$RUNNER_TEMP/settings-ui-avd.log" "$RUNNER_TEMP/settings-ui-emulator.log" "$RUNNER_TEMP/settings-ui-emulator.pid" "$log"
+      - name: Validate sanitized result and deletion evidence
+        env:
+          APP_SHA: ${{ steps.verified.outputs.app_sha }}
+          VERIFIED_HARNESS_SHA: ${{ steps.verified.outputs.harness_sha }}
+          VERIFICATION_ATTEMPT: ${{ steps.verified.outputs.verification_attempt }}
+        run: |
+          python3 - <<'PY_FINALIZE'
+          import json, os, pathlib, re
+          
+          CHECKS = {'settings_navigation', 'off_ui_and_saved_value', 'on_ui_and_saved_value',
+                    'unrelated_control_unchanged', 'unrelated_saved_settings_unchanged'}
+          FIELDS = {'subcategory', 'app_sha', 'ui_harness_sha', 'verification_run_id',
+                    'verification_harness_sha', 'verification_attempt', 'run_id', 'run_attempt',
+                    'api_level', 'abi', 'apk_sha256', 'checks', 'test_apk_created',
+                    'test_apk_published', 'release_acceptance'}
+          
+          def validate_ui_result(value, expected):
+              if type(value) is not dict or set(value) != FIELDS:
+                  raise ValueError('Invalid UI result schema')
+              for key, item in expected.items():
+                  if type(value[key]) is not type(item) or value[key] != item:
+                      raise ValueError('UI result identity mismatch')
+              for key in ('app_sha', 'ui_harness_sha', 'verification_harness_sha'):
+                  if not re.fullmatch(r'[0-9a-f]{40}', value[key]):
+                      raise ValueError('Invalid source identity')
+              for key in ('verification_run_id', 'run_id', 'run_attempt'):
+                  if not re.fullmatch(r'[1-9][0-9]{0,19}', value[key]):
+                      raise ValueError('Invalid run identity')
+              if type(value['verification_attempt']) is not int or value['verification_attempt'] < 1:
+                  raise ValueError('Invalid verification attempt')
+              if value['subcategory'] != '1.1' or type(value['api_level']) is not int or value['api_level'] != 28 or value['abi'] != 'x86_64':
+                  raise ValueError('Invalid UI scope')
+              if not re.fullmatch(r'[0-9a-f]{64}', value['apk_sha256']):
+                  raise ValueError('Invalid APK identity')
+              if type(value['checks']) is not dict or set(value['checks']) != CHECKS:
+                  raise ValueError('Missing UI checks')
+              if any(type(passed) is not bool or not passed for passed in value['checks'].values()):
+                  raise ValueError('UI checks did not pass')
+              for key, item in [('test_apk_created', True), ('test_apk_published', False), ('release_acceptance', False)]:
+                  if type(value[key]) is not bool or value[key] is not item:
+                      raise ValueError('Incorrect APK or release claim')
+              return dict(value)
+          
+          def main():
+              expected = {'app_sha': os.environ['APP_SHA'], 'ui_harness_sha': os.environ['GITHUB_SHA'],
+                          'verification_run_id': os.environ['PUBLIC_RUN_ID'],
+                          'verification_harness_sha': os.environ['VERIFIED_HARNESS_SHA'],
+                          'verification_attempt': int(os.environ['VERIFICATION_ATTEMPT']),
+                          'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT']}
+              path = pathlib.Path('public-ui-results/settings-ui-result.json')
+              value = validate_ui_result(json.loads(path.read_text()), expected)
+              if pathlib.Path('app-src').exists() or any(pathlib.Path('.').rglob('*.apk')) or pathlib.Path(os.environ['ANDROID_USER_HOME']).exists():
+                  raise ValueError('Private outputs remain')
+              value.update(test_apk_deleted=True, private_outputs_deleted=True)
+              text = json.dumps(value, sort_keys=True)
+              if len(text) > 4096:
+                  raise ValueError('Result too large')
+              path.write_text(text + '\n')
+              print(text)
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  summary.write('Settings 1.1: 5/5 UI checks passed; temporary APK/private outputs deleted.\n')
+                  summary.write('App source: ' + expected['app_sha'] + '\n')
+                  summary.write('This is settings interaction evidence, not release acceptance.\n')
+          
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception:
+                  raise SystemExit('::error::Sanitized UI result or cleanup validation failed; details withheld')
+          PY_FINALIZE
+      - name: Upload sanitized UI result only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DriveMate-settings-ui-result
+          path: public-ui-results/settings-ui-result.json
+          if-no-files-found: error
+          retention-days: 30
