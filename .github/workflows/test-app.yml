@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "DriveMate verification: ${{ inputs.app_sha || 'e22996df5b5b929ed5291613a6c2bd9b3f11a3de' }}"
+run-name: "DriveMate verification: ${{ inputs.app_sha || '43f6d877d40e9d3482aa529a08d0fb584a998817' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: 'e22996df5b5b929ed5291613a6c2bd9b3f11a3de'
+        default: '43f6d877d40e9d3482aa529a08d0fb584a998817'
 permissions:
   contents: read
 jobs:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || 'e22996df5b5b929ed5291613a6c2bd9b3f11a3de' }}
+      APP_SHA: ${{ inputs.app_sha || '43f6d877d40e9d3482aa529a08d0fb584a998817' }}
     steps:
       - name: Require private-source read access
         env:
