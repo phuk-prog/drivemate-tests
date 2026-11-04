@@ -1,6 +1,6 @@
 # Exact restore-recovery verification requested after the previous merge produced no Actions run.
 name: Verify exact DriveMate source without APK packaging
-run-name: "DriveMate verification: ${{ inputs.app_sha || 'd532df432afcdbd9c8334c40673d71a58505b4cb' }}"
+run-name: "DriveMate verification: ${{ inputs.app_sha || '3dfe074a6046b79cf990fdd46bf3144ab6a8b24b' }}"
 on:
   push:
     branches: [main]
@@ -10,7 +10,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: 'd532df432afcdbd9c8334c40673d71a58505b4cb'
+        default: '3dfe074a6046b79cf990fdd46bf3144ab6a8b24b'
 permissions:
   contents: read
 jobs:
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || 'd532df432afcdbd9c8334c40673d71a58505b4cb' }}
+      APP_SHA: ${{ inputs.app_sha || '3dfe074a6046b79cf990fdd46bf3144ab6a8b24b' }}
     steps:
       - name: Require private-source read access
         env:
