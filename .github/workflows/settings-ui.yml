@@ -90,8 +90,10 @@ jobs:
               app_sha, harness_sha, attempt = public_identity(run, run_id)
               jobs = fetch_json(public_base + '/attempts/' + str(attempt) + '/jobs?per_page=100', os.environ['GH_TOKEN'])
               private_base = 'https://api.github.com/repos/' + PRIVATE_REPO
-              comparison = fetch_json(private_base + '/compare/' + app_sha + '...main', os.environ['APP_TOKEN'])
-              require_ancestor(comparison, app_sha)
+              # Amended R005: the disposable test APK must come from the exact verified app SHA. Merging is not required.
+              commit = fetch_json(private_base + '/commits/' + app_sha, os.environ['APP_TOKEN'])
+              if commit.get('sha') != app_sha:
+                  raise ValueError('Verified app commit not found')
               gate_file = fetch_json(private_base + '/contents/.github/workflows/build-apk.yml?ref=' + app_sha, os.environ['APP_TOKEN'])
               gate = canonical_validator(base64.b64decode(gate_file['content']).decode('utf-8'))
               if gate(run, jobs) != (app_sha, harness_sha):
