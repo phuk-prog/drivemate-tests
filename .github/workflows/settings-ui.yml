@@ -1,5 +1,5 @@
 name: Verify settings effects with a disposable test APK
-run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42089571480' }}"
+run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42093892220' }}"
 on:
   workflow_dispatch:
     inputs:
@@ -7,7 +7,7 @@ on:
         description: Successful trusted public full-verification run for the exact app source
         type: string
         required: true
-        default: '42089571480'
+        default: '42093892220'
 permissions:
   contents: read
   actions: read
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      PUBLIC_RUN_ID: ${{ inputs.verification_run || '42089571480' }}
+      PUBLIC_RUN_ID: ${{ inputs.verification_run || '42093892220' }}
     steps:
       - name: Validate trusted full verification and exact source
         id: verified
