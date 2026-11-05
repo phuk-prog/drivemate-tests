@@ -1,0 +1,85 @@
+name: Lint report encrypted for owner only
+run-name: "Lint report encrypted: ${{ inputs.app_sha }}"
+on:
+  workflow_dispatch:
+    inputs:
+      app_sha:
+        description: Full 40-character private app commit SHA to lint
+        required: true
+        default: '434806aa4e0b99d5471586f47b6c356c25fac148'
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: lint-encrypted
+  cancel-in-progress: false
+jobs:
+  lint:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_SHA: ${{ inputs.app_sha }}
+      RECIPIENT: ${{ vars.LINT_AGE_RECIPIENT }}
+    steps:
+      - name: Require owner recipient key and exact app revision
+        run: |
+          [[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::app_sha must be a full 40-character commit SHA."; exit 1; }
+          case "$RECIPIENT" in
+            age1*) ;;
+            *) echo "::error::LINT_AGE_RECIPIENT repository variable is missing or invalid; no output produced."; exit 1 ;;
+          esac
+      - name: Check out private app source (ephemeral)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate
+          ref: ${{ env.APP_SHA }}
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          persist-credentials: false
+          path: app-src
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Install age encryption tool
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age && age --version
+      - name: Run lint without publishing its output
+        working-directory: app-src
+        run: |
+          # Gradle output contains private paths; keep it in a runner-only file.
+          ./gradlew :app:lintRelease --no-daemon --max-workers=4 > "$RUNNER_TEMP/lint-gradle.log" 2>&1 || true
+      - name: Publish totals and encrypted report only
+        working-directory: app-src
+        run: |
+          set -euo pipefail
+          report=app/build/reports/lint-results-release.xml
+          if [ ! -f "$report" ]; then
+            echo "::error::Lint report missing; private output withheld."
+            exit 1
+          fi
+          python3 - "$report" <<'PY_TOTALS'
+          import json, sys, xml.etree.ElementTree as ET
+          issues = ET.parse(sys.argv[1]).getroot().findall('issue')
+          totals = {'errors': sum(i.get('severity') in ('Error', 'Fatal') for i in issues),
+                    'warnings': sum(i.get('severity') == 'Warning' for i in issues)}
+          print('Lint totals: ' + json.dumps(totals, sort_keys=True))
+          PY_TOTALS
+          mkdir -p "$GITHUB_WORKSPACE/public-lint"
+          age -r "$RECIPIENT" -o "$GITHUB_WORKSPACE/public-lint/lint-results.xml.age" "$report"
+          test -s "$GITHUB_WORKSPACE/public-lint/lint-results.xml.age"
+      - name: Upload encrypted report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lint-report-encrypted
+          path: public-lint/lint-results.xml.age
+          if-no-files-found: error
+          retention-days: 3
+      - name: Remove private checkout and runner output
+        if: always()
+        run: |
+          rm -rf "$GITHUB_WORKSPACE/app-src" "$GITHUB_WORKSPACE/public-lint" "$RUNNER_TEMP/lint-gradle.log"
