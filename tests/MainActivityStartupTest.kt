@@ -1,6 +1,5 @@
 package com.drivemate.app
 
-import android.app.Application
 import com.drivemate.app.MainActivity
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -16,7 +15,7 @@ import android.os.Looper
  * onCreate, the map view and controller, and the first Compose frame.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], application = Application::class)
+@Config(sdk = [28], application = DriveMateApp::class)
 class MainActivityStartupTest {
     @Test fun mainActivityStartsThroughFirstFrameOnApi28() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
