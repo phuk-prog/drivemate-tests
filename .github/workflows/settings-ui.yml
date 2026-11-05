@@ -1,9 +1,6 @@
 name: Verify settings effects with a disposable test APK
 run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42089571480' }}"
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/settings-ui.yml']
   workflow_dispatch:
     inputs:
       verification_run:
@@ -16,7 +13,7 @@ permissions:
   actions: read
 jobs:
   settings-ui:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[verify-settings-1.2]'))
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:

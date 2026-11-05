@@ -160,4 +160,52 @@ class SessionSettingsEffectTest {
         org.junit.Assert.assertEquals(2, session.easeOff)
     }
 
+    @Test fun voiceOptionsReachTheLiveEngineAndCommittedRestore() = withSession { session ->
+        val voice = NavigationSession::class.java.getDeclaredField("voice").apply { isAccessible = true }
+            .get(session) as com.drivemate.app.nav.Voice
+        fun assertApplied(expected: com.drivemate.app.data.Settings) {
+            org.junit.Assert.assertEquals(expected.sound, voice.sound)
+            org.junit.Assert.assertEquals(expected.pauseMusic, voice.pauseMusic)
+            org.junit.Assert.assertEquals(expected.voiceOutput, voice.output)
+            org.junit.Assert.assertEquals(expected.speakDuringCalls, voice.speakDuringCalls)
+            org.junit.Assert.assertEquals(expected.guidanceVolume, voice.volume)
+            org.junit.Assert.assertEquals(expected.sound.icon, com.drivemate.app.car.CarBridge.soundIcon)
+        }
+        val requested = session.settings.copy(sound = com.drivemate.app.data.SoundMode.ALERTS,
+            pauseMusic = true, voiceOutput = com.drivemate.app.nav.VoiceOutput.PHONE,
+            speakDuringCalls = true, guidanceVolume = com.drivemate.app.nav.GuidanceVolume.LOUDER)
+        session.updateSettings(requested)
+        assertApplied(requested)
+        org.junit.Assert.assertFalse(com.drivemate.app.nav.SoundModePolicy.plays(voice.sound, false, false))
+        org.junit.Assert.assertTrue(com.drivemate.app.nav.SoundModePolicy.plays(voice.sound, true, false))
+        val silent = requested.copy(sound = com.drivemate.app.data.SoundMode.OFF)
+        session.updateSettings(silent)
+        assertApplied(silent)
+        org.junit.Assert.assertFalse(com.drivemate.app.nav.SoundModePolicy.plays(voice.sound, true, false))
+        val restored = com.drivemate.app.data.Settings()
+        NavigationSession::class.java.getDeclaredMethod("applyCommittedSettings", com.drivemate.app.data.Settings::class.java)
+            .apply { isAccessible = true }.invoke(session, restored)
+        assertApplied(restored)
+        org.junit.Assert.assertTrue(com.drivemate.app.nav.SoundModePolicy.plays(voice.sound, false, false))
+    }
+
+    @Test fun disablingJunctionViewClearsCurrentAndUpcomingViewsImmediately() = withSession { session ->
+        val point = com.drivemate.app.nav.LatLon(53.48, -2.24)
+        val junction = com.drivemate.app.nav.ImmersiveMap.Junction(0,
+            com.drivemate.app.nav.ImmersiveMap.Kind.TURN, point,
+            listOf(point, com.drivemate.app.nav.LatLon(53.49, -2.23)))
+        val disabled = session.settings.copy(junctionView = false)
+        state(session, "immersiveMap", junction)
+        state(session, "immersiveUpcoming", junction)
+        session.updateSettings(disabled)
+        org.junit.Assert.assertNull(session.immersiveMap)
+        org.junit.Assert.assertNull(session.immersiveUpcoming)
+        state(session, "immersiveMap", junction)
+        state(session, "immersiveUpcoming", junction)
+        NavigationSession::class.java.getDeclaredMethod("applyCommittedSettings", com.drivemate.app.data.Settings::class.java)
+            .apply { isAccessible = true }.invoke(session, disabled)
+        org.junit.Assert.assertNull(session.immersiveMap)
+        org.junit.Assert.assertNull(session.immersiveUpcoming)
+    }
+
 }
