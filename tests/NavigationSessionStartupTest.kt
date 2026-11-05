@@ -209,3 +209,48 @@ class SessionSettingsEffectTest {
     }
 
 }
+
+/**
+ * Startup history cleanup ("keep N days") must follow the authoritative DataStore value, not the
+ * preference mirror kept for backup compatibility. Covers both conflict directions in one test:
+ * a stale mirror that would delete history the user chose to keep, and a stale mirror that would skip
+ * cleanup the user asked for.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = Application::class)
+class RetentionAuthorityStartupTest {
+    /** Seeds conflicting values, starts a real session, and returns whether the old trip survived. */
+    private fun oldTripSurvivesStartup(mirrorKeepDays: Int, authorityKeepDays: Int, tripStartedAt: Long): Boolean {
+        val app = RuntimeEnvironment.getApplication() as Application
+        val prefs = app.getSharedPreferences("drivemate", android.content.Context.MODE_PRIVATE)
+        org.junit.Assert.assertTrue(prefs.edit().clear().commit())
+        val setup = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        try {
+            kotlinx.coroutines.runBlocking {
+                com.drivemate.app.data.SettingsRepository(app, setup).save(com.drivemate.app.data.Settings(keepDays = authorityKeepDays))
+            }
+            org.junit.Assert.assertTrue(com.drivemate.app.data.Settings(keepDays = mirrorKeepDays).save(prefs, synchronous = true))
+            com.drivemate.app.nav.TripHistory(prefs).add(
+                com.drivemate.app.nav.TripSummary("Synthetic old trip", tripStartedAt, 600, 4_000.0, 0, emptyList()))
+            NavigationSession(app).use { session ->
+                val deadline = System.nanoTime() + 15_000_000_000L
+                while (!session.settingsReady && System.nanoTime() < deadline) {
+                    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+                    Thread.sleep(10)
+                }
+                org.junit.Assert.assertTrue("Saved settings must load", session.settingsReady)
+                return session.pastTrips().any { it.destination == "Synthetic old trip" }
+            }
+        } finally { setup.coroutineContext[kotlinx.coroutines.Job]!!.cancel() }
+    }
+
+    @Test fun startupCleanupUsesAuthoritativeRetentionInBothDirections() {
+        val thirtyDaysAgo = System.currentTimeMillis() - 30L * 86_400_000L
+        org.junit.Assert.assertTrue(
+            "Authoritative keep-forever must keep a 30-day-old trip even when the mirror says 7 days",
+            oldTripSurvivesStartup(mirrorKeepDays = 7, authorityKeepDays = 0, tripStartedAt = thirtyDaysAgo))
+        org.junit.Assert.assertFalse(
+            "Authoritative 7-day retention must remove a 30-day-old trip even when the mirror says keep forever",
+            oldTripSurvivesStartup(mirrorKeepDays = 0, authorityKeepDays = 7, tripStartedAt = thirtyDaysAgo))
+    }
+}
