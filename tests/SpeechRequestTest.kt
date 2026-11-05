@@ -37,6 +37,9 @@ class SpeechRequestTest {
         try {
             voice.onInit(TextToSpeech.SUCCESS)
             looper.idle()
+            // Direction prompts are only valid for the route they belong to; start one first, as the app does.
+            voice.beginRoute()
+            looper.idle()
             voice.say(prompt)
             looper.idle()
         } finally {
