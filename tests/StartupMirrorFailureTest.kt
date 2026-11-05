@@ -1,6 +1,5 @@
 package com.drivemate.app
 
-import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.datastore.preferences.core.edit
 import android.app.Application
 import android.content.Context
@@ -96,23 +95,23 @@ class StartupMirrorFailureTest {
 
     @Test fun legacyDatastoreAppearanceValuesDoNotOverrideActiveChoices() = runBlocking {
         val base = RuntimeEnvironment.getApplication() as Application
-        val seedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val seed = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
-            scope = seedScope, produceFile = { base.preferencesDataStoreFile("drivemate-settings") })
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            seed.edit { values ->
+            val repository = com.drivemate.app.data.SettingsRepository(base, scope)
+            // Use the process-owned store already used by the app. A second factory/file can
+            // pass in isolation while the full suite still reads the delegated singleton.
+            @Suppress("UNCHECKED_CAST")
+            val store = repository.javaClass.getDeclaredField("store").let { field ->
+                field.isAccessible = true
+                field.get(repository) as androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+            }
+            store.edit { values ->
+                values.clear()
                 values[androidx.datastore.preferences.core.booleanPreferencesKey("_ready")] = true
                 values[androidx.datastore.preferences.core.stringPreferencesKey("theme")] = "BRIGHT"
                 values[androidx.datastore.preferences.core.booleanPreferencesKey("browseBuildings3d")] = true
                 values[androidx.datastore.preferences.core.booleanPreferencesKey("autoZoom")] = false
             }
-        } finally {
-            seedScope.cancel()
-            seedScope.coroutineContext[Job]!!.join()
-        }
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        try {
-            val repository = com.drivemate.app.data.SettingsRepository(base, scope)
             assertEquals("Legacy DataStore fields must not become active choices",
                 Settings(autoZoom = false), withTimeout(15_000) { repository.load(Settings()) })
         } finally { scope.cancel() }
