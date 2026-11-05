@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '6374784e68a3f2e0560b73916e38890a5a334864' }}"
+run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '434806aa4e0b99d5471586f47b6c356c25fac148' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '6374784e68a3f2e0560b73916e38890a5a334864'
+        default: '434806aa4e0b99d5471586f47b6c356c25fac148'
       check_mode:
         description: Full verification or focused reproduction (focused never qualifies for an APK)
         type: choice
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || '6374784e68a3f2e0560b73916e38890a5a334864' }}
+      APP_SHA: ${{ inputs.app_sha || '434806aa4e0b99d5471586f47b6c356c25fac148' }}
       CHECK_MODE: ${{ inputs.check_mode || 'full' }}
       TEST_FILTERS: ${{ inputs.test_filters || '' }}
     steps:
