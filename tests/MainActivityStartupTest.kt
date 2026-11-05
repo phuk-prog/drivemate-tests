@@ -15,7 +15,7 @@ import android.os.Looper
  * onCreate, the map view and controller, and the first Compose frame.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], application = DriveMateApp::class)
+@Config(sdk = [28], application = DriveMateApp::class, shadows = [ShadowNativeConnectivityListener::class, ShadowTileServerOptions::class, ShadowFileSource::class])
 class MainActivityStartupTest {
     @Test fun mainActivityStartsThroughFirstFrameOnApi28() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
