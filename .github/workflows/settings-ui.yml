@@ -628,8 +628,8 @@ jobs:
           FIELDS = {'subcategory', 'app_sha', 'ui_harness_sha', 'verification_run_id',
                     'verification_harness_sha', 'verification_attempt', 'run_id', 'run_attempt',
                     'api_level', 'abi', 'apk_sha256', 'checks', 'test_apk_created',
-                    'test_apk_published', 'release_acceptance'}
-          
+                    'test_apk_published', 'release_acceptance', 'restart_persisted'}
+
           def validate_ui_result(value, expected):
               if type(value) is not dict or set(value) != FIELDS:
                   raise ValueError('Invalid UI result schema')
@@ -652,6 +652,8 @@ jobs:
                   raise ValueError('Missing UI checks')
               if any(type(passed) is not bool or not passed for passed in value['checks'].values()):
                   raise ValueError('UI checks did not pass')
+              if type(value['restart_persisted']) is not bool or value['restart_persisted'] is not True:
+                  raise ValueError('Restart persistence did not pass')
               for key, item in [('test_apk_created', True), ('test_apk_published', False), ('release_acceptance', False)]:
                   if type(value[key]) is not bool or value[key] is not item:
                       raise ValueError('Incorrect APK or release claim')
