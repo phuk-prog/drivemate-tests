@@ -304,4 +304,89 @@ class NavigationSafetyTest {
         assertEquals(target, camera.update(0.0, -1L, 100.0, true, true, false))
     }
 
+    private fun preferenceRoute(seconds: Double, turns: Int, sideStreet: Boolean): com.drivemate.app.data.Route {
+        val a = LatLon(53.48, -2.24)
+        fun step(type: String, metres: Double, ref: String) = com.drivemate.app.data.RouteStep(
+            "Synthetic instruction", type, if (type == "turn") "left" else "straight",
+            "Synthetic road", metres, a, leftDriving = true, duration = metres / 8.0, ref = ref)
+        val middle = if (turns == 0) listOf(step("continue", 2_000.0, if (sideStreet) "" else "A1"))
+            else List(turns) { step("turn", 2_000.0 / turns, if (sideStreet) "" else "A1") }
+        return com.drivemate.app.data.Route(listOf(a, LatLon(53.50, -2.20)), 4_000.0, seconds,
+            listOf(step("depart", 1_000.0, "A1")) + middle + step("arrive", 1_000.0, "A1"), "Synthetic")
+    }
+
+    @Test fun routePreferencesChangeSelectionOnlyWithinTheirTimeAllowance() {
+        val fast = preferenceRoute(600.0, 5, true)
+        val simple = preferenceRoute(720.0, 0, false)
+        val format = com.drivemate.app.nav.Format(false)
+        val choices = com.drivemate.app.controller.RouteChoices
+        assertSame(simple, choices.order(listOf(fast, simple), com.drivemate.app.data.Settings(preferSimple = true), format).routes.first())
+        assertSame(fast, choices.order(listOf(fast, simple.copy(duration = 721.0)), com.drivemate.app.data.Settings(preferSimple = true), format).routes.first())
+        val mainRoad = simple.copy(duration = 780.0)
+        assertSame(mainRoad, choices.order(listOf(fast, mainRoad), com.drivemate.app.data.Settings(avoidRatRuns = true), format).routes.first())
+        assertSame(fast, choices.order(listOf(fast, mainRoad.copy(duration = 781.0)), com.drivemate.app.data.Settings(avoidRatRuns = true), format).routes.first())
+    }
+
+    @Test fun explicitPreferencesOverrideAnUnsuitableLearnedFirstRoute() {
+        val learned = preferenceRoute(650.0, 5, true)
+        val fastMainRoad = preferenceRoute(600.0, 0, false)
+        val format = com.drivemate.app.nav.Format(false)
+        val choices = com.drivemate.app.controller.RouteChoices
+        assertSame(learned, choices.order(listOf(learned, fastMainRoad), com.drivemate.app.data.Settings(), format).routes.first())
+        for (settings in listOf(com.drivemate.app.data.Settings(preferSimple = true), com.drivemate.app.data.Settings(avoidRatRuns = true)))
+            assertSame(fastMainRoad, choices.order(listOf(learned, fastMainRoad), settings, format).routes.first())
+    }
+
+    @Test fun preferencesDoNotInventComparisonsBetweenLiveAndUntimedRoutes() {
+        val live = preferenceRoute(700.0, 5, true).copy(live = true,
+            trafficCheckedAt = System.currentTimeMillis(), comparisonReliable = true)
+        val untimed = preferenceRoute(600.0, 0, false)
+        assertSame(live, com.drivemate.app.controller.RouteChoices.order(listOf(live, untimed),
+            com.drivemate.app.data.Settings(preferSimple = true, avoidRatRuns = true),
+            com.drivemate.app.nav.Format(false)).routes.first())
+    }
+
+    private class PreferenceRoutingProvider(val answer: com.drivemate.app.data.Router.Result) : com.drivemate.app.controller.RoutingProvider {
+        var alternatives = false
+        var stops: List<LatLon> = emptyList()
+        var avoid: Set<String> = emptySet()
+        var failure: RuntimeException? = null
+        override fun route(from: LatLon, to: LatLon, heading: Float?, alternatives: Boolean,
+                           stops: List<LatLon>, avoid: Set<String>): com.drivemate.app.data.Router.Result {
+            this.alternatives = alternatives; this.stops = stops; this.avoid = avoid
+            failure?.let { throw it }
+            return answer
+        }
+        override fun options(from: LatLon, to: LatLon, avoid: Set<String>, heading: Float?) =
+            throw AssertionError("Rerouting must preserve intermediate stops")
+    }
+
+    @Test fun rerouteAppliesPreferencesWithoutDroppingStopsOrAvoidances() {
+        val fast = preferenceRoute(600.0, 5, true)
+        val simple = preferenceRoute(660.0, 0, false)
+        val provider = PreferenceRoutingProvider(com.drivemate.app.data.Router.Result(listOf(fast, simple)))
+        val controller = com.drivemate.app.controller.RoutePlanningController(provider)
+        val stops = listOf(LatLon(53.49, -2.23), LatLon(53.495, -2.22))
+        val settings = com.drivemate.app.data.Settings(preferSimple = true, avoidTolls = true, avoidFerries = true)
+        val answer = controller.preferredRoute(fast.points.first(), fast.points.last(), null, stops, settings, com.drivemate.app.nav.Format(false))
+        assertSame(simple, answer.routes.first())
+        assertTrue(provider.alternatives)
+        assertEquals(stops, provider.stops)
+        assertEquals(setOf("toll", "ferry"), provider.avoid)
+        controller.preferredRoute(fast.points.first(), fast.points.last(), null, stops,
+            settings.copy(preferSimple = false), com.drivemate.app.nav.Format(false))
+        assertFalse(provider.alternatives)
+    }
+
+    @Test fun cancelledPreferenceRerouteCannotReturnAChoice() {
+        val fast = preferenceRoute(600.0, 5, true)
+        val provider = PreferenceRoutingProvider(com.drivemate.app.data.Router.Result(listOf(fast)))
+        provider.failure = java.util.concurrent.CancellationException("Synthetic cancelled request")
+        val controller = com.drivemate.app.controller.RoutePlanningController(provider)
+        assertThrows(java.util.concurrent.CancellationException::class.java) {
+            controller.preferredRoute(fast.points.first(), fast.points.last(), null, emptyList(),
+                com.drivemate.app.data.Settings(preferSimple = true), com.drivemate.app.nav.Format(false))
+        }
+    }
+
 }
