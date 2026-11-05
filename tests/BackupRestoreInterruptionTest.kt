@@ -325,6 +325,15 @@ class BackupRestoreInterruptionTest {
         }
     }
 
+    /** The authority accepted the write, but the preference mirror rejected it: the save succeeded. */
+    private suspend fun mirrorRejectedSettingsWrite(controller: PersonalDataController, settings: Settings) {
+        val saved = CompletableDeferred<Unit>()
+        controller.saveSettings(settings,
+            onSaved = { saved.complete(Unit) },
+            onFailed = { saved.completeExceptionally(AssertionError("A mirror-only failure must not report a failed save")) })
+        withTimeout(15_000) { saved.await() }
+    }
+
     private suspend fun rejectedSettingsWrite(controller: PersonalDataController, settings: Settings) {
         val rejected = CompletableDeferred<Unit>()
         controller.saveSettings(settings,
@@ -337,7 +346,7 @@ class BackupRestoreInterruptionTest {
         settingsWriteFailureFixture { controller, reject, authority, context ->
             val changed = Settings(avoidTolls = true)
             reject(true, false)
-            rejectedSettingsWrite(controller, changed)
+            mirrorRejectedSettingsWrite(controller, changed)
             assertEquals(changed, authority())
             assertEquals(changed, controller.currentSettings())
             assertFalse(Settings.load(context.getSharedPreferences("drivemate", 0)).avoidTolls)
@@ -353,7 +362,7 @@ class BackupRestoreInterruptionTest {
         settingsWriteFailureFixture { controller, reject, authority, context ->
             val changed = Settings(avoidMotorways = true)
             reject(true, false)
-            rejectedSettingsWrite(controller, changed)
+            mirrorRejectedSettingsWrite(controller, changed)
             assertEquals(changed, authority())
             reject(false, false)
             val learned = LearnedSpeeds(context)
