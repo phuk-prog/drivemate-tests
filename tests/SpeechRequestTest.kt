@@ -34,6 +34,8 @@ class SpeechRequestTest {
         val voice = Voice(app)
         val requests = mutableListOf<Triple<String, Float, String>>()
         voice.onSpeakRequest = { text, volume, id -> requests.add(Triple(text, volume, id)) }
+        // Robolectric does not grant audio focus by default; grant it so the speak path is reached.
+        voice.focusGranted = { true }
         try {
             voice.onInit(TextToSpeech.SUCCESS)
             looper.idle()
