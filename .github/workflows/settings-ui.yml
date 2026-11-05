@@ -1,23 +1,26 @@
 name: Verify settings 1.1 with a disposable test APK
-run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '41898662578' }}"
+run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '42078539282' }}"
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/settings-ui.yml']
   workflow_dispatch:
     inputs:
       verification_run:
         description: Successful trusted public full-verification run for the merged app source
         type: string
         required: true
-        default: '41898662578'
+        default: '42078539282'
 permissions:
   contents: read
   actions: read
 jobs:
   settings-ui:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[verify-settings-1.1]'))
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      PUBLIC_RUN_ID: ${{ inputs.verification_run || '41898662578' }}
+      PUBLIC_RUN_ID: ${{ inputs.verification_run || '42078539282' }}
     steps:
       - name: Validate trusted full verification and merged source
         id: verified
