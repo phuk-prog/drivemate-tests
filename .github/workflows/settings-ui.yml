@@ -519,22 +519,33 @@ jobs:
                   return wait_for(lambda: True if prefs().get(key) == expected else None)
 
               def cycle_switch(text, key):
+                  global phase
+                  stage = phase
+                  phase = stage + '_reveal'
                   baseline = before[key][1] == 'true'
                   reveal(text)
+                  phase = stage + '_toggle'
                   tap(wait_switch(text, baseline))
                   wait_switch(text, not baseline)
+                  phase = stage + '_saved_value'
                   wait_preference(key, ('boolean', 'false' if baseline else 'true'))
                   if not unchanged(before, prefs(), keys - {key}):
                       raise AssertionError('Control changed unrelated settings')
+                  phase = stage + '_restore'
                   tap(wait_switch(text, not baseline))
                   wait_switch(text, baseline)
                   wait_preference(key, before[key])
                   if not unchanged(before, prefs(), keys):
                       raise AssertionError('Control did not restore its baseline')
+                  phase = stage
 
               phase = 'battery_control'
               cycle_switch(BATTERY, 'batterySaver')
               phase = 'junction_control'
+              adb('shell', 'input', 'keyevent', '4')
+              wait_for(lambda: label('Search settings'))
+              reveal('Lane and junction guidance')
+              tap(wait_for(lambda: label('Lane and junction guidance')))
               cycle_switch('Continuous junction view (closer road perspective with the route ahead)', 'junctionView')
               phase = 'route_preference_controls'
               adb('shell', 'input', 'keyevent', '4')
@@ -546,8 +557,8 @@ jobs:
               phase = 'sound_control'
               adb('shell', 'input', 'keyevent', '4')
               wait_for(lambda: label('Search settings'))
-              reveal('Sound')
-              tap(wait_for(lambda: label('Sound')))
+              reveal('Voice and music')
+              tap(wait_for(lambda: label('Voice and music')))
               modes = {'ALL': 'Directions & warnings', 'ALERTS': 'Alerts only', 'OFF': 'Silent'}
               original_sound = before['sound'][1]
               alternate = 'ALL' if original_sound == 'OFF' else 'OFF'
