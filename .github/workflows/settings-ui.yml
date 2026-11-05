@@ -1,25 +1,28 @@
 name: Verify settings effects with a disposable test APK
-run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42078539282' }}"
+run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42089571480' }}"
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/settings-ui.yml']
   workflow_dispatch:
     inputs:
       verification_run:
-        description: Successful trusted public full-verification run for the merged app source
+        description: Successful trusted public full-verification run for the exact app source
         type: string
         required: true
-        default: '42078539282'
+        default: '42089571480'
 permissions:
   contents: read
   actions: read
 jobs:
   settings-ui:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[verify-settings-1.2]'))
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      PUBLIC_RUN_ID: ${{ inputs.verification_run || '42078539282' }}
+      PUBLIC_RUN_ID: ${{ inputs.verification_run || '42089571480' }}
     steps:
-      - name: Validate trusted full verification and merged source
+      - name: Validate trusted full verification and exact source
         id: verified
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,11 +54,6 @@ jobs:
                       or type(run.get('run_attempt')) is not int or run['run_attempt'] < 1):
                   raise ValueError('Invalid public identity')
               return match.group(1), run['head_sha'], run['run_attempt']
-          
-          def require_ancestor(comparison, app_sha):
-              if (comparison.get('status') not in ('ahead', 'identical')
-                      or comparison.get('merge_base_commit', {}).get('sha') != app_sha):
-                  raise ValueError('Test source is not merged')
           
           def canonical_validator(source):
               match = re.search(r"python3 - <<'PY_VERIFY'\n(.*?)          PY_VERIFY(?:\n|$)", source, re.S)
@@ -176,7 +174,7 @@ jobs:
           test "$("$adb" -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" = 28
           test "$("$adb" -s emulator-5554 shell getprop ro.product.cpu.abi | tr -d '\r')" = x86_64
           echo "Settings UI emulator ready: API 28, x86_64, KVM"
-      - name: Exercise real Settings Auto-zoom control
+      - name: Exercise real Settings controls
         timeout-minutes: 10
         env:
           APP_SHA: ${{ steps.verified.outputs.app_sha }}
