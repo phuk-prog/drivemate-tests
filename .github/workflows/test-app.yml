@@ -284,13 +284,34 @@ jobs:
             rm -rf "$ANDROID_USER_HOME"
           }
           trap cleanup EXIT
-          trap 'echo "::error::Emulator bootstrap failed during $phase; raw output withheld."' ERR
+          report_bootstrap_failure() {
+            echo "::error::Emulator bootstrap failed during $phase; raw output withheld."
+            python3 - "$log" <<'PY_BOOTSTRAP_FAILURE'
+          import json, pathlib, sys
+          text = pathlib.Path(sys.argv[1]).read_text(errors='replace') if pathlib.Path(sys.argv[1]).exists() else ''
+          signatures = {
+              'PACKAGE_MISSING': ('Failed to find package', 'Package path is not valid'),
+              'DISK_FULL': ('No space left on device',),
+              'JAVA_VERSION': ('UnsupportedClassVersionError', 'requires Java'),
+              'ARCHIVE_CORRUPT': ('Not in GZIP format', 'zip END header not found', 'invalid LOC header'),
+              'DOWNLOAD_FAILURE': ('Failed to download', 'Error while downloading', 'Connection reset', 'Read timed out'),
+              'LICENSE_REQUIRED': ('licenses have not been accepted', 'Accept? (y/N)'),
+              'INVALID_DEVICE': ('no device found matching', 'Invalid device'),
+              'IMAGE_UNAVAILABLE': ('Valid system image paths are:', 'not installed'),
+          }
+          labels = [label for label, needles in signatures.items() if any(needle.lower() in text.lower() for needle in needles)]
+          # Only this SDK/AVD tool log is inspected; no app/compiler output or raw text is published.
+          print('Bootstrap diagnostic: ' + json.dumps({'labels': labels or ['UNCLASSIFIED'], 'log_present': bool(text)}))
+          PY_BOOTSTRAP_FAILURE
+          }
+          trap report_bootstrap_failure ERR
           test -e /dev/kvm
           sudo chown "$(id -u)" /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           mkdir -p "$ANDROID_AVD_HOME"
-          phase=installation
+          phase=sdk_installation
           sdkmanager 'emulator' 'system-images;android-28;default;x86_64' > "$log" 2>&1
+          phase=avd_creation
           printf 'no\n' | avdmanager create avd --force --name public-api28 --package 'system-images;android-28;default;x86_64' >> "$log" 2>&1
           phase=boot
           "$ANDROID_HOME/emulator/emulator" -avd public-api28 -port 5554 -accel on -no-window -gpu swiftshader_indirect -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 >> "$log" 2>&1 &
