@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '29774b1a6f0cbe5d843c0be076667e8b7b96d2d1' }}"
+run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '8042a2b22f46964487c5f77fe495f0a0a6e97d80' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '29774b1a6f0cbe5d843c0be076667e8b7b96d2d1'
+        default: '8042a2b22f46964487c5f77fe495f0a0a6e97d80'
       check_mode:
         description: Full verification or focused reproduction (focused never qualifies for an APK)
         type: choice
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || '29774b1a6f0cbe5d843c0be076667e8b7b96d2d1' }}
+      APP_SHA: ${{ inputs.app_sha || '8042a2b22f46964487c5f77fe495f0a0a6e97d80' }}
       CHECK_MODE: ${{ inputs.check_mode || 'full' }}
       TEST_FILTERS: ${{ inputs.test_filters || '' }}
     steps:
@@ -240,7 +240,7 @@ jobs:
                   private_tests = list(app.glob('app/src/test/**/*.*')) + list(app.glob('app/src/androidTest/**/*.*'))
                   self.assertFalse([p for p in private_tests if p.is_file()])
                   count = sum(len(re.findall(r'@Test\s+fun ', p.read_text())) for p in (harness / 'tests').glob('*.kt'))
-                  self.assertGreaterEqual(count, 88)
+                  self.assertGreaterEqual(count, 90)
 
           result = unittest.TextTestRunner(stream=io.StringIO()).run(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowContracts))
           counts = {'tests': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors)}
@@ -478,7 +478,7 @@ jobs:
           assert reports, 'No test results'
           totals = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in reports)
                     for key in ('tests', 'failures', 'errors', 'skipped')}
-          assert totals['tests'] >= 88 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
+          assert totals['tests'] >= 90 and totals['failures'] == totals['errors'] == totals['skipped'] == 0, totals
           issues = ET.parse('app-src/app/build/reports/lint-results-release.xml').getroot().findall('issue')
           lint = {'errors': sum(i.get('severity') in ('Error', 'Fatal') for i in issues),
                   'warnings': sum(i.get('severity') == 'Warning' for i in issues)}

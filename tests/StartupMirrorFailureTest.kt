@@ -1,5 +1,7 @@
 package com.drivemate.app
 
+import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.datastore.preferences.core.edit
 import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
@@ -67,4 +69,53 @@ class StartupMirrorFailureTest {
             withTimeout(15_000) { scope.coroutineContext[Job]!!.join() }
         }
     }
+    @Test fun legacyAppearanceBackupRemainsPortableWithoutChangingActiveSettings() {
+        val base = RuntimeEnvironment.getApplication() as Application
+        val prefs = base.getSharedPreferences("drivemate", Context.MODE_PRIVATE)
+        assertTrue(prefs.edit().clear().commit())
+        val values = org.json.JSONObject()
+            .put("theme", org.json.JSONObject().put("t", "s").put("v", "BRIGHT"))
+            .put("browseBuildings3d", org.json.JSONObject().put("t", "b").put("v", true))
+            .put("autoZoom", org.json.JSONObject().put("t", "b").put("v", false))
+        val text = org.json.JSONObject().put("format", "DriveMate backup").put("version", 1)
+            .put("preferences", values).toString()
+        val learned = com.drivemate.app.nav.LearnedSpeeds(base)
+        try {
+            com.drivemate.app.data.BackupManager.restore(base, learned, text)
+            assertEquals("Retired appearance choices must not change active settings",
+                Settings(autoZoom = false), Settings.load(prefs))
+            assertTrue(Settings(autoZoom = false, avoidTolls = true).save(prefs, synchronous = true))
+            val exported = com.drivemate.app.data.BackupSchema.parse(
+                com.drivemate.app.data.BackupManager.export(base, learned)).preferences
+            assertEquals("BRIGHT", exported["theme"])
+            assertEquals(true, exported["browseBuildings3d"])
+            assertEquals(false, exported["autoZoom"])
+            assertEquals(true, exported["avoidTolls"])
+        } finally { learned.close() }
+    }
+
+    @Test fun legacyDatastoreAppearanceValuesDoNotOverrideActiveChoices() = runBlocking {
+        val base = RuntimeEnvironment.getApplication() as Application
+        val seedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val seed = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
+            scope = seedScope, produceFile = { base.preferencesDataStoreFile("drivemate-settings") })
+        try {
+            seed.edit { values ->
+                values[androidx.datastore.preferences.core.booleanPreferencesKey("_ready")] = true
+                values[androidx.datastore.preferences.core.stringPreferencesKey("theme")] = "BRIGHT"
+                values[androidx.datastore.preferences.core.booleanPreferencesKey("browseBuildings3d")] = true
+                values[androidx.datastore.preferences.core.booleanPreferencesKey("autoZoom")] = false
+            }
+        } finally {
+            seedScope.cancel()
+            seedScope.coroutineContext[Job]!!.join()
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            val repository = com.drivemate.app.data.SettingsRepository(base, scope)
+            assertEquals("Legacy DataStore fields must not become active choices",
+                Settings(autoZoom = false), withTimeout(15_000) { repository.load(Settings()) })
+        } finally { scope.cancel() }
+    }
+
 }
