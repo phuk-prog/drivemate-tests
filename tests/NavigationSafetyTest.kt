@@ -274,4 +274,34 @@ class NavigationSafetyTest {
         assertTrue(policy.allowed(true, false, 0.49, 5_000L))
     }
 
+    @Test fun autoZoomChangesTheActualCameraTargetAndCanBeDisabled() {
+        val camera = com.drivemate.app.map.AdaptiveDrivingCamera()
+        val cruise = camera.update(30.0, 0L, 5_000.0, false, false, true)
+        val fixed = camera.update(30.0, 1_000L, 5_000.0, false, false, false)
+        val enabled = camera.update(30.0, 2_000L, 5_000.0, false, false, true)
+        assertTrue("Fast-road Auto-zoom must show more road", cruise.zoom < fixed.zoom)
+        assertEquals(cruise.zoom, enabled.zoom, 0.001)
+        val turn = camera.update(30.0, 3_000L, 100.0, true, false, true)
+        assertTrue("Approaching a turn must zoom closer", turn.zoom > fixed.zoom)
+        val disabledAtTurn = camera.update(30.0, 4_000L, 100.0, true, false, false)
+        assertEquals(fixed.zoom, disabledAtTurn.zoom, 0.001)
+    }
+
+    @Test fun reenabledAutoZoomUsesCurrentSpeedInsteadOfTheOldRoadBand() {
+        val camera = com.drivemate.app.map.AdaptiveDrivingCamera()
+        val fast = camera.update(30.0, 0L, 5_000.0, false, false, true)
+        camera.update(0.0, 1_000L, 5_000.0, false, false, false)
+        val slow = camera.update(0.0, 2_000L, 5_000.0, false, false, true)
+        assertTrue(slow.zoom > fast.zoom)
+        assertEquals(0.0, camera.smoothedSpeed, 0.001)
+    }
+
+    @Test fun staleCameraSamplesCannotUndoTheCurrentTarget() {
+        val camera = com.drivemate.app.map.AdaptiveDrivingCamera()
+        val target = camera.update(30.0, 2_000L, 5_000.0, false, false, true)
+        assertEquals(target, camera.update(0.0, 1_000L, 100.0, true, true, false))
+        assertEquals(target, camera.update(0.0, 2_000L, 100.0, true, true, false))
+        assertEquals(target, camera.update(0.0, -1L, 100.0, true, true, false))
+    }
+
 }
