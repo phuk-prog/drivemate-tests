@@ -64,10 +64,15 @@ class RetentionAuthorityGatedTest {
         }
     }
 
-    @Test fun startupCleanupFollowsAuthorityWhileTheMirrorDisagrees() {
+    /** Stale mirror would delete history the authority keeps forever. */
+    @Test fun authorityKeepForeverSurvivesStaleSevenDayMirror() {
         assertTrue(
             "Authoritative keep-forever must keep a 30-day-old trip while the mirror says 7 days",
             tripSurvives(mirrorKeepDays = 7, authorityKeepDays = 0))
+    }
+
+    /** Stale mirror would skip cleanup the authority asks for. */
+    @Test fun authoritySevenDayRetentionRemovesTripAgainstKeepForeverMirror() {
         assertFalse(
             "Authoritative 7-day retention must remove a 30-day-old trip while the mirror says keep forever",
             tripSurvives(mirrorKeepDays = 0, authorityKeepDays = 7))
