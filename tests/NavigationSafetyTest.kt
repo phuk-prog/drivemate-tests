@@ -182,4 +182,96 @@ class NavigationSafetyTest {
         assertTrue(route.metres > 0)
         assertTrue(route.seconds.isFinite() && route.seconds > 0)
     }
+    // These cases catch malformed fixes triggering a reroute, not just a changed threshold.
+    @Test fun invalidOffRouteEvidenceNeverTriggersRerouting() {
+        val rule = com.drivemate.app.nav.OffRouteRule
+        for (bad in listOf(-1.0, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            assertFalse(rule.clearlyOff(bad, 5.0, false, false, 10.0))
+            assertFalse(rule.clearlyOff(200.0, bad, false, false, 10.0))
+            assertFalse(rule.clearlyOff(200.0, 5.0, false, false, bad))
+            assertFalse(rule.turnedOffWithoutMap(bad, 5.0, 10.0, false))
+            assertFalse(rule.turnedOffWithoutMap(200.0, bad, 10.0, false))
+            assertFalse(rule.turnedOffWithoutMap(200.0, 5.0, bad, false))
+            assertFalse(rule.wrongTurn(10.0, false, bad, 5.0, 180.0, listOf(0.0)))
+            assertFalse(rule.wrongTurn(10.0, false, 200.0, bad, 180.0, listOf(0.0)))
+            assertFalse(rule.wrongTurn(bad, false, 200.0, 5.0, 180.0, listOf(0.0)))
+        }
+        assertTrue(rule.clearlyOff(200.0, 5.0, false, false, 10.0))
+        assertTrue(rule.turnedOffWithoutMap(200.0, 5.0, 10.0, false))
+    }
+
+    // Matching the road after a bend must prevent a spurious gyro wrong turn.
+    @Test fun wrongTurnRequiresDisagreementWithEveryUpcomingBearing() {
+        val rule = com.drivemate.app.nav.OffRouteRule
+        assertFalse(rule.wrongTurn(10.0, false, 50.0, 5.0, 90.0, listOf(0.0, 90.0)))
+        assertTrue(rule.wrongTurn(10.0, false, 50.0, 5.0, 180.0, listOf(0.0, 90.0)))
+        assertFalse(rule.wrongTurn(10.0, true, 50.0, 5.0, 180.0, listOf(0.0)))
+        assertFalse(rule.wrongTurn(0.0, false, 50.0, 5.0, 180.0, listOf(0.0)))
+        assertFalse(rule.wrongTurn(10.0, false, 50.0, 5.0, null, listOf(0.0)))
+        assertFalse(rule.wrongTurn(10.0, false, 50.0, 5.0, 180.0, emptyList()))
+        assertFalse(rule.wrongTurn(10.0, false, 50.0, 5.0, Double.NaN, listOf(0.0)))
+        assertFalse(rule.wrongTurn(10.0, false, 50.0, 5.0, 180.0, listOf(Double.NaN)))
+    }
+
+    @Test fun fasterGpsSamplingCannotShortenOffRouteConfirmation() {
+        val rule = com.drivemate.app.nav.OffRouteRule
+        assertFalse(rule.lastedLongEnough(4, 1.5))
+        assertTrue(rule.lastedLongEnough(4, 3.0))
+        assertTrue(rule.lastedLongEnough(1, 0.0))
+        assertFalse(rule.lastedLongEnough(0, 10.0))
+        for (bad in listOf(-1.0, Double.NaN, Double.POSITIVE_INFINITY))
+            assertFalse(rule.lastedLongEnough(4, bad))
+    }
+
+    @Test fun headingAgreementHandlesNorthWrapAndUnusableFixes() {
+        val rule = com.drivemate.app.nav.OffRouteRule
+        assertTrue(rule.headingAgrees(359.0, 10.0, 1.0))
+        assertTrue(rule.headingAgrees(1.0, 10.0, 359.0))
+        assertFalse(rule.headingAgrees(180.0, 10.0, 0.0))
+        assertFalse(rule.headingAgrees(0.0, 0.0, 0.0))
+        assertFalse(rule.headingAgrees(null, 10.0, 0.0))
+        assertFalse(rule.headingAgrees(Double.NaN, 10.0, 0.0))
+        assertFalse(rule.headingAgrees(0.0, Double.POSITIVE_INFINITY, 0.0))
+        assertFalse(rule.headingAgrees(0.0, 10.0, Double.NaN))
+    }
+
+    @Test fun failedReroutesBackOffAndSuccessRestoresNormalRetry() {
+        val policy = com.drivemate.app.nav.ReroutePolicy
+        assertTrue(policy.mayReroute(7_001, 1_000, 0))
+        assertFalse(policy.mayReroute(7_001, 1_000, 1))
+        assertTrue(policy.mayReroute(13_001, 1_000, 1))
+        assertFalse(policy.mayReroute(13_001, 1_000, 2))
+        assertTrue(policy.mayReroute(25_001, 1_000, 2))
+        assertFalse(policy.mayReroute(61_000, 1_000, Int.MAX_VALUE))
+        assertTrue(policy.mayReroute(61_001, 1_000, Int.MAX_VALUE))
+        assertTrue(policy.mayReroute(7_001, 1_000, 0))
+    }
+
+    @Test fun rerouteRejectsInvalidOrBackwardsClockEvidence() {
+        val policy = com.drivemate.app.nav.ReroutePolicy
+        assertFalse(policy.mayReroute(-1, 0, 0))
+        assertFalse(policy.mayReroute(10_000, -1, 0))
+        assertFalse(policy.mayReroute(1_000, 10_000, 0))
+        assertFalse(policy.mayReroute(7_000, 1_000, 0))
+        assertTrue(policy.mayReroute(7_001, 1_000, Int.MIN_VALUE))
+    }
+
+    @Test fun stoppedFixAloneNeverAuthorizesReplayWhileDriving() {
+        val policy = com.drivemate.app.nav.ReplaySafety
+        assertFalse(policy.allowed(false, false, 0.0, 0L))
+        assertFalse(policy.allowed(true, true, 0.0, 0L))
+        assertFalse(policy.allowed(false, true, 0.0, 0L))
+        assertTrue(policy.allowed(true, false, 0.0, 0L))
+    }
+
+    @Test fun replayRequiresFreshFiniteStationaryEvidence() {
+        val policy = com.drivemate.app.nav.ReplaySafety
+        for (speed in listOf(null, -0.1, 0.5, 10.0, Double.NaN,
+                             Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY))
+            assertFalse(policy.allowed(true, false, speed, 0L))
+        for (age in listOf(null, -1L, 5_001L, Long.MAX_VALUE))
+            assertFalse(policy.allowed(true, false, 0.0, age))
+        assertTrue(policy.allowed(true, false, 0.49, 5_000L))
+    }
+
 }
