@@ -162,7 +162,7 @@ jobs:
           phase=avd
           printf 'no\n' | avdmanager create avd --force --name settings-ui-api28 --device pixel_2 --package 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/settings-ui-avd.log" 2>&1
           phase=boot
-          nohup "$ANDROID_HOME/emulator/emulator" -avd settings-ui-api28 -port 5554 -accel on -no-window -gpu swiftshader_indirect -feature -Vulkan -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 > "$RUNNER_TEMP/settings-ui-emulator.log" 2>&1 &
+          nohup "$ANDROID_HOME/emulator/emulator" -avd settings-ui-api28 -port 5554 -accel on -no-window -gpu guest -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 > "$RUNNER_TEMP/settings-ui-emulator.log" 2>&1 &
           echo "$!" > "$RUNNER_TEMP/settings-ui-emulator.pid"
           adb="$ANDROID_HOME/platform-tools/adb"
           timeout 240 "$adb" -s emulator-5554 wait-for-device >> "$RUNNER_TEMP/settings-ui-emulator.log" 2>&1
