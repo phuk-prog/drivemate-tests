@@ -389,6 +389,23 @@ jobs:
                       app_frames.append(frame)
               result['crash_app_frame_classes'] = app_frames[:5]
               result['crash_drivemate_frame_count'] = len(drivemate_frames)
+              # The app's own crash block: AndroidRuntime errors whose process is this app (class names only).
+              try:
+                  runtime_errors = adb('logcat', '-d', '-s', 'AndroidRuntime:E', '-v', 'brief', timeout=10)
+                  app_text = ''
+                  for block in runtime_errors.split('FATAL EXCEPTION')[1:]:
+                      if PACKAGE in block:
+                          app_text = block
+                          break
+                  app_frames = []
+                  for frame in re.findall(r'\bat ([A-Za-z_][A-Za-z0-9_.$]{1,200})\.[A-Za-z0-9_$<>-]{1,120}\(', app_text):
+                      if frame not in app_frames:
+                          app_frames.append(frame)
+                  result['app_crash_frame_classes'] = app_frames[:8]
+                  first_exception = re.search(r'([A-Za-z_][A-Za-z0-9_.$]*(?:Exception|Error)):', app_text)
+                  result['app_crash_exception_class'] = first_exception.group(1) if first_exception else None
+              except Exception:
+                  pass
               # Top frame classes of any package in the first crash block (class names only, no methods or lines).
               top_frames = []
               for frame in re.findall(r'\bat ([A-Za-z_][A-Za-z0-9_.$]{1,200})\.[A-Za-z0-9_$<>-]{1,120}\(', combined):
