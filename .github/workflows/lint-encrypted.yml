@@ -20,14 +20,15 @@ jobs:
     timeout-minutes: 30
     env:
       APP_SHA: ${{ inputs.app_sha }}
-      RECIPIENT: ${{ vars.LINT_AGE_RECIPIENT }}
+      # age public key (not secret). Only the matching private key can decrypt the report.
+      RECIPIENT: age1vmxzn3w0lmkzwddrz9agwp7rr8httqhz2fegqphfuv4e3ckh8dms2kkctx
     steps:
       - name: Require owner recipient key and exact app revision
         run: |
           [[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::app_sha must be a full 40-character commit SHA."; exit 1; }
           case "$RECIPIENT" in
             age1*) ;;
-            *) echo "::error::LINT_AGE_RECIPIENT repository variable is missing or invalid; no output produced."; exit 1 ;;
+            *) echo "::error::Recipient key is missing or invalid; no output produced."; exit 1 ;;
           esac
       - name: Check out private app source (ephemeral)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
