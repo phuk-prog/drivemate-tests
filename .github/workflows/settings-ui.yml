@@ -16,6 +16,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    environment: apk-owner
     env:
       PUBLIC_RUN_ID: ${{ inputs.verification_run || '42093892220' }}
     steps:
