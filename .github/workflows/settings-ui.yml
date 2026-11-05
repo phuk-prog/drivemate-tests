@@ -387,6 +387,12 @@ jobs:
                       app_frames.append(frame)
               result['crash_app_frame_classes'] = app_frames[:5]
               result['crash_drivemate_frame_count'] = len(drivemate_frames)
+              # Top frame classes of any package in the first crash block (class names only, no methods or lines).
+              top_frames = []
+              for frame in re.findall(r'\bat ([A-Za-z_][A-Za-z0-9_.$]{1,200})\.[A-Za-z0-9_$<>-]{1,120}\(', combined):
+                  if frame not in top_frames:
+                      top_frames.append(frame)
+              result['crash_top_frame_classes'] = top_frames[:6]
               try:
                   memory = adb('shell', 'cat', '/proc/meminfo', timeout=10)
                   for field, name in [('MemTotal', 'guest_total_mb'), ('MemAvailable', 'guest_available_mb')]:
