@@ -124,4 +124,40 @@ class SessionSettingsEffectTest {
         } finally { providerField.set(container.routes, original) }
     }
 
+    private fun progress(session: NavigationSession, distanceToNext: Double) {
+        NavigationSession::class.java.getDeclaredField("progress").apply { isAccessible = true }.set(session,
+            com.drivemate.app.nav.Progress(0.0, 0.0, 0, distanceToNext, false, null, 0,
+                5_000.0, 500.0, com.drivemate.app.nav.LatLon(53.48, -2.24), 0, null))
+    }
+
+    @Test fun batterySaverChangesMapFrameRateImmediatelyWithoutAnotherGpsFix() = withSession { session ->
+        mode(session, Mode.NAVIGATING)
+        progress(session, 1_000.0)
+        val normal = com.drivemate.app.nav.SceneFrameRate.mapFps(session.easeOff, false, visibleOverview = true)
+        session.updateSettings(session.settings.copy(batterySaver = true))
+        org.junit.Assert.assertEquals(1, session.easeOff)
+        org.junit.Assert.assertTrue(com.drivemate.app.nav.SceneFrameRate.mapFps(session.easeOff, false, visibleOverview = true) < normal)
+        session.updateSettings(session.settings.copy(batterySaver = false))
+        org.junit.Assert.assertEquals(0, session.easeOff)
+        org.junit.Assert.assertEquals(normal, com.drivemate.app.nav.SceneFrameRate.mapFps(session.easeOff, false, visibleOverview = true))
+        session.updateSettings(session.settings.copy(batterySaver = true))
+        NavigationSession::class.java.getDeclaredMethod("applyCommittedSettings", com.drivemate.app.data.Settings::class.java)
+            .apply { isAccessible = true }.invoke(session, session.settings.copy(batterySaver = false))
+        org.junit.Assert.assertEquals("Committed restore/rollback must also recompute the screen", 0, session.easeOff)
+    }
+
+    @Test fun batterySaverPreservesNearTurnDetailAndThermalProtection() = withSession { session ->
+        mode(session, Mode.NAVIGATING)
+        progress(session, 100.0)
+        session.updateSettings(session.settings.copy(batterySaver = true))
+        org.junit.Assert.assertEquals("Near a turn the full detail must remain", 0, session.easeOff)
+        progress(session, 1_000.0)
+        NavigationSession::class.java.getDeclaredMethod("onThermal", Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }.invoke(session, 2)
+        session.updateSettings(session.settings.copy(batterySaver = false))
+        org.junit.Assert.assertEquals(2, session.easeOff)
+        session.updateSettings(session.settings.copy(batterySaver = true))
+        org.junit.Assert.assertEquals(2, session.easeOff)
+    }
+
 }

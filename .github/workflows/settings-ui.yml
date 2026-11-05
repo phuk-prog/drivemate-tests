@@ -1,5 +1,5 @@
-name: Verify settings 1.1 with a disposable test APK
-run-name: "DriveMate settings UI 1.1 — verification ${{ inputs.verification_run || '42078539282' }}"
+name: Verify settings effects with a disposable test APK
+run-name: "DriveMate settings UI 1.1/1.2 — verification ${{ inputs.verification_run || '42078539282' }}"
 on:
   workflow_dispatch:
     inputs:
@@ -188,7 +188,7 @@ jobs:
           
           PACKAGE = 'com.drivemate.app'
           AUTO = 'Auto-zoom (out on fast roads, in for turns)'
-          BATTERY = 'Battery saver while driving (map drawn less often, screen a little dimmer)'
+          BATTERY = 'Battery saver while driving (map drawn less often)'
           ADB = os.path.join(os.environ['ANDROID_HOME'], 'platform-tools', 'adb')
           SERIAL = 'emulator-5554'
           phase = 'initialization'
@@ -422,6 +422,28 @@ jobs:
                   pass
               return result
           
+          def reveal(text):
+              for direction in (1, -1):
+                  for _ in range(5):
+                      root = dump()
+                      if labels(root, text):
+                          return
+                      areas = []
+                      for node in root.iter('node'):
+                          if node.get('scrollable') != 'true':
+                              continue
+                          bounds = [int(v) for v in re.findall(r'[0-9]+', node.get('bounds', ''))]
+                          if len(bounds) == 4 and bounds[3] - bounds[1] > 150:
+                              areas.append(bounds)
+                      if not areas:
+                          break
+                      left, top, right, bottom = max(areas, key=lambda b: (b[2]-b[0])*(b[3]-b[1]))
+                      x = str((left + right)//2)
+                      high, low = top + (bottom-top)//4, bottom - (bottom-top)//4
+                      start, end = (low, high) if direction == 1 else (high, low)
+                      adb('shell', 'input', 'swipe', x, str(start), x, str(end), '250')
+              raise AssertionError('Settings control not reachable')
+
           def main():
               global phase
               checkout = pathlib.Path('app-src')
@@ -495,6 +517,52 @@ jobs:
                   raise AssertionError('Unrelated settings changed')
               if switch_state(dump(), BATTERY) is not battery_before:
                   raise AssertionError('Unrelated control changed')
+              def wait_preference(key, expected):
+                  return wait_for(lambda: True if prefs().get(key) == expected else None)
+
+              def cycle_switch(text, key):
+                  baseline = before[key][1] == 'true'
+                  reveal(text)
+                  tap(wait_switch(text, baseline))
+                  wait_switch(text, not baseline)
+                  wait_preference(key, ('boolean', 'false' if baseline else 'true'))
+                  if not unchanged(before, prefs(), keys - {key}):
+                      raise AssertionError('Control changed unrelated settings')
+                  tap(wait_switch(text, not baseline))
+                  wait_switch(text, baseline)
+                  wait_preference(key, before[key])
+                  if not unchanged(before, prefs(), keys):
+                      raise AssertionError('Control did not restore its baseline')
+
+              phase = 'battery_control'
+              cycle_switch(BATTERY, 'batterySaver')
+              phase = 'junction_control'
+              cycle_switch('Continuous junction view (closer road perspective with the route ahead)', 'junctionView')
+              phase = 'route_preference_controls'
+              adb('shell', 'input', 'keyevent', '4')
+              wait_for(lambda: label('Search settings'))
+              reveal('Routes')
+              tap(wait_for(lambda: label('Routes')))
+              cycle_switch('Avoid shortcuts through housing estates (up to 3 min longer)', 'avoidRatRuns')
+              cycle_switch('Prefer simpler routes (fewer turns, up to 2 min longer)', 'preferSimple')
+              phase = 'sound_control'
+              adb('shell', 'input', 'keyevent', '4')
+              wait_for(lambda: label('Search settings'))
+              reveal('Sound')
+              tap(wait_for(lambda: label('Sound')))
+              modes = {'ALL': 'Directions & warnings', 'ALERTS': 'Alerts only', 'OFF': 'Silent'}
+              original_sound = before['sound'][1]
+              alternate = 'ALL' if original_sound == 'OFF' else 'OFF'
+              reveal(modes[alternate])
+              tap(wait_for(lambda: label(modes[alternate])))
+              wait_preference('sound', ('string', alternate))
+              if not unchanged(before, prefs(), keys - {'sound'}):
+                  raise AssertionError('Sound control changed unrelated settings')
+              reveal(modes[original_sound])
+              tap(wait_for(lambda: label(modes[original_sound])))
+              wait_preference('sound', before['sound'])
+              if not unchanged(before, prefs(), keys):
+                  raise AssertionError('Sound control did not restore its baseline')
               # Restart persistence (subcategory 1.3): the last value must survive a force-stop and relaunch.
               phase = 'restart'
               adb('shell', 'am', 'force-stop', PACKAGE)
@@ -510,7 +578,7 @@ jobs:
                   raise AssertionError('Restart changed unrelated settings')
               restart_persisted = True
               phase = 'result'
-              result = {'subcategory': '1.1', 'app_sha': os.environ['APP_SHA'],
+              result = {'subcategory': '1.2', 'app_sha': os.environ['APP_SHA'],
                         'ui_harness_sha': os.environ['GITHUB_SHA'],
                         'verification_run_id': os.environ['PUBLIC_RUN_ID'],
                         'verification_harness_sha': os.environ['VERIFIED_HARNESS_SHA'],
@@ -519,7 +587,8 @@ jobs:
                         'api_level': 28, 'abi': 'x86_64', 'apk_sha256': digest,
                         'checks': {'settings_navigation': True, 'off_ui_and_saved_value': True,
                                    'on_ui_and_saved_value': True, 'unrelated_control_unchanged': True,
-                                   'unrelated_saved_settings_unchanged': True},
+                                   'unrelated_saved_settings_unchanged': True, 'battery_saver_control': True,
+                                   'junction_view_control': True, 'route_preference_controls': True, 'sound_control': True},
                         'test_apk_created': True, 'test_apk_published': False, 'release_acceptance': False, 'restart_persisted': restart_persisted}
               output = pathlib.Path('public-ui-results')
               output.mkdir(exist_ok=True)
@@ -624,7 +693,8 @@ jobs:
           import json, os, pathlib, re
           
           CHECKS = {'settings_navigation', 'off_ui_and_saved_value', 'on_ui_and_saved_value',
-                    'unrelated_control_unchanged', 'unrelated_saved_settings_unchanged'}
+                    'unrelated_control_unchanged', 'unrelated_saved_settings_unchanged',
+                    'battery_saver_control', 'junction_view_control', 'route_preference_controls', 'sound_control'}
           FIELDS = {'subcategory', 'app_sha', 'ui_harness_sha', 'verification_run_id',
                     'verification_harness_sha', 'verification_attempt', 'run_id', 'run_attempt',
                     'api_level', 'abi', 'apk_sha256', 'checks', 'test_apk_created',
@@ -644,7 +714,7 @@ jobs:
                       raise ValueError('Invalid run identity')
               if type(value['verification_attempt']) is not int or value['verification_attempt'] < 1:
                   raise ValueError('Invalid verification attempt')
-              if value['subcategory'] != '1.1' or type(value['api_level']) is not int or value['api_level'] != 28 or value['abi'] != 'x86_64':
+              if value['subcategory'] != '1.2' or type(value['api_level']) is not int or value['api_level'] != 28 or value['abi'] != 'x86_64':
                   raise ValueError('Invalid UI scope')
               if not re.fullmatch(r'[0-9a-f]{64}', value['apk_sha256']):
                   raise ValueError('Invalid APK identity')
@@ -676,7 +746,7 @@ jobs:
               path.write_text(text + '\n')
               print(text)
               with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-                  summary.write('Settings 1.1: 5/5 UI checks passed; temporary APK/private outputs deleted.\n')
+                  summary.write('Settings 1.1/1.2: 9/9 UI control checks passed; temporary APK/private outputs deleted.\n')
                   summary.write('App source: ' + expected['app_sha'] + '\n')
                   summary.write('This is settings interaction evidence, not release acceptance.\n')
           
