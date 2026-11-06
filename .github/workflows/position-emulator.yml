@@ -127,6 +127,14 @@ jobs:
               except RuntimeError:
                   return False
 
+          def location_requests():
+              # Count of system location entries that name the app: a count only, no dump text is printed.
+              try:
+                  text = adb('shell', 'dumpsys', 'location', timeout=20)
+              except RuntimeError:
+                  return -1
+              return sum(1 for line in text.splitlines() if PACKAGE in line)
+
           def main():
               adb('install', '-r', os.environ['APK'], timeout=120)
               adb('shell', 'pm', 'clear', PACKAGE)
@@ -162,7 +170,8 @@ jobs:
               report(fixes_sent=fixes_sent,
                      warned_after_s=None if warned is None else round(warned, 1),
                      labels_visible={label: visible(label) for label in LABELS},
-                     app_running=app_running())
+                     app_running=app_running(),
+                     location_requests_listed=location_requests())
               if warned is None:
                   raise AssertionError('Position warning never shown after fixes stopped')
               # The warning must not appear before ten seconds. Allow 0.5 s for polling jitter.
