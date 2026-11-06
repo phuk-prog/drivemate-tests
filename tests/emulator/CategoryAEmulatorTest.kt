@@ -235,18 +235,104 @@ class CategoryAEmulatorTest {
         }
     }
 
+    /** Android's actual compositor, independent of MapLibre's native map snapshot. */
+    private fun displayedAmber(x: Int, y: Int, radius: Int): Pair<Int, Boolean> {
+        // UiDevice.takeScreenshot(): Bitmap requires UI Automator 2.4; this test uses 2.3.
+        val shot = instrumentation.uiAutomation.takeScreenshot() ?: return 0 to false
+        return try {
+            val left = (x - radius).coerceIn(0, shot.width)
+            val right = (x + radius).coerceIn(0, shot.width)
+            val top = (y - radius).coerceIn(0, shot.height)
+            val bottom = (y + radius).coerceIn(0, shot.height)
+            if (left >= right || top >= bottom) return 0 to false
+            var amber = 0
+            for (py in top until bottom) for (px in left until right) {
+                val c = shot.getPixel(px, py)
+                val red = c shr 16 and 255
+                val green = c shr 8 and 255
+                val blue = c and 255
+                if (red > 220 && green in 110..210 && blue < 80) amber++
+            }
+            amber to true
+        } finally { shot.recycle() }
+    }
+
+    /** Prove the display observer sees a known amber patch and rejects a dark patch. */
+    private fun calibrateDisplayCapture() {
+        val patch = android.view.View(activity).apply {
+            setBackgroundColor(android.graphics.Color.rgb(255, 160, 0))
+        }
+        val rect = main {
+            val view = controller.mapView
+            val x = (view.width / 2 - 24).coerceAtLeast(0)
+            val y = (view.height / 2 - 24).coerceAtLeast(0)
+            view.addView(patch, android.widget.FrameLayout.LayoutParams(48, 48).apply {
+                leftMargin = x; topMargin = y
+            })
+            val origin = IntArray(2)
+            view.getLocationOnScreen(origin)
+            intArrayOf(origin[0] + x + 24, origin[1] + y + 24)
+        }
+        try {
+            SystemClock.sleep(300)
+            val positive = displayedAmber(rect[0], rect[1], 12)
+            main { patch.setBackgroundColor(android.graphics.Color.BLACK) }
+            SystemClock.sleep(300)
+            val negative = displayedAmber(rect[0], rect[1], 12)
+            report("capture-control",
+                "positive_amber_pixels" to positive.first,
+                "negative_amber_pixels" to negative.first,
+                "display_capture_available" to (positive.second && negative.second))
+            assertTrue("screen-capture-unavailable", positive.second && negative.second)
+            assertTrue("positive-control-not-visible", positive.first > 100)
+            assertEquals("negative-control-false-amber", 0, negative.first)
+        } finally {
+            main { controller.mapView.removeView(patch) }
+        }
+    }
+
+    private fun markerOnDisplay(): Pair<Int, Boolean> {
+        val centre = main {
+            val map = nativeMap() ?: return@main null
+            val lc = map.locationComponent
+            val last = if (lc.isLocationComponentActivated) lc.lastKnownLocation else null
+            last?.let {
+                val pixel = map.projection.toScreenLocation(
+                    org.maplibre.android.geometry.LatLng(it.latitude, it.longitude))
+                val origin = IntArray(2)
+                controller.mapView.getLocationOnScreen(origin)
+                intArrayOf(origin[0] + pixel.x.toInt(), origin[1] + pixel.y.toInt())
+            }
+        } ?: return 0 to false
+        return displayedAmber(centre[0], centre[1], 72)
+    }
+
     private fun marker(phase: String, weak: Boolean) {
         var previous: Int? = null
-        await(phase) {
-            val pixels = amberPixels()
-            if (pixels != previous) {
-                report("marker-sample", "amber_pixels" to pixels, "expected_weak" to weak,
-                    "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
-                    "marker_colored_pixels" to coloredPixels)
-                markerDiagnostics()
-                previous = pixels
+        var displaySampled = false
+        try {
+            await(phase) {
+                val pixels = amberPixels()
+                if (pixels != previous) {
+                    report("marker-sample", "amber_pixels" to pixels, "expected_weak" to weak,
+                        "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
+                        "marker_colored_pixels" to coloredPixels)
+                    markerDiagnostics()
+                    previous = pixels
+                }
+                if (!displaySampled) {
+                    val display = markerOnDisplay()
+                    report("marker-display", "screen_amber_pixels" to display.first,
+                        "display_capture_available" to display.second, "expected_weak" to weak)
+                    displaySampled = true
+                }
+                (pixels > 0) == weak
             }
-            (pixels > 0) == weak
+        } catch (error: AssertionError) {
+            val display = markerOnDisplay()
+            report("marker-display-final", "screen_amber_pixels" to display.first,
+                "display_capture_available" to display.second, "expected_weak" to weak)
+            throw error
         }
     }
 
@@ -346,6 +432,7 @@ class CategoryAEmulatorTest {
             freshFix("grant-first-fix")
             await("grant-native-marker") { nativeEnabled() && main { session.positionReliable } }
             isolatedStyle("native-style-loaded")
+            calibrateDisplayCapture()
 
             for (icon in CarIcon.entries) {
                 main { session.updateSettings(session.settings.copy(carIcon = icon)) }
