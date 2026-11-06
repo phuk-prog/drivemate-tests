@@ -14,7 +14,6 @@ PHASES = {
     "permission-request-ready", "denial-callback",
     "controlled-provider", "tracker-diagnostics",
     "marker-native-diagnostics", "capture-control", "marker-display", "marker-display-final",
-    "native-symbol-control",
     "grant-first-fix", "grant-native-marker", "native-style-loaded", "marker-good-fix",
     "marker-setting", "weak-state", "exact-accuracy-threshold", "marker-sample",
     "marker-recovered-fix", "reliable-recovery", "gap-baseline", "ten-second-warning",
@@ -31,7 +30,7 @@ BOOLEAN_FIELDS = {"passed", "expected_weak", "fix_unchanged", "precise", "native
                   "tracker_running", "has_tracked_fix", "provider_has_fix", "provider_fix_is_mock",
                   "provider_fix_matches_injected", "diagnostics_available", "provider_enabled", "provider_available"}
 BOOLEAN_FIELDS.update({"native_activated", "native_has_fix", "native_on_screen", "style_loaded",
-                       "controller_weak", "native_asset_matches_controller", "location_source_present",
+                       "native_asset_matches_controller", "location_source_present",
                        "display_capture_available", "source_location_stale",
                        "source_foreground_icon_registered", "source_foreground_stale_icon_registered",
                        "foreground_layer_visible", "background_layer_visible"})
@@ -39,6 +38,7 @@ NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons", "den
                  "listener_count", "injected_samples", "tracked_fix_age_ms"}
 NUMBER_FIELDS.update({"snapshot_width", "snapshot_height", "marker_colored_pixels", "location_layer_count",
                       "visible_location_layers", "sprite_amber_pixels", "render_mode",
+                      "marker_colored_nearby_pixels", "screen_marker_colored_pixels",
                       "location_source_features", "rendered_location_features",
                       "rendered_nearby_location_features", "screen_amber_pixels",
                        "positive_amber_pixels", "negative_amber_pixels",
@@ -112,7 +112,7 @@ def main():
     adb("install-instrumentation", "install", "-r", os.environ["TEST_APK"], timeout=120)
     adb("clear-disposable-app", "shell", "pm", "clear", PACKAGE)
     adb("allow-controlled-provider", "shell", "appops", "set", PACKAGE, "android:mock_location", "allow")
-    required = {"permission-denied", "permission-granted", "grant-native-marker", "capture-control", "marker-display", "native-symbol-control", "warning-timing",
+    required = {"permission-denied", "permission-granted", "grant-native-marker", "capture-control", "marker-display", "warning-timing",
                 "stale-feed", "gap-recovered-state", "simulated-movement", "batch-complete"}
     required.update(f"{prefix}-{index}" for prefix in (
         "marker-good", "marker-weak", "marker-reloaded", "marker-threshold", "marker-recovered"
@@ -130,7 +130,7 @@ def main():
               "api_level": 28, "app_installed": True, "app_acceptance": True,
               "tests": 2, "failures": 0, "errors": 0, "skipped": 0,
               "diagnostic_records": diagnostics, "apk_published": False,
-              "checks": ["permission-denial-grant", "permission-revocation-restoration", "native-marker-variants",
+              "checks": ["permission-denial-grant", "permission-revocation-restoration", "normal-marker-visibility", "no-weak-marker",
                          "native-style-reload", "accuracy-boundary", "ten-second-warning", "gap-recovery"]}
     output = pathlib.Path("public-results/category-a-emulator.json")
     output.parent.mkdir(exist_ok=True)

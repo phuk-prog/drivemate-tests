@@ -6,12 +6,11 @@ on:
       app_sha:
         description: Exact private app SHA already passed by full public verification
         required: true
-        default: 'fb6f959a8638e51c69ad82696cd014d6d82bf96a'
+        default: '707499adfd40a97b3a6cc543f60b4d40af061251'
         type: string
       verification_run_id:
         description: Successful full public verification run for this exact app SHA
         required: true
-        default: '42193702365'
         type: string
 permissions:
   contents: read

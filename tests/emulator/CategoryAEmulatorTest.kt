@@ -44,6 +44,7 @@ class CategoryAEmulatorTest {
     private var snapshotWidth = 0
     private var snapshotHeight = 0
     private var coloredPixels = 0
+    private var markerColoredPixels = 0
 
     private fun <T> main(block: () -> T): T {
         var value: T? = null
@@ -225,9 +226,26 @@ class CategoryAEmulatorTest {
         snapshotHeight = image.height
         val pixels = IntArray(image.width * image.height)
         image.getPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
-        coloredPixels = pixels.count { color ->
+        fun distinctive(color: Int): Boolean {
             val r = color shr 16 and 255; val g = color shr 8 and 255; val b = color and 255
-            maxOf(r, g, b) - minOf(r, g, b) >= 60 && minOf(r, g, b) <= 170
+            return maxOf(r, g, b) - minOf(r, g, b) >= 60 && minOf(r, g, b) <= 170
+        }
+        coloredPixels = pixels.count(::distinctive)
+        val centre = main {
+            val map = nativeMap() ?: return@main null
+            val last = map.locationComponent.lastKnownLocation ?: return@main null
+            map.projection.toScreenLocation(org.maplibre.android.geometry.LatLng(last.latitude, last.longitude))
+        }
+        markerColoredPixels = if (centre == null) 0 else {
+            val x = centre.x.toInt(); val y = centre.y.toInt()
+            val left = (x - 52).coerceIn(0, image.width)
+            val right = (x + 52).coerceIn(0, image.width)
+            val top = (y - 52).coerceIn(0, image.height)
+            val bottom = (y + 52).coerceIn(0, image.height)
+            var n = 0
+            for (py in top until bottom) for (px in left until right)
+                if (distinctive(pixels[py * image.width + px])) n++
+            n
         }
         return pixels.count { color ->
             val red = color shr 16 and 255; val green = color shr 8 and 255; val blue = color and 255
@@ -292,51 +310,6 @@ class CategoryAEmulatorTest {
     }
 
 
-    /** Verify that the same registered weak sprite can really be rasterized by a map symbol.
-     * The temporary layer and source are removed before the original marker assertion.
-     */
-    private fun calibrateNativeSymbol() {
-        val sourceId = "dm-test-symbol-source"
-        val layerId = "dm-test-symbol-layer"
-        main {
-            val map = nativeMap() ?: throw AssertionError("native-map-missing")
-            val style = map.style ?: throw AssertionError("native-style-missing")
-            val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-fix-missing")
-            assertNotNull("weak-sprite-missing", style.getImage("mapbox-location-icon"))
-            style.addSource(org.maplibre.android.style.sources.GeoJsonSource(sourceId,
-                org.maplibre.geojson.Feature.fromGeometry(
-                    org.maplibre.geojson.Point.fromLngLat(fix.longitude, fix.latitude))))
-            style.addLayer(org.maplibre.android.style.layers.SymbolLayer(layerId, sourceId).withProperties(
-                org.maplibre.android.style.layers.PropertyFactory.iconImage("mapbox-location-icon"),
-                org.maplibre.android.style.layers.PropertyFactory.iconSize(2f),
-                org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
-                org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)))
-        }
-        try {
-            val deadline = SystemClock.elapsedRealtime() + 6_000
-            var nativePixels = 0
-            var screen = 0 to false
-            do {
-                nativePixels = amberPixels()
-                screen = markerOnDisplay()
-                if (nativePixels > 0 && screen.second && screen.first > 0) break
-                SystemClock.sleep(200)
-            } while (SystemClock.elapsedRealtime() < deadline)
-            report("native-symbol-control", "native_symbol_amber_pixels" to nativePixels,
-                "screen_amber_pixels" to screen.first,
-                "display_capture_available" to screen.second)
-            assertTrue("map-symbol-positive-control-not-painted", nativePixels > 0)
-            assertTrue("map-symbol-screen-control-not-painted", screen.second && screen.first > 0)
-        } finally {
-            main {
-                nativeMap()?.style?.let { style ->
-                    if (style.getLayer(layerId) != null) style.removeLayer(layerId)
-                    if (style.getSource(sourceId) != null) style.removeSource(sourceId)
-                }
-            }
-        }
-    }
-
     private fun markerOnDisplay(): Pair<Int, Boolean> {
         val centre = main {
             val map = nativeMap() ?: return@main null
@@ -353,33 +326,72 @@ class CategoryAEmulatorTest {
         return displayedAmber(centre[0], centre[1], 72)
     }
 
+    /** No quality-coloured marker is drawn. When position is reliable, the standard icon
+     * must be visibly painted in both the native snapshot and independent screen capture.
+     */
     private fun marker(phase: String, weak: Boolean) {
-        var previous: Int? = null
-        var displaySampled = false
-        try {
-            await(phase) {
-                val pixels = amberPixels()
-                if (pixels != previous) {
-                    report("marker-sample", "amber_pixels" to pixels, "expected_weak" to weak,
-                        "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
-                        "marker_colored_pixels" to coloredPixels)
-                    markerDiagnostics()
-                    previous = pixels
-                }
-                if (!displaySampled) {
-                    val display = markerOnDisplay()
-                    report("marker-display", "screen_amber_pixels" to display.first,
-                        "display_capture_available" to display.second, "expected_weak" to weak)
-                    displaySampled = true
-                }
-                (pixels > 0) == weak
-            }
-        } catch (error: AssertionError) {
+        var lastEvidence = ""
+        await(phase) {
+            val amber = amberPixels()
+            val nativeMarker = markerColoredPixels
             val display = markerOnDisplay()
-            report("marker-display-final", "screen_amber_pixels" to display.first,
-                "display_capture_available" to display.second, "expected_weak" to weak)
-            throw error
+            val actualScreenMarker = normalMarkerOnDisplay()
+            val noHeldLayer = main { nativeMap()?.style?.getLayer("dm-held-position-marker") == null }
+            val optionsMatch = main {
+                val map = nativeMap() ?: return@main false
+                val lc = map.locationComponent
+                val expected = MapController::class.java.getDeclaredMethod("carDrawable")
+                    .apply { isAccessible = true }.invoke(controller) as Int?
+                val icon = MapController::class.java.getDeclaredField("carIcon")
+                    .apply { isAccessible = true }.get(controller) as CarIcon
+                val actual = if (lc.renderMode == org.maplibre.android.location.modes.RenderMode.GPS)
+                    lc.locationComponentOptions.gpsDrawable() else lc.locationComponentOptions.foregroundDrawable()
+                icon == CarIcon.DOT || expected == actual
+            }
+            val evidence = "$amber-$nativeMarker-${actualScreenMarker.first}-$noHeldLayer-$optionsMatch"
+            if (evidence != lastEvidence) {
+                report("marker-sample", "amber_pixels" to amber, "expected_weak" to weak,
+                    "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
+                    "marker_colored_pixels" to coloredPixels,
+                    "marker_colored_nearby_pixels" to nativeMarker)
+                report("marker-display", "screen_amber_pixels" to display.first,
+                    "screen_marker_colored_pixels" to actualScreenMarker.first,
+                    "display_capture_available" to (display.second && actualScreenMarker.second),
+                    "expected_weak" to weak)
+                markerDiagnostics()
+                lastEvidence = evidence
+            }
+            val noAmber = amber == 0 && noHeldLayer && optionsMatch
+            if (weak) noAmber
+            else noAmber && nativeEnabled() && nativeMarker > 20 &&
+                actualScreenMarker.second && actualScreenMarker.first > 20
         }
+    }
+
+    /** Colour contrast confined to the projected ordinary marker, independent of amber. */
+    private fun normalMarkerOnDisplay(): Pair<Int, Boolean> {
+        val centre = main {
+            val map = nativeMap() ?: return@main null
+            val last = map.locationComponent.lastKnownLocation ?: return@main null
+            val pixel = map.projection.toScreenLocation(org.maplibre.android.geometry.LatLng(last.latitude, last.longitude))
+            val origin = IntArray(2)
+            controller.mapView.getLocationOnScreen(origin)
+            intArrayOf(origin[0] + pixel.x.toInt(), origin[1] + pixel.y.toInt())
+        } ?: return 0 to false
+        val shot = instrumentation.uiAutomation.takeScreenshot() ?: return 0 to false
+        return try {
+            val left = (centre[0] - 52).coerceIn(0, shot.width)
+            val right = (centre[0] + 52).coerceIn(0, shot.width)
+            val top = (centre[1] - 52).coerceIn(0, shot.height)
+            val bottom = (centre[1] + 52).coerceIn(0, shot.height)
+            var pixels = 0
+            for (y in top until bottom) for (x in left until right) {
+                val c = shot.getPixel(x, y)
+                val r = c shr 16 and 255; val g = c shr 8 and 255; val b = c and 255
+                if (maxOf(r, g, b) - minOf(r, g, b) >= 60 && minOf(r, g, b) <= 170) pixels++
+            }
+            pixels to true
+        } finally { shot.recycle() }
     }
 
     private fun markerDiagnostics() {
@@ -450,8 +462,6 @@ class CategoryAEmulatorTest {
                     "native_on_screen" to (point != null && point.x >= 0 && point.x < controller.mapView.width &&
                         point.y >= 0 && point.y < controller.mapView.height),
                     "style_loaded" to (style?.isFullyLoaded == true),
-                    "controller_weak" to MapController::class.java.getDeclaredField("weakAccuracy")
-                        .apply { isAccessible = true }.getBoolean(controller),
                     "native_asset_matches_controller" to (expectedDrawable != null && expectedDrawable == actualDrawable),
                     "location_layer_count" to layers.size,
                     "location_source_present" to (locationSource != null),
@@ -517,20 +527,19 @@ class CategoryAEmulatorTest {
                 } }
                 marker("marker-good-${icon.ordinal}", false)
                 freshFix("marker-good-fix")
-                // A rejected poor fix must change quality indication without advancing position.
+                // A rejected poor fix must not advance navigation or create an alternate marker.
                 val heldTimestamp = main { session.location!!.elapsedRealtimeNanos }
                 feed(80f)
-                await("weak-state") { main { session.accuracyWeak && !session.positionReliable } }
+                await("weak-state") { main { session.locationAvailability.value.weakAccuracy && !session.positionReliable } }
                 assertEquals("poor-fix-must-not-move-position", heldTimestamp, main { session.location!!.elapsedRealtimeNanos })
-                if (icon == CarIcon.entries.first()) calibrateNativeSymbol()
                 marker("marker-weak-${icon.ordinal}", true)
                 isolatedStyle("style-reloaded-${icon.ordinal}")
                 marker("marker-reloaded-${icon.ordinal}", true)
                 feed(50f)
-                await("exact-accuracy-threshold") { main { !session.accuracyWeak } }
+                await("exact-accuracy-threshold") { main { !session.locationAvailability.value.weakAccuracy } }
                 marker("marker-threshold-${icon.ordinal}", false)
                 freshFix("marker-recovered-fix")
-                await("reliable-recovery") { main { !session.accuracyWeak && session.positionReliable } }
+                await("reliable-recovery") { main { !session.locationAvailability.value.weakAccuracy && session.positionReliable } }
                 marker("marker-recovered-${icon.ordinal}", false)
             }
 
