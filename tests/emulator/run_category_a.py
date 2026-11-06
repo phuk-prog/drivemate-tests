@@ -13,6 +13,7 @@ PHASES = {
     "activity-ready", "permission-dialog", "permission-denied", "permission-granted",
     "permission-request-ready", "denial-callback",
     "controlled-provider", "tracker-diagnostics",
+    "marker-native-diagnostics",
     "grant-first-fix", "grant-native-marker", "native-style-loaded", "marker-good-fix",
     "marker-setting", "weak-state", "exact-accuracy-threshold", "marker-sample",
     "marker-recovered-fix", "reliable-recovery", "gap-baseline", "ten-second-warning",
@@ -28,8 +29,12 @@ BOOLEAN_FIELDS = {"passed", "expected_weak", "fix_unchanged", "precise", "native
                   "resumed", "window_focused", "rationale", "services_enabled", "authoritative", "reliable", "weak",
                   "tracker_running", "has_tracked_fix", "provider_has_fix", "provider_fix_is_mock",
                   "provider_fix_matches_injected", "diagnostics_available", "provider_enabled", "provider_available"}
+BOOLEAN_FIELDS.update({"native_activated", "native_has_fix", "native_on_screen", "style_loaded",
+                       "controller_weak", "native_asset_matches_controller"})
 NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons", "deny_buttons",
                  "listener_count", "injected_samples", "tracked_fix_age_ms"}
+NUMBER_FIELDS.update({"snapshot_width", "snapshot_height", "marker_colored_pixels", "location_layer_count",
+                      "visible_location_layers", "sprite_amber_pixels", "render_mode"})
 STATUSES = {"STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE", "PERMISSION_REQUIRED",
             "LOCATION_DISABLED", "PROVIDER_UNAVAILABLE"}
 

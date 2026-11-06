@@ -41,6 +41,9 @@ class CategoryAEmulatorTest {
     private lateinit var controller: MapController
     private var lastInjectedAt = 0L
     private var injectedSamples = 0
+    private var snapshotWidth = 0
+    private var snapshotHeight = 0
+    private var coloredPixels = 0
 
     private fun <T> main(block: () -> T): T {
         var value: T? = null
@@ -218,8 +221,14 @@ class CategoryAEmulatorTest {
         main { nativeMap()!!.snapshot { image -> bitmap = image; latch.countDown() } }
         if (!latch.await(10, TimeUnit.SECONDS)) throw AssertionError("native-snapshot-timeout")
         val image = bitmap ?: throw AssertionError("native-snapshot-missing")
+        snapshotWidth = image.width
+        snapshotHeight = image.height
         val pixels = IntArray(image.width * image.height)
         image.getPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
+        coloredPixels = pixels.count { color ->
+            val r = color shr 16 and 255; val g = color shr 8 and 255; val b = color and 255
+            maxOf(r, g, b) - minOf(r, g, b) >= 60 && minOf(r, g, b) <= 170
+        }
         return pixels.count { color ->
             val red = color shr 16 and 255; val green = color shr 8 and 255; val blue = color and 255
             red > 220 && green in 110..210 && blue < 80
@@ -227,11 +236,64 @@ class CategoryAEmulatorTest {
     }
 
     private fun marker(phase: String, weak: Boolean) {
+        var previous: Int? = null
         await(phase) {
             val pixels = amberPixels()
-            report("marker-sample", "amber_pixels" to pixels, "expected_weak" to weak)
+            if (pixels != previous) {
+                report("marker-sample", "amber_pixels" to pixels, "expected_weak" to weak,
+                    "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
+                    "marker_colored_pixels" to coloredPixels)
+                markerDiagnostics()
+                previous = pixels
+            }
             (pixels > 0) == weak
         }
+    }
+
+    private fun markerDiagnostics() {
+        if (!::controller.isInitialized) return
+        runCatching {
+            val fields = main {
+                val map = nativeMap() ?: return@main emptyArray<Pair<String, Any>>()
+                val lc = map.locationComponent
+                val style = map.style
+                val last = if (lc.isLocationComponentActivated) lc.lastKnownLocation else null
+                val point = last?.let { map.projection.toScreenLocation(org.maplibre.android.geometry.LatLng(it.latitude, it.longitude)) }
+                val expectedDrawable = MapController::class.java.getDeclaredMethod("carDrawable")
+                    .apply { isAccessible = true }.invoke(controller) as Int?
+                val options = if (lc.isLocationComponentActivated) lc.locationComponentOptions else null
+                val actualDrawable = if (lc.isLocationComponentActivated && lc.renderMode == org.maplibre.android.location.modes.RenderMode.GPS)
+                    options?.gpsDrawable() else options?.foregroundDrawable()
+                val layers = style?.layers?.filter { it.id.startsWith("mapbox-location-") }.orEmpty()
+                val sprite = style?.getImage("mapbox-location-icon")
+                var spriteAmber = 0
+                if (sprite != null) {
+                    val colors = IntArray(sprite.width * sprite.height)
+                    sprite.getPixels(colors, 0, sprite.width, 0, 0, sprite.width, sprite.height)
+                    spriteAmber = colors.count { color ->
+                        val r = color shr 16 and 255; val g = color shr 8 and 255; val b = color and 255
+                        r > 220 && g in 110..210 && b < 80
+                    }
+                }
+                arrayOf<Pair<String, Any>>(
+                    "native_activated" to lc.isLocationComponentActivated,
+                    "native_enabled" to (lc.isLocationComponentActivated && lc.isLocationComponentEnabled),
+                    "native_has_fix" to (last != null),
+                    "native_on_screen" to (point != null && point.x >= 0 && point.x < controller.mapView.width &&
+                        point.y >= 0 && point.y < controller.mapView.height),
+                    "style_loaded" to (style?.isFullyLoaded == true),
+                    "controller_weak" to MapController::class.java.getDeclaredField("weakAccuracy")
+                        .apply { isAccessible = true }.getBoolean(controller),
+                    "native_asset_matches_controller" to (expectedDrawable != null && expectedDrawable == actualDrawable),
+                    "location_layer_count" to layers.size,
+                    "visible_location_layers" to layers.count { it.visibility.value == "visible" },
+                    "sprite_amber_pixels" to spriteAmber,
+                    "render_mode" to if (lc.isLocationComponentActivated) lc.renderMode else 0,
+                    "snapshot_width" to snapshotWidth, "snapshot_height" to snapshotHeight,
+                    "marker_colored_pixels" to coloredPixels)
+            }
+            report("marker-native-diagnostics", *fields)
+        }.onFailure { report("marker-native-diagnostics", "diagnostics_available" to false) }
     }
 
     private fun close() {
@@ -316,6 +378,7 @@ class CategoryAEmulatorTest {
             }
             report("batch-complete", "passed" to true)
         } catch (error: Throwable) {
+            markerDiagnostics()
             trackerDiagnostics()
             report("batch-error", "error_type" to error.javaClass.simpleName)
             throw error
@@ -340,6 +403,7 @@ class CategoryAEmulatorTest {
             await("restored-native-marker") { nativeEnabled() && main { session.positionReliable } }
             report("revocation-complete", "passed" to true)
         } catch (error: Throwable) {
+            markerDiagnostics()
             trackerDiagnostics()
             report("batch-error", "error_type" to error.javaClass.simpleName)
             throw error
