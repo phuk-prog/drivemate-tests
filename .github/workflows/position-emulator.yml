@@ -1,26 +1,102 @@
-name: Position warning on emulator (disposable test APK)
-run-name: "Position warning check: ${{ inputs.app_sha }}"
+name: Category A emulator acceptance (disposable test APKs)
+run-name: "Category A emulator acceptance: ${{ inputs.app_sha }}"
 on:
   workflow_dispatch:
     inputs:
       app_sha:
-        description: Full 40-character private app commit SHA to check
+        description: Exact private app SHA already passed by full public verification
         required: true
-        default: '0c0c4dba04873c9a878db399ef773d649b851326'
+        default: 'fb6f959a8638e51c69ad82696cd014d6d82bf96a'
+        type: string
+      verification_run_id:
+        description: Successful full public verification run for this exact app SHA
+        required: true
+        default: '42193702365'
         type: string
 permissions:
   contents: read
+  actions: read
 jobs:
   position:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment: apk-owner
     env:
       APP_SHA: ${{ inputs.app_sha }}
+      VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
     steps:
-      - name: Validate exact app revision
-        run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
+      - name: Validate exact app revision and prerequisite full verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY_VERIFY'
+          import io, json, os, re, urllib.request, zipfile
+          def verify():
+              app_sha = os.environ['APP_SHA']
+              run_id = os.environ['VERIFICATION_RUN_ID']
+              assert re.fullmatch(r'[0-9a-f]{40}', app_sha), 'Invalid app SHA'
+              assert re.fullmatch(r'[0-9]{1,15}', run_id), 'Invalid verification run ID'
+              base = 'https://api.github.com/repos/phuk-prog/drivemate-tests'
+              class SafeRedirect(urllib.request.HTTPRedirectHandler):
+                  def redirect_request(self, request, fp, code, message, headers, newurl):
+                      redirected = super().redirect_request(request, fp, code, message, headers, newurl)
+                      if redirected is not None:
+                          redirected.remove_header('Authorization')
+                      return redirected
+              opener = urllib.request.build_opener(SafeRedirect())
+              def get(path, binary=False):
+                  request = urllib.request.Request(base + path, headers={
+                      'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                      'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
+                  with opener.open(request, timeout=45) as response:
+                      data = response.read()
+                  return data if binary else json.loads(data)
+              run = get('/actions/runs/' + run_id)
+              assert run['repository']['full_name'] == 'phuk-prog/drivemate-tests'
+              assert run['status'] == 'completed' and run['conclusion'] == 'success'
+              assert run['path'] == '.github/workflows/test-app.yml' and run['head_branch'] == 'main'
+              assert run['event'] in ('push', 'workflow_dispatch')
+              assert run['display_title'] == 'DriveMate verification: ' + app_sha
+              jobs = []
+              page = 1
+              while True:
+                  batch = get('/actions/runs/' + run_id + '/jobs?per_page=100&page=' + str(page))['jobs']
+                  jobs.extend(batch)
+                  if len(batch) < 100: break
+                  page += 1
+              assert jobs and all(j['status'] == 'completed' and j['conclusion'] == 'success' for j in jobs)
+              successful = {step['name'] for job in jobs for step in job.get('steps', []) if step['conclusion'] == 'success'}
+              required = {'Run tests and lint without publishing private output', 'Check workflow contracts',
+                          'Confirm no APK was created', 'Publish sanitized results', 'Upload sanitized results',
+                          'Remove private checkout and compiler output'}
+              assert required <= successful
+              artifacts = get('/actions/runs/' + run_id + '/artifacts?per_page=100')['artifacts']
+              matches = [a for a in artifacts if a['name'] == 'DriveMate-verification-results' and not a['expired']]
+              assert len(matches) == 1
+              archive = get('/actions/artifacts/' + str(matches[0]['id']) + '/zip', binary=True)
+              with zipfile.ZipFile(io.BytesIO(archive)) as z:
+                  assert z.namelist() == ['verification-result.json']
+                  proof = json.loads(z.read('verification-result.json'))
+              assert proof['app_sha'] == app_sha and proof['harness_sha'] == run['head_sha']
+              assert str(proof['run_id']) == run_id and int(proof['run_attempt']) == run['run_attempt']
+              totals = proof['unit_tests']
+              assert totals['tests'] >= 118 and all(totals[k] == 0 for k in ('failures', 'errors', 'skipped'))
+              contracts = proof['workflow_contracts']
+              assert contracts['tests'] >= 20 and contracts['failures'] == contracts['errors'] == 0
+              assert proof['lint']['errors'] == 0 and proof['apk_created'] is False
+              print(json.dumps({'app_sha': app_sha, 'verification_run_id': run_id,
+                                'verification_attempt': run['run_attempt'], 'prerequisite_valid': True}, sort_keys=True))
+          try:
+              verify()
+          except Exception as error:
+              print('::error::Prerequisite verification failed: ' + type(error).__name__ + '; raw output withheld')
+              raise SystemExit(1)
+          PY_VERIFY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          path: harness
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: phuk-prog/drivemate
@@ -41,7 +117,19 @@ jobs:
             echo "::error::Emulator tooling installation failed; raw output withheld"
             exit 1
           fi
-      - name: Build disposable debug test APK
+      - name: Install canonical emulator tests in ephemeral checkout
+        run: |
+          mkdir -p app-src/app/src/androidTest/java/com/drivemate/app
+          cp harness/tests/emulator/CategoryAEmulatorTest.kt app-src/app/src/androidTest/java/com/drivemate/app/
+          cat >> app-src/app/build.gradle.kts <<'GRADLE_TEST_ONLY'
+          dependencies {
+              androidTestImplementation("junit:junit:4.13.2")
+              androidTestImplementation("androidx.test:runner:1.6.2")
+              androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+          }
+          android { defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" } }
+          GRADLE_TEST_ONLY
+      - name: Build disposable app and instrumentation APKs
         working-directory: app-src
         env:
           DRIVEMATE_KEYSTORE_PATH: ''
@@ -49,11 +137,18 @@ jobs:
           DRIVEMATE_KEY_ALIAS: ''
           DRIVEMATE_KEY_PASSWORD: ''
         run: |
-          if ! ./gradlew :app:assembleDebug --no-daemon --max-workers=4 > "$RUNNER_TEMP/position-build.log" 2>&1; then
-            echo "::error::Temporary debug APK build failed; private compiler output withheld"
+          if ! ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --max-workers=4 > "$RUNNER_TEMP/position-build.log" 2>&1; then
+            python3 - <<'PY_BUILD_DIAGNOSTICS'
+          import json, os, pathlib, re
+          log = pathlib.Path(os.environ['RUNNER_TEMP'], 'position-build.log').read_text(errors='replace')
+          print(json.dumps({'phase': 'apk-build', 'compiler_error_count': len(re.findall(r'(?m)^e: ', log)),
+                            'failed_task_count': len(re.findall(r'(?m)^> Task .* FAILED$', log))}, sort_keys=True))
+          PY_BUILD_DIAGNOSTICS
+            echo "::error::Disposable test APK compilation failed; private output withheld"
             exit 1
           fi
           echo "APK=$GITHUB_WORKSPACE/app-src/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_ENV"
+          echo "TEST_APK=$GITHUB_WORKSPACE/app-src/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" >> "$GITHUB_ENV"
       - name: Boot isolated Android emulator
         timeout-minutes: 10
         run: |
@@ -74,188 +169,26 @@ jobs:
             sleep 5
           done
           test "$("$adb" -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" = 28
-      - name: Check the uncertain-position warning waits ten seconds
-        timeout-minutes: 8
-        run: |
-          python3 - <<'PY_POSITION'
-          import json, os, re, subprocess, time, xml.etree.ElementTree as ET
-
-          PACKAGE = 'com.drivemate.app'
-          ADB = os.path.join(os.environ['ANDROID_HOME'], 'platform-tools', 'adb')
-          SERIAL = 'emulator-5554'
-
-          def adb(*args, timeout=35):
-              result = subprocess.run([ADB, '-s', SERIAL, *args], capture_output=True, timeout=timeout)
-              if result.returncode != 0:
-                  raise RuntimeError('ADB command failed')
-              return result.stdout.decode('utf-8', errors='replace')
-
-          def dump():
-              # The screen can be empty right after launch; retry the read instead of failing.
-              last_error = None
-              for _ in range(15):
-                  try:
-                      adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/position-ui.xml')
-                      return ET.fromstring(adb('exec-out', 'cat', '/sdcard/position-ui.xml'))
-                  except (RuntimeError, ET.ParseError, subprocess.TimeoutExpired) as error:
-                      last_error = error
-                      time.sleep(1)
-              raise RuntimeError('Screen could not be read: ' + type(last_error).__name__)
-
-          def visible(text):
-              return any(node.get('text') == text or text in node.get('content-desc', '').split('\n')
-                         for node in dump().iter('node'))
-
-          def tap_text(text):
-              root = dump()
-              for node in root.iter('node'):
-                  if node.get('text') == text:
-                      left, top, right, bottom = [int(v) for v in node.get('bounds').replace('][', ',').strip('[]').split(',')]
-                      adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
-                      return True
-              return False
-
-          LABELS = ['Main menu', 'Position uncertain', 'Not now', 'Driving view', 'Search']
-
-          def report(**fields):
-              # Sanitized diagnostics only: counts, timings, booleans and fixed UI labels.
-              print('Diagnostics: ' + json.dumps(fields, sort_keys=True))
-
-          def app_running():
-              try:
-                  return bool(adb('shell', 'pidof', PACKAGE, timeout=10).strip())
-              except RuntimeError:
-                  return False
-
-          def location_requests():
-              # Count of system location entries that name the app: a count only, no dump text is printed.
-              try:
-                  text = adb('shell', 'dumpsys', 'location', timeout=20)
-              except RuntimeError:
-                  return -1
-              return sum(1 for line in text.splitlines() if PACKAGE in line)
-
-          def position_lines():
-              # The app's sanitized DM_POSITION log lines (booleans and mode only).
-              try:
-                  text = adb('logcat', '-d', '-s', 'DM_POSITION:I', timeout=20)
-              except RuntimeError:
-                  return None
-              return [line for line in text.splitlines() if 'DM_POSITION' in line]
-
-          def last_position_state():
-              # Booleans and the mode name from the app's sanitized DM_POSITION log line; no position data.
-              lines = position_lines()
-              if lines is None:
-                  return {'lines': -1}
-              if not lines:
-                  return {'lines': 0}
-              last = lines[-1]
-              state = dict(re.findall(r'(reliable|uncertain)=(true|false)', last))
-              mode = re.findall(r'mode=([A-Z_]+)', last)
-              return {'lines': len(lines), 'reliable': state.get('reliable'),
-                      'uncertain': state.get('uncertain'), 'mode': mode[0] if mode else None}
-
-          def last_reliable_flag():
-              # Only the reliable value of the app's latest DM_POSITION line: a boolean, no position data.
-              lines = position_lines()
-              if not lines:
-                  return None
-              state = dict(re.findall(r'(reliable|uncertain)=(true|false)', lines[-1]))
-              return state.get('reliable')
-
-          def main():
-              adb('install', '-r', os.environ['APK'], timeout=120)
-              adb('shell', 'pm', 'clear', PACKAGE)
-              adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.ACCESS_FINE_LOCATION')
-              adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.ACCESS_COARSE_LOCATION')
-              adb('shell', 'am', 'start', '-n', PACKAGE + '/.MainActivity', timeout=30)
-              deadline = time.monotonic() + 90
-              while time.monotonic() < deadline:
-                  if tap_text('Not now'):
-                      time.sleep(1)
-                      continue
-                  if visible('Main menu'):
-                      break
-                  time.sleep(1)
-              else:
-                  raise AssertionError('Main screen not reached')
-
-              # Give the app a steady fix stream (Manchester), then stop it.
-              fixes_sent = 0
-              for index in range(8):
-                  adb('emu', 'geo', 'fix', '-2.2374', '53.4808')
-                  fixes_sent += 1
-                  if index < 7:
-                      time.sleep(1)
-              # The clock starts at the last fix sent; the app receives that fix after this point.
-              last_fix = time.monotonic()
-              # The emulator keeps replaying its last fix after "geo fix" (the last run logged reliable
-              # positions for about 60 s after the feed stopped). Stop the app's receipt of locations with an
-              # app-op instead: permission stays granted and the location providers stay on, so the
-              # position-uncertain warning is not hidden by a location-off status.
-              time.sleep(2)
-              for op in ('FINE_LOCATION', 'COARSE_LOCATION'):
-                  adb('shell', 'appops', 'set', PACKAGE, op, 'ignore')
-                  if 'ignore' not in adb('shell', 'appops', 'get', PACKAGE, op):
-                      raise RuntimeError('Location feed stop not applied')
-              lines_at_stop = len(position_lines() or [])
-
-              warned = None
-              timeline = []
-              last_flag = None
-              next_sample = 0.0
-              deadline = last_fix + 60
-              while time.monotonic() < deadline:
-                  now = time.monotonic()
-                  if now >= next_sample:
-                      # Timeline of the app's reliable flag after the stop: [seconds after last fix, value].
-                      flag = last_reliable_flag()
-                      if flag != last_flag and len(timeline) < 10:
-                          timeline.append([round(now - last_fix, 1), flag])
-                      last_flag = flag
-                      next_sample = now + 1
-                  if visible('Position uncertain'):
-                      warned = time.monotonic() - last_fix
-                      break
-                  time.sleep(0.5)
-              later = (position_lines() or [])[lines_at_stop:]
-              report(lines_after_stop=len(later),
-                     reliable_lines_after_stop=sum('reliable=true' in line for line in later),
-                     reliable_timeline_s=timeline,
-                     stop_method='appops ignore',
-                     fixes_sent=fixes_sent,
-                     warned_after_s=None if warned is None else round(warned, 1),
-                     labels_visible={label: visible(label) for label in LABELS},
-                     app_running=app_running(),
-                     location_requests_listed=location_requests(),
-                     last_position_state=last_position_state())
-              if warned is None:
-                  raise AssertionError('Position warning never shown after fixes stopped')
-              # The warning must not appear before ten seconds. Allow 0.5 s for polling jitter.
-              if warned < 9.5:
-                  raise AssertionError('Position warning shown before ten seconds')
-
-              result = {'app_sha': os.environ['APP_SHA'], 'warning_wait_ok': True,
-                        'apk_created_here': True, 'apk_published': False}
-              print(json.dumps(result, sort_keys=True))
-
-          if __name__ == '__main__':
-              try:
-                  main()
-              except Exception as error:
-                  print('::error::Position warning check failed: ' + type(error).__name__ + '; details withheld')
-                  raise SystemExit(1)
-          PY_POSITION
-        env:
-          APP_SHA: ${{ inputs.app_sha }}
-      - name: Delete test APK and runner output
+      - name: Run all Category A emulator acceptance checks
+        timeout-minutes: 15
+        run: python3 harness/tests/emulator/run_category_a.py
+      - name: Upload sanitized Category A acceptance result
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DriveMate-category-a-emulator-results
+          path: public-results/category-a-emulator.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Delete disposable APKs and private runner output
         if: always()
         run: |
           adb="$ANDROID_HOME/platform-tools/adb"
+          "$adb" -s emulator-5554 uninstall com.drivemate.app.test >/dev/null 2>&1 || true
           "$adb" -s emulator-5554 uninstall com.drivemate.app >/dev/null 2>&1 || true
           "$adb" -s emulator-5554 emu kill >/dev/null 2>&1 || true
           if [ -f "$RUNNER_TEMP/position-emulator.pid" ]; then kill "$(cat "$RUNNER_TEMP/position-emulator.pid")" 2>/dev/null || true; fi
           rm -rf "$GITHUB_WORKSPACE/app-src" "$RUNNER_TEMP/position-home" "$RUNNER_TEMP/position-"*.log
           find "$RUNNER_TEMP" -name '*.apk' -delete 2>/dev/null || true
-          echo "Temporary APK, private checkout and runner output removed"
+          test ! -e "$GITHUB_WORKSPACE/app-src"
+          test -z "$(find "$GITHUB_WORKSPACE" -name '*.apk' -print -quit)"
+          echo "Disposable APKs, private checkout and runner logs removed"
