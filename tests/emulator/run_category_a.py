@@ -12,6 +12,7 @@ CLASS = "com.drivemate.app.CategoryAEmulatorTest"
 PHASES = {
     "activity-ready", "permission-dialog", "permission-denied", "permission-granted",
     "permission-request-ready", "denial-callback",
+    "controlled-provider", "tracker-diagnostics",
     "grant-first-fix", "grant-native-marker", "native-style-loaded", "marker-good-fix",
     "marker-setting", "weak-state", "exact-accuracy-threshold", "marker-sample",
     "marker-recovered-fix", "reliable-recovery", "gap-baseline", "ten-second-warning",
@@ -24,8 +25,13 @@ PHASES.update(f"{prefix}-{index}" for prefix in (
     "marker-good", "marker-weak", "style-reloaded", "marker-reloaded", "marker-threshold", "marker-recovered"
 ) for index in range(3))
 BOOLEAN_FIELDS = {"passed", "expected_weak", "fix_unchanged", "precise", "native_enabled",
-                  "resumed", "window_focused", "rationale"}
-NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons", "deny_buttons"}
+                  "resumed", "window_focused", "rationale", "services_enabled", "authoritative", "reliable", "weak",
+                  "tracker_running", "has_tracked_fix", "provider_has_fix", "provider_fix_is_mock",
+                  "provider_fix_matches_injected", "diagnostics_available", "provider_enabled", "provider_available"}
+NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons", "deny_buttons",
+                 "listener_count", "injected_samples", "tracked_fix_age_ms"}
+STATUSES = {"STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE", "PERMISSION_REQUIRED",
+            "LOCATION_DISABLED", "PROVIDER_UNAVAILABLE"}
 
 
 def sanitized_record(raw):
@@ -33,7 +39,7 @@ def sanitized_record(raw):
         value = json.loads(raw)
     except (ValueError, TypeError):
         return None
-    if type(value) is not dict or value.get("phase") not in PHASES:
+    if type(value) is not dict or type(value.get("phase")) is not str or value["phase"] not in PHASES:
         return None
     for key, item in value.items():
         if key == "phase":
@@ -42,7 +48,9 @@ def sanitized_record(raw):
             continue
         if key in NUMBER_FIELDS and type(item) is int and 0 <= item <= 10_000_000:
             continue
-        if key == "error_type" and item in {"AssertionError", "RuntimeException", "SecurityException",
+        if key == "status" and type(item) is str and item in STATUSES:
+            continue
+        if key == "error_type" and type(item) is str and item in {"AssertionError", "RuntimeException", "SecurityException",
                 "IllegalStateException", "IllegalArgumentException", "InvocationTargetException",
                 "NullPointerException", "TimeoutException"}:
             continue

@@ -39,6 +39,8 @@ class CategoryAEmulatorTest {
     private lateinit var activity: MainActivity
     private lateinit var session: NavigationSession
     private lateinit var controller: MapController
+    private var lastInjectedAt = 0L
+    private var injectedSamples = 0
 
     private fun <T> main(block: () -> T): T {
         var value: T? = null
@@ -63,8 +65,39 @@ class CategoryAEmulatorTest {
             }
             SystemClock.sleep(100)
         }
+        trackerDiagnostics()
         report(phase, "passed" to false, "elapsed_ms" to (SystemClock.elapsedRealtime() - start))
         throw AssertionError(phase)
+    }
+
+    @Suppress("MissingPermission", "DEPRECATION")
+    private fun trackerDiagnostics() {
+        if (!::session.isInitialized) return
+        runCatching {
+            val fields = main {
+                val tracker = NavigationSession::class.java.getDeclaredField("tracker").apply { isAccessible = true }
+                    .get(session) as LocationTracker
+                val state = tracker.state.value
+                val listeners = LocationTracker::class.java.getDeclaredField("listeners").apply { isAccessible = true }
+                    .get(tracker) as Map<*, *>
+                val running = LocationTracker::class.java.getDeclaredField("running").apply { isAccessible = true }
+                    .getBoolean(tracker)
+                val latest = runCatching { manager.getLastKnownLocation(LocationManager.GPS_PROVIDER) }.getOrNull()
+                arrayOf<Pair<String, Any>>(
+                    "status" to state.status.name, "precise" to state.precisePermission,
+                    "services_enabled" to state.servicesEnabled, "authoritative" to state.authoritativeFix,
+                    "reliable" to state.guidanceReliable, "weak" to state.weakAccuracy,
+                    "tracker_running" to running, "listener_count" to listeners.size,
+                    "injected_samples" to injectedSamples, "has_tracked_fix" to (session.location != null),
+                    "provider_has_fix" to (latest != null),
+                    "provider_fix_is_mock" to (latest?.isFromMockProvider == true),
+                    "provider_fix_matches_injected" to (latest != null && latest.elapsedRealtimeNanos == lastInjectedAt),
+                    "tracked_fix_age_ms" to (session.location?.let {
+                        (SystemClock.elapsedRealtime() - it.elapsedRealtimeNanos / 1_000_000).coerceIn(0, 10_000_000)
+                    } ?: 0L))
+            }
+            report("tracker-diagnostics", *fields)
+        }.onFailure { report("tracker-diagnostics", "diagnostics_available" to false) }
     }
 
     private fun start() {
@@ -128,11 +161,15 @@ class CategoryAEmulatorTest {
         manager.addTestProvider(LocationManager.GPS_PROVIDER, false, true, false, false,
             true, true, true, Criteria.POWER_LOW, Criteria.ACCURACY_FINE)
         manager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        report("controlled-provider", "provider_enabled" to manager.isProviderEnabled(LocationManager.GPS_PROVIDER),
+            "provider_available" to (LocationManager.GPS_PROVIDER in manager.allProviders))
     }
 
     @Suppress("MissingPermission")
     private fun feed(accuracy: Float, index: Int = 0): Long {
         val timestamp = SystemClock.elapsedRealtimeNanos()
+        lastInjectedAt = timestamp
+        injectedSamples++
         manager.setTestProviderLocation(LocationManager.GPS_PROVIDER, Location(LocationManager.GPS_PROVIDER).apply {
             latitude = 53.4808 + index * 0.000005
             longitude = -2.2374
@@ -146,7 +183,12 @@ class CategoryAEmulatorTest {
 
     private fun freshFix(phase: String, accuracy: Float = 5f, index: Int = 0) {
         val old = main { session.location?.elapsedRealtimeNanos ?: 0L }
-        feed(accuracy, index)
+        // A short measured stream exercises normal Android delivery and permits the app's
+        // existing three-sample outlier reacquisition; never bypass that safety filter.
+        repeat(3) { sample ->
+            feed(accuracy, index)
+            if (sample < 2) SystemClock.sleep(250)
+        }
         await(phase) { main { (session.location?.elapsedRealtimeNanos ?: 0) > old } }
     }
 
@@ -199,6 +241,9 @@ class CategoryAEmulatorTest {
 
     @Test fun permissionMarkersWarningAndGapRecovery() {
         try {
+            // Replace emulator GNSS before the Activity can register listeners or receive a
+            // default emulator position. Replacing an active provider is not a clean fixture.
+            installControlledProvider()
             start()
             assertFalse(preciseGranted())
             assertFalse(nativeEnabled())
@@ -217,7 +262,6 @@ class CategoryAEmulatorTest {
             requestPermission()
             permissionAnswer(true)
             await("permission-granted") { preciseGranted() }
-            installControlledProvider()
             main { session.startLocation() }
             freshFix("grant-first-fix")
             await("grant-native-marker") { nativeEnabled() && main { session.positionReliable } }
@@ -230,6 +274,7 @@ class CategoryAEmulatorTest {
                     MapController::class.java.getDeclaredField("carIcon").apply { isAccessible = true }.get(controller) == icon
                 } }
                 marker("marker-good-${icon.ordinal}", false)
+                freshFix("marker-good-fix")
                 // A rejected poor fix must change quality indication without advancing position.
                 val heldTimestamp = main { session.location!!.elapsedRealtimeNanos }
                 feed(80f)
@@ -271,6 +316,7 @@ class CategoryAEmulatorTest {
             }
             report("batch-complete", "passed" to true)
         } catch (error: Throwable) {
+            trackerDiagnostics()
             report("batch-error", "error_type" to error.javaClass.simpleName)
             throw error
         } finally { close() }
@@ -279,6 +325,7 @@ class CategoryAEmulatorTest {
     /** Host revokes the permission between invocations because Android kills the app on revoke. */
     @Test fun revokedPermissionThenRestoredCallback() {
         try {
+            installControlledProvider()
             start()
             report("revoked-start", "precise" to preciseGranted(), "native_enabled" to nativeEnabled())
             assertFalse(preciseGranted())
@@ -287,13 +334,13 @@ class CategoryAEmulatorTest {
             if (notice != null) notice.click() else requestPermission()
             permissionAnswer(true)
             await("restored-permission") { preciseGranted() }
-            installControlledProvider()
             main { session.startLocation() }
             freshFix("restored-fix")
             isolatedStyle("restored-native-style")
             await("restored-native-marker") { nativeEnabled() && main { session.positionReliable } }
             report("revocation-complete", "passed" to true)
         } catch (error: Throwable) {
+            trackerDiagnostics()
             report("batch-error", "error_type" to error.javaClass.simpleName)
             throw error
         } finally { close() }
