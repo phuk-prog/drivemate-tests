@@ -331,7 +331,14 @@ class CategoryAEmulatorTest {
      */
     private fun marker(phase: String, weak: Boolean) {
         var lastEvidence = ""
+        var nextFreshFixAt = 0L
         await(phase) {
+            // Reliable-marker observation needs an ongoing live feed. A single fix
+            // expires while native rendering/capture waits; gap tests stop feeding separately.
+            if (!weak && SystemClock.elapsedRealtime() >= nextFreshFixAt) {
+                feed(5f)
+                nextFreshFixAt = SystemClock.elapsedRealtime() + 500L
+            }
             val amber = amberPixels()
             val nativeMarker = markerColoredPixels
             val display = markerOnDisplay()
