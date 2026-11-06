@@ -135,13 +135,19 @@ jobs:
                   return -1
               return sum(1 for line in text.splitlines() if PACKAGE in line)
 
-          def last_position_state():
-              # Booleans and the mode name from the app's sanitized DM_POSITION log line; no position data.
+          def position_lines():
+              # The app's sanitized DM_POSITION log lines (booleans and mode only).
               try:
                   text = adb('logcat', '-d', '-s', 'DM_POSITION:I', timeout=20)
               except RuntimeError:
+                  return None
+              return [line for line in text.splitlines() if 'DM_POSITION' in line]
+
+          def last_position_state():
+              # Booleans and the mode name from the app's sanitized DM_POSITION log line; no position data.
+              lines = position_lines()
+              if lines is None:
                   return {'lines': -1}
-              lines = [line for line in text.splitlines() if 'DM_POSITION' in line]
               if not lines:
                   return {'lines': 0}
               last = lines[-1]
@@ -168,6 +174,7 @@ jobs:
                   raise AssertionError('Main screen not reached')
 
               # Give the app a steady fix stream (Manchester), then stop it.
+              lines_before_feed = len(position_lines() or [])
               fixes_sent = 0
               for _ in range(8):
                   adb('emu', 'geo', 'fix', '-2.2374', '53.4808')
@@ -182,7 +189,10 @@ jobs:
                       warned = time.monotonic() - last_fix
                       break
                   time.sleep(0.5)
-              report(fixes_sent=fixes_sent,
+              later = (position_lines() or [])[lines_before_feed:]
+              report(lines_after_feed=len(later),
+                     reliable_lines_after_feed=sum('reliable=true' in line for line in later),
+                     fixes_sent=fixes_sent,
                      warned_after_s=None if warned is None else round(warned, 1),
                      labels_visible={label: visible(label) for label in LABELS},
                      app_running=app_running(),
