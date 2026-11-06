@@ -45,6 +45,8 @@ class CategoryAEmulatorTest {
     private var snapshotHeight = 0
     private var coloredPixels = 0
     private var markerColoredPixels = 0
+    private val lastDiagnosticByPhase = mutableMapOf<String, String>()
+    private var activeCheckId = "activity-ready"
 
     private fun <T> main(block: () -> T): T {
         var value: T? = null
@@ -57,10 +59,27 @@ class CategoryAEmulatorTest {
     private fun report(phase: String, vararg fields: Pair<String, Any>) {
         val json = JSONObject().put("phase", phase)
         fields.forEach { json.put(it.first, it.second) }
-        instrumentation.sendStatus(2, Bundle().apply { putString("category_a", json.toString()) })
+        val encoded = json.toString()
+        // Retain the first and changed samples; failure-detail carries final values.
+        if (phase in setOf("capture-control", "marker-sample", "marker-display") &&
+            lastDiagnosticByPhase.put(phase, encoded) == encoded) return
+        instrumentation.sendStatus(2, Bundle().apply { putString("category_a", encoded) })
     }
 
-    private fun await(phase: String, timeoutMs: Long = 15_000, condition: () -> Boolean) {
+    private fun assertCondition(checkId: String, expected: Boolean, actual: Boolean) {
+        activeCheckId = checkId
+        if (expected != actual) report("failure-detail", "check_id" to checkId,
+            "failure_kind" to "assertion", "expected_passed" to expected,
+            "actual_passed" to actual)
+        assertEquals(checkId, expected, actual)
+    }
+
+    private fun await(
+        phase: String, timeoutMs: Long = 15_000,
+        diagnostic: () -> Array<Pair<String, Any>> = { emptyArray() },
+        condition: () -> Boolean,
+    ) {
+        activeCheckId = phase
         val start = SystemClock.elapsedRealtime()
         while (SystemClock.elapsedRealtime() - start < timeoutMs) {
             if (condition()) {
@@ -69,8 +88,12 @@ class CategoryAEmulatorTest {
             }
             SystemClock.sleep(100)
         }
+        val elapsed = SystemClock.elapsedRealtime() - start
         trackerDiagnostics()
-        report(phase, "passed" to false, "elapsed_ms" to (SystemClock.elapsedRealtime() - start))
+        report("failure-detail", "check_id" to phase, "failure_kind" to "timeout",
+            "expected_passed" to true, "actual_passed" to false,
+            "timeout_ms" to timeoutMs, "elapsed_ms" to elapsed, *diagnostic())
+        report(phase, "passed" to false, "elapsed_ms" to elapsed)
         throw AssertionError(phase)
     }
 
@@ -302,9 +325,16 @@ class CategoryAEmulatorTest {
                 "positive_amber_pixels" to positive.first,
                 "negative_amber_pixels" to negative.first,
                 "display_capture_available" to (positive.second && negative.second))
-            assertTrue("screen-capture-unavailable", positive.second && negative.second)
+            assertCondition("screen-control-available", true, positive.second && negative.second)
+            if (positive.first <= 100) report("failure-detail",
+                "check_id" to "screen-control-positive", "failure_kind" to "assertion",
+                "expected_pixels_min" to 101, "actual_display_pixels" to positive.first)
             assertTrue("positive-control-not-visible", positive.first > 100)
+            if (negative.first != 0) report("failure-detail",
+                "check_id" to "screen-control-negative", "failure_kind" to "assertion",
+                "expected_pixels_max" to 0, "actual_display_pixels" to negative.first)
             assertEquals("negative-control-false-amber", 0, negative.first)
+            report("screen-control-verified", "passed" to true)
         } finally {
             main { controller.mapView.removeView(patch) }
         }
@@ -334,11 +364,16 @@ class CategoryAEmulatorTest {
                 org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)))
         }
         try {
-            await("capture-control", 10_000) {
+            await("native-control-positive", 10_000, diagnostic = {
+                arrayOf("expected_pixels_min" to 101,
+                    "actual_native_pixels" to nativePositive,
+                    "actual_display_pixels" to displayPositive)
+            }) {
                 nativePositive = amberPixels()
                 val display = markerOnDisplay()
                 displayPositive = display.first
-                report("capture-control", "native_symbol_amber_pixels" to nativePositive,
+                report("capture-control", "check_id" to "native-control-positive",
+                    "native_symbol_amber_pixels" to nativePositive,
                     "positive_amber_pixels" to displayPositive,
                     "display_capture_available" to display.second)
                 nativePositive > 100 && display.second && displayPositive > 100
@@ -352,13 +387,21 @@ class CategoryAEmulatorTest {
                 }
             }
         }
-        await("capture-control", 10_000) {
-            val nativeNegative = amberPixels()
+        var nativeNegative = 0
+        var displayNegative = 0
+        await("native-control-negative", 10_000, diagnostic = {
+            arrayOf("expected_pixels_max" to 0,
+                "actual_native_pixels" to nativeNegative,
+                "actual_display_pixels" to displayNegative)
+        }) {
+            nativeNegative = amberPixels()
             val display = markerOnDisplay()
-            report("capture-control", "native_symbol_amber_pixels" to nativeNegative,
-                "negative_amber_pixels" to display.first,
+            displayNegative = display.first
+            report("capture-control", "check_id" to "native-control-negative",
+                "native_symbol_amber_pixels" to nativeNegative,
+                "negative_amber_pixels" to displayNegative,
                 "display_capture_available" to display.second)
-            nativeNegative == 0 && display.second && display.first == 0
+            nativeNegative == 0 && display.second && displayNegative == 0
         }
     }
 
@@ -555,8 +598,8 @@ class CategoryAEmulatorTest {
             // default emulator position. Replacing an active provider is not a clean fixture.
             installControlledProvider()
             start()
-            assertFalse(preciseGranted())
-            assertFalse(nativeEnabled())
+            assertCondition("initial-permission", false, preciseGranted())
+            assertCondition("initial-native-marker", false, nativeEnabled())
             val notice = device.wait(Until.findObject(By.text("Continue")), 15_000)
                 ?: throw AssertionError("location-notice")
             notice.click()
@@ -568,7 +611,7 @@ class CategoryAEmulatorTest {
                     activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             } }
             await("permission-denied") { main { !preciseGranted() && !session.locationAvailability.value.authoritativeFix } }
-            assertFalse(nativeEnabled())
+            assertCondition("denied-native-marker", false, nativeEnabled())
             requestPermission()
             permissionAnswer(true)
             await("permission-granted") { preciseGranted() }
@@ -590,7 +633,11 @@ class CategoryAEmulatorTest {
                 val heldTimestamp = main { session.location!!.elapsedRealtimeNanos }
                 feed(80f)
                 await("weak-state") { main { session.locationAvailability.value.weakAccuracy && !session.positionReliable } }
-                assertEquals("poor-fix-must-not-move-position", heldTimestamp, main { session.location!!.elapsedRealtimeNanos })
+                val acceptedTimestamp = main { session.location!!.elapsedRealtimeNanos }
+                if (heldTimestamp != acceptedTimestamp) report("failure-detail",
+                    "check_id" to "poor-fix-must-not-move-position", "failure_kind" to "assertion",
+                    "expected_passed" to true, "actual_passed" to false)
+                assertEquals("poor-fix-must-not-move-position", heldTimestamp, acceptedTimestamp)
                 marker("marker-weak-${icon.ordinal}", true)
                 isolatedStyle("style-reloaded-${icon.ordinal}")
                 marker("marker-reloaded-${icon.ordinal}", true)
@@ -608,17 +655,18 @@ class CategoryAEmulatorTest {
             val lastFixMs = main { session.location!!.elapsedRealtimeNanos / 1_000_000 }
             val start = SystemClock.elapsedRealtime()
             while (SystemClock.elapsedRealtime() - lastFixMs < 9_500) {
-                assertFalse("warning-before-ten-seconds", main { session.positionUncertain })
+                assertCondition("warning-before-ten-seconds", false, main { session.positionUncertain })
                 SystemClock.sleep(100)
             }
             await("ten-second-warning", 6_000) { main { session.positionUncertain } }
             val delay = SystemClock.elapsedRealtime() - lastFixMs
             val unchanged = main { session.location!!.elapsedRealtimeNanos / 1_000_000 == lastFixMs }
             report("warning-timing", "delay_ms" to delay, "fix_unchanged" to unchanged)
-            assertTrue("controlled-feed-must-stop", unchanged)
-            assertTrue("warning-before-ten-seconds", delay >= 9_500)
-            assertTrue("warning-too-late", delay <= 15_000)
-            assertTrue(device.wait(Until.hasObject(By.text("Position uncertain")), 3_000))
+            assertCondition("controlled-feed-must-stop", true, unchanged)
+            assertCondition("warning-before-ten-seconds", true, delay >= 9_500)
+            assertCondition("warning-too-late", true, delay <= 15_000)
+            assertCondition("warning-message-visible", true,
+                device.wait(Until.hasObject(By.text("Position uncertain")), 3_000))
             await("stale-feed") { main { !session.locationAvailability.value.authoritativeFix } }
             while (SystemClock.elapsedRealtime() - start < 20_000) SystemClock.sleep(100)
             freshFix("gap-recovered-fix", index = 1)
@@ -631,7 +679,8 @@ class CategoryAEmulatorTest {
         } catch (error: Throwable) {
             markerDiagnostics()
             trackerDiagnostics()
-            report("batch-error", "error_type" to error.javaClass.simpleName)
+            report("batch-error", "error_type" to error.javaClass.simpleName,
+                "check_id" to activeCheckId)
             throw error
         } finally { close() }
     }
@@ -642,8 +691,8 @@ class CategoryAEmulatorTest {
             installControlledProvider()
             start()
             report("revoked-start", "precise" to preciseGranted(), "native_enabled" to nativeEnabled())
-            assertFalse(preciseGranted())
-            assertFalse(nativeEnabled())
+            assertCondition("revoked-permission", false, preciseGranted())
+            assertCondition("revoked-native-marker", false, nativeEnabled())
             val notice = device.wait(Until.findObject(By.text("Continue")), 10_000)
             if (notice != null) notice.click() else requestPermission()
             permissionAnswer(true)
@@ -656,7 +705,8 @@ class CategoryAEmulatorTest {
         } catch (error: Throwable) {
             markerDiagnostics()
             trackerDiagnostics()
-            report("batch-error", "error_type" to error.javaClass.simpleName)
+            report("batch-error", "error_type" to error.javaClass.simpleName,
+                "check_id" to activeCheckId)
             throw error
         } finally { close() }
     }
