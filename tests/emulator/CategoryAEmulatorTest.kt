@@ -341,6 +341,29 @@ class CategoryAEmulatorTest {
     }
 
 
+    /** Bounded non-location evidence: distinguish off-screen control from missing rendering. */
+    private fun nativeControlState(): Array<Pair<String, Any>> = main {
+        val map = nativeMap()
+        val style = map?.style
+        val source = style?.getSource("category-a-render-control-source")
+        val layer = style?.getLayer("category-a-render-control-layer")
+        val fix = map?.locationComponent?.lastKnownLocation
+        val point = if (map != null && fix != null) map.projection.toScreenLocation(
+            org.maplibre.android.geometry.LatLng(fix.latitude, fix.longitude)) else null
+        val onScreen = point != null && map != null &&
+            point.x >= 0f && point.y >= 0f &&
+            point.x < controller.mapView.width && point.y < controller.mapView.height
+        val rendered = if (map != null && point != null && layer != null) runCatching {
+            map.queryRenderedFeatures(point, "category-a-render-control-layer").size
+        }.getOrDefault(0) else 0
+        arrayOf<Pair<String, Any>>(
+            "control_source_present" to (source != null),
+            "control_layer_present" to (layer != null),
+            "control_on_screen" to onScreen,
+            "control_rendered_features" to rendered,
+        )
+    }
+
     /** Validate the real native symbol renderer and compositor after every style load. */
     private fun calibrateNativeSymbolCapture() {
         val imageId = "category-a-render-control-image"
@@ -365,9 +388,9 @@ class CategoryAEmulatorTest {
         }
         try {
             await("native-control-positive", 10_000, diagnostic = {
-                arrayOf("expected_pixels_min" to 101,
+                arrayOf<Pair<String, Any>>("expected_pixels_min" to 101,
                     "actual_native_pixels" to nativePositive,
-                    "actual_display_pixels" to displayPositive)
+                    "actual_display_pixels" to displayPositive) + nativeControlState()
             }) {
                 nativePositive = amberPixels()
                 val display = markerOnDisplay()
@@ -390,9 +413,9 @@ class CategoryAEmulatorTest {
         var nativeNegative = 0
         var displayNegative = 0
         await("native-control-negative", 10_000, diagnostic = {
-            arrayOf("expected_pixels_max" to 0,
+            arrayOf<Pair<String, Any>>("expected_pixels_max" to 0,
                 "actual_native_pixels" to nativeNegative,
-                "actual_display_pixels" to displayNegative)
+                "actual_display_pixels" to displayNegative) + nativeControlState()
         }) {
             nativeNegative = amberPixels()
             val display = markerOnDisplay()
