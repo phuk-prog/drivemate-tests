@@ -78,7 +78,7 @@ SAMPLE_PHASES = {"capture-control", "marker-sample", "marker-display"}
 
 # Completion requirements remain unchanged: a blocked check is never a pass.
 SUBSYSTEM_REQUIREMENTS = {
-    "diagnostics": set(),
+    "diagnostics": {"controlled-provider"},
     "permissions": {"permission-denied", "permission-granted", "grant-first-fix"},
     "screen_capture": {"screen-control-verified"},
     "native_rendering": (
@@ -284,6 +284,7 @@ def self_test():
     assert sanitized_record({**valid, "check_id": "secret/path"}) is None
     assert sanitized_record({**valid, "actual_native_pixels": -1}) is None
     base = [
+        {"phase": "controlled-provider", "provider_available": True},
         {"phase": "permission-denied", "passed": True},
         {"phase": "permission-granted", "passed": True},
         {"phase": "grant-first-fix", "passed": True},
@@ -297,6 +298,7 @@ def self_test():
     found = first_failure(compacted, False)
     assert found == {key: value for key, value in valid.items() if key != "phase"}
     results = subsystem_results(compacted, found)
+    assert results["diagnostics"]["status"] == "passed"
     assert results["permissions"]["status"] == "passed"
     assert results["screen_capture"]["status"] == "passed"
     assert results["native_rendering"]["status"] == "failed"
