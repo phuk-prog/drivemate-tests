@@ -214,6 +214,7 @@ class CategoryAEmulatorTest {
             loaded
         } }
         assertTrue(loaded)
+        calibrateNativeSymbolCapture()
     }
 
     private fun amberPixels(): Int {
@@ -309,6 +310,57 @@ class CategoryAEmulatorTest {
         }
     }
 
+
+    /** Validate the real native symbol renderer and compositor after every style load. */
+    private fun calibrateNativeSymbolCapture() {
+        val imageId = "category-a-render-control-image"
+        val sourceId = "category-a-render-control-source"
+        val layerId = "category-a-render-control-layer"
+        var nativePositive = 0
+        var displayPositive = 0
+        main {
+            val map = nativeMap() ?: throw AssertionError("native-control-map")
+            val style = map.style ?: throw AssertionError("native-control-style")
+            val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-control-fix")
+            val image = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
+            image.eraseColor(android.graphics.Color.rgb(255, 160, 0))
+            style.addImage(imageId, image)
+            style.addSource(org.maplibre.android.style.sources.GeoJsonSource(sourceId,
+                org.maplibre.geojson.Feature.fromGeometry(
+                    org.maplibre.geojson.Point.fromLngLat(fix.longitude, fix.latitude))))
+            style.addLayer(org.maplibre.android.style.layers.SymbolLayer(layerId, sourceId).withProperties(
+                org.maplibre.android.style.layers.PropertyFactory.iconImage(imageId),
+                org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
+                org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)))
+        }
+        try {
+            await("capture-control", 10_000) {
+                nativePositive = amberPixels()
+                val display = markerOnDisplay()
+                displayPositive = display.first
+                report("capture-control", "native_symbol_amber_pixels" to nativePositive,
+                    "positive_amber_pixels" to displayPositive,
+                    "display_capture_available" to display.second)
+                nativePositive > 100 && display.second && displayPositive > 100
+            }
+        } finally {
+            main {
+                nativeMap()?.style?.let { style ->
+                    style.removeLayer(layerId)
+                    style.removeSource(sourceId)
+                    style.removeImage(imageId)
+                }
+            }
+        }
+        await("capture-control", 10_000) {
+            val nativeNegative = amberPixels()
+            val display = markerOnDisplay()
+            report("capture-control", "native_symbol_amber_pixels" to nativeNegative,
+                "negative_amber_pixels" to display.first,
+                "display_capture_available" to display.second)
+            nativeNegative == 0 && display.second && display.first == 0
+        }
+    }
 
     private fun markerOnDisplay(): Pair<Int, Boolean> {
         val centre = main {
