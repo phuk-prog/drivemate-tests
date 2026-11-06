@@ -78,6 +78,7 @@ SAMPLE_PHASES = {"capture-control", "marker-sample", "marker-display"}
 
 # Completion requirements remain unchanged: a blocked check is never a pass.
 SUBSYSTEM_REQUIREMENTS = {
+    "diagnostics": set(),
     "permissions": {"permission-denied", "permission-granted", "grant-first-fix"},
     "screen_capture": {"screen-control-verified"},
     "native_rendering": (
