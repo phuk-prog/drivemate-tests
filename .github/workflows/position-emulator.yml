@@ -78,7 +78,7 @@ jobs:
         timeout-minutes: 8
         run: |
           python3 - <<'PY_POSITION'
-          import json, os, subprocess, time, xml.etree.ElementTree as ET
+          import json, os, re, subprocess, time, xml.etree.ElementTree as ET
 
           PACKAGE = 'com.drivemate.app'
           ADB = os.path.join(os.environ['ANDROID_HOME'], 'platform-tools', 'adb')
@@ -135,6 +135,21 @@ jobs:
                   return -1
               return sum(1 for line in text.splitlines() if PACKAGE in line)
 
+          def last_position_state():
+              # Booleans and the mode name from the app's sanitized DM_POSITION log line; no position data.
+              try:
+                  text = adb('logcat', '-d', '-s', 'DM_POSITION:I', timeout=20)
+              except RuntimeError:
+                  return {'lines': -1}
+              lines = [line for line in text.splitlines() if 'DM_POSITION' in line]
+              if not lines:
+                  return {'lines': 0}
+              last = lines[-1]
+              state = dict(re.findall(r'(reliable|uncertain)=(true|false)', last))
+              mode = re.findall(r'mode=([A-Z_]+)', last)
+              return {'lines': len(lines), 'reliable': state.get('reliable'),
+                      'uncertain': state.get('uncertain'), 'mode': mode[0] if mode else None}
+
           def main():
               adb('install', '-r', os.environ['APK'], timeout=120)
               adb('shell', 'pm', 'clear', PACKAGE)
@@ -171,7 +186,8 @@ jobs:
                      warned_after_s=None if warned is None else round(warned, 1),
                      labels_visible={label: visible(label) for label in LABELS},
                      app_running=app_running(),
-                     location_requests_listed=location_requests())
+                     location_requests_listed=location_requests(),
+                     last_position_state=last_position_state())
               if warned is None:
                   raise AssertionError('Position warning never shown after fixes stopped')
               # The warning must not appear before ten seconds. Allow 0.5 s for polling jitter.
