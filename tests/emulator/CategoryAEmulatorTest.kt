@@ -313,9 +313,15 @@ class CategoryAEmulatorTest {
                 org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)))
         }
         try {
-            SystemClock.sleep(500)
-            val nativePixels = amberPixels()
-            val screen = markerOnDisplay()
+            val deadline = SystemClock.elapsedRealtime() + 6_000
+            var nativePixels = 0
+            var screen = 0 to false
+            do {
+                nativePixels = amberPixels()
+                screen = markerOnDisplay()
+                if (nativePixels > 0 && screen.second && screen.first > 0) break
+                SystemClock.sleep(200)
+            } while (SystemClock.elapsedRealtime() < deadline)
             report("native-symbol-control", "native_symbol_amber_pixels" to nativePixels,
                 "screen_amber_pixels" to screen.first,
                 "display_capture_available" to screen.second)
@@ -398,9 +404,15 @@ class CategoryAEmulatorTest {
                     .getOrDefault(emptyList())
                 val sourceFeatures = sourceFeatureList.size
                 val locationFeature = sourceFeatureList.firstOrNull()
-                val sourceIsStale = locationFeature?.getBooleanProperty("mapbox-property-location-stale") == true
-                val foregroundImage = locationFeature?.getStringProperty("mapbox-property-foreground-icon")
-                val foregroundStaleImage = locationFeature?.getStringProperty("mapbox-property-foreground-stale-icon")
+                val staleKey = "mapbox-property-location-stale"
+                val fgKey = "mapbox-property-foreground-icon"
+                val fgStaleKey = "mapbox-property-foreground-stale-icon"
+                val sourceIsStale = locationFeature?.takeIf { it.hasProperty(staleKey) }
+                    ?.getBooleanProperty(staleKey) == true
+                val foregroundImage = locationFeature?.takeIf { it.hasProperty(fgKey) }
+                    ?.getStringProperty(fgKey)
+                val foregroundStaleImage = locationFeature?.takeIf { it.hasProperty(fgStaleKey) }
+                    ?.getStringProperty(fgStaleKey)
                 val foregroundLayer = style?.getLayer("mapbox-location-foreground-layer")
                 val backgroundLayer = style?.getLayer("mapbox-location-background-layer")
                 val foregroundRendered = runCatching {
