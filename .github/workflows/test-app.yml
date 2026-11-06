@@ -1,5 +1,5 @@
 name: Verify exact DriveMate source without APK packaging
-run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || '434806aa4e0b99d5471586f47b6c356c25fac148' }}"
+run-name: "${{ (inputs.check_mode || 'full') == 'full' && 'DriveMate verification' || 'DriveMate focused reproduction' }}: ${{ inputs.app_sha || 'fb6f959a8638e51c69ad82696cd014d6d82bf96a' }}"
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
       app_sha:
         description: Full 40-character private app commit SHA to verify before merging
         required: true
-        default: '434806aa4e0b99d5471586f47b6c356c25fac148'
+        default: 'fb6f959a8638e51c69ad82696cd014d6d82bf96a'
       check_mode:
         description: Full verification or focused reproduction (focused never qualifies for an APK)
         type: choice
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      APP_SHA: ${{ inputs.app_sha || '434806aa4e0b99d5471586f47b6c356c25fac148' }}
+      APP_SHA: ${{ inputs.app_sha || 'fb6f959a8638e51c69ad82696cd014d6d82bf96a' }}
       CHECK_MODE: ${{ inputs.check_mode || 'full' }}
       TEST_FILTERS: ${{ inputs.test_filters || '' }}
     steps:
@@ -441,6 +441,48 @@ jobs:
           PY_FAILURE
             exit 1
           fi
+      - name: Publish allowlisted Category A diagnostics
+        if: always()
+        run: |
+          python3 - <<'PY_POSITION_DIAGNOSTICS'
+          import glob, json, re, xml.etree.ElementTree as ET
+          labels = {'denied', 'grant-and-fix', 'poor-fix-rejected', 'quality-recovery', 'stale',
+                    'gap-recovery', 'revoked', 'permission-restored', 'stopped', 'quality-observation',
+                    'invalid-accuracy', 'invalid-age', 'boundaries-complete', 'estimate'}
+          statuses = {'STOPPED', 'WAITING', 'GOOGLE', 'GPS', 'APPROXIMATE', 'PERMISSION_REQUIRED',
+                      'LOCATION_DISABLED', 'PROVIDER_UNAVAILABLE'}
+          def safe_diagnostic(line):
+              prefix = 'Position diagnostics: '
+              if not line.startswith(prefix): return None
+              fields = {}
+              for token in line[len(prefix):].split():
+                  if token.count('=') != 1: return None
+                  key, value = token.split('=')
+                  if key in fields: return None
+                  if key == 'check': valid = value in labels
+                  elif key == 'status': valid = value in statuses
+                  elif key in {'precise', 'authoritative', 'reliable', 'weak'}: valid = value in {'true', 'false'}
+                  elif key in {'delivered', 'now_ms', 'selected_ms', 'index', 'invalid_cases'}:
+                      valid = re.fullmatch(r'[0-9]{1,12}', value) is not None
+                  elif key == 'limit': valid = re.fullmatch(r'[0-9]{1,6}(?:\.[0-9]{1,3})?', value) is not None
+                  elif key == 'gaps_ms': valid = re.fullmatch(r'[0-9]{1,8}(?:,[0-9]{1,8}){0,5}', value) is not None
+                  else: return None
+                  if not valid: return None
+                  fields[key] = value
+              return fields if 'check' in fields else None
+          assert safe_diagnostic('Position diagnostics: check=denied delivered=0') is not None
+          assert safe_diagnostic('Position diagnostics: check=denied private=secret') is None
+          assert safe_diagnostic('Position diagnostics: check=secret delivered=0') is None
+          count = 0
+          for path in glob.glob('app-src/app/build/test-results/testDebugUnitTest/TEST-com.drivemate.app.PositionCategoryTest.xml'):
+              for node in ET.parse(path).getroot().iter('system-out'):
+                  for line in (node.text or '').splitlines():
+                      fields = safe_diagnostic(line)
+                      if fields is not None:
+                          print('Position diagnostics: ' + json.dumps(fields, sort_keys=True))
+                          count += 1
+          print('Category A diagnostic records: ' + str(count))
+          PY_POSITION_DIAGNOSTICS
       - name: Confirm no APK was created
         if: always()
         run: |
