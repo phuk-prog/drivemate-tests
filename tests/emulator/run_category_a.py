@@ -305,8 +305,7 @@ def self_test():
     }
     assert results["warning_timing"]["status"] == "blocked"
     assert first_failure([{"phase": "batch-complete", "passed": True}], True) is None
-    print(json.dumps({"diagnostic_contract_passed": True, "checks": 12},
-                     sort_keys=True))
+    print(json.dumps({"diagnostic_contract_passed": True}, sort_keys=True))
 
 
 def main():
