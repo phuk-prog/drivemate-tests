@@ -37,7 +37,7 @@ CHECK_IDS = PHASES | {
     "denied-native-marker", "poor-fix-must-not-move-position",
     "warning-before-ten-seconds", "warning-too-late",
     "controlled-feed-must-stop", "warning-message-visible",
-    "revoked-permission", "revoked-native-marker",
+    "revoked-permission", "revoked-native-marker", "diagnostic-schema",
 }
 BOOLEAN_FIELDS = {
     "passed", "expected_weak", "fix_unchanged", "precise", "native_enabled",
@@ -147,6 +147,8 @@ def compact_records(records):
 
 
 def subsystem_for(check_id):
+    if check_id == "diagnostic-schema":
+        return "diagnostics"
     if check_id.startswith(("native-control", "marker-good", "marker-reloaded",
                             "marker-recovered", "marker-threshold", "marker-display",
                             "style-reloaded")) or check_id in {
@@ -249,9 +251,12 @@ def run_case(method, required_phases):
     passed = (
         proc.returncode == 0 and totals == ["1"]
         and not failed_status and required_phases <= phases
+        and rejected_count == 0
         and not any(rec.get("passed") is False for rec in records)
     )
     failure = first_failure(records, passed)
+    if rejected_count and (failure is None or failure["check_id"] == "unclassified"):
+        failure = {"check_id": "diagnostic-schema", "failure_kind": "runner"}
     summary = {
         "case": method, "passed": passed, "diagnostic_records": len(records),
         "rejected_diagnostic_records": rejected_count,
@@ -274,6 +279,7 @@ def self_test():
     assert sanitized_record(valid) == valid
     assert sanitized_record({**valid, "latitude": 53.4}) is None
     assert sanitized_record({**valid, "stack_trace": "private"}) is None
+    assert subsystem_for("diagnostic-schema") == "diagnostics"
     assert sanitized_record({**valid, "check_id": "secret/path"}) is None
     assert sanitized_record({**valid, "actual_native_pixels": -1}) is None
     base = [
