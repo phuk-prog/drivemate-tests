@@ -91,8 +91,16 @@ jobs:
               return result.stdout.decode('utf-8', errors='replace')
 
           def dump():
-              adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/position-ui.xml')
-              return ET.fromstring(adb('exec-out', 'cat', '/sdcard/position-ui.xml'))
+              # The screen can be empty right after launch; retry the read instead of failing.
+              last_error = None
+              for _ in range(15):
+                  try:
+                      adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/position-ui.xml')
+                      return ET.fromstring(adb('exec-out', 'cat', '/sdcard/position-ui.xml'))
+                  except (RuntimeError, ET.ParseError, subprocess.TimeoutExpired) as error:
+                      last_error = error
+                      time.sleep(1)
+              raise RuntimeError('Screen could not be read: ' + type(last_error).__name__)
 
           def visible(text):
               return any(node.get('text') == text or text in node.get('content-desc', '').split('\n')
