@@ -11,6 +11,7 @@ SERIAL = "emulator-5554"
 CLASS = "com.drivemate.app.CategoryAEmulatorTest"
 PHASES = {
     "activity-ready", "permission-dialog", "permission-denied", "permission-granted",
+    "permission-request-ready", "denial-callback",
     "grant-first-fix", "grant-native-marker", "native-style-loaded", "marker-good-fix",
     "marker-setting", "weak-state", "exact-accuracy-threshold", "marker-sample",
     "marker-recovered-fix", "reliable-recovery", "gap-baseline", "ten-second-warning",
@@ -22,8 +23,9 @@ PHASES = {
 PHASES.update(f"{prefix}-{index}" for prefix in (
     "marker-good", "marker-weak", "style-reloaded", "marker-reloaded", "marker-threshold", "marker-recovered"
 ) for index in range(3))
-BOOLEAN_FIELDS = {"passed", "expected_weak", "fix_unchanged", "precise", "native_enabled"}
-NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms"}
+BOOLEAN_FIELDS = {"passed", "expected_weak", "fix_unchanged", "precise", "native_enabled",
+                  "resumed", "window_focused", "rationale"}
+NUMBER_FIELDS = {"elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons", "deny_buttons"}
 
 
 def sanitized_record(raw):

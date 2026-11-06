@@ -12,6 +12,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.result.ActivityResultLauncher
+import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
@@ -97,15 +98,26 @@ class CategoryAEmulatorTest {
             }
             SystemClock.sleep(100)
         }
-        report("permission-dialog", "passed" to false)
+        report("permission-dialog", "passed" to false,
+            "allow_buttons" to ids.sumOf { device.findObjects(By.res(it, "permission_allow_button")).size },
+            "deny_buttons" to ids.sumOf { device.findObjects(By.res(it, "permission_deny_button")).size },
+            "precise" to preciseGranted(),
+            "resumed" to main { activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) },
+            "window_focused" to main { activity.hasWindowFocus() },
+            "rationale" to main { activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) })
         throw AssertionError("permission-dialog")
     }
 
-    private fun requestPermission() = main {
-        @Suppress("UNCHECKED_CAST")
-        val launcher = MainActivity::class.java.getDeclaredField("permissionLauncher").apply { isAccessible = true }
-            .get(activity) as ActivityResultLauncher<Array<String>>
-        launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    private fun requestPermission() {
+        await("permission-request-ready") { main {
+            activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && activity.hasWindowFocus()
+        } }
+        main {
+            @Suppress("UNCHECKED_CAST")
+            val launcher = MainActivity::class.java.getDeclaredField("permissionLauncher").apply { isAccessible = true }
+                .get(activity) as ActivityResultLauncher<Array<String>>
+            launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        }
     }
 
     @Suppress("DEPRECATION", "MissingPermission")
@@ -194,6 +206,12 @@ class CategoryAEmulatorTest {
                 ?: throw AssertionError("location-notice")
             notice.click()
             permissionAnswer(false)
+            // Absence of a grant is true even before the dialog result is delivered. Wait for
+            // the Activity's actual denial callback before launching a second permission request.
+            await("denial-callback") { main {
+                session.message == "DriveMate needs your location to navigate" &&
+                    activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            } }
             await("permission-denied") { main { !preciseGranted() && !session.locationAvailability.value.authoritativeFix } }
             assertFalse(nativeEnabled())
             requestPermission()
