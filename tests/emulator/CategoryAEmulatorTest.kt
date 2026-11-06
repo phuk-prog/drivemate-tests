@@ -265,6 +265,20 @@ class CategoryAEmulatorTest {
                 val actualDrawable = if (lc.isLocationComponentActivated && lc.renderMode == org.maplibre.android.location.modes.RenderMode.GPS)
                     options?.gpsDrawable() else options?.foregroundDrawable()
                 val layers = style?.layers?.filter { it.id.startsWith("mapbox-location-") }.orEmpty()
+                // Only counts and booleans leave the emulator; no coordinates or screenshots.
+                val locationSource = style?.getSource("mapbox-location-source") as?
+                    org.maplibre.android.style.sources.GeoJsonSource
+                val sourceFeatures = runCatching { locationSource?.querySourceFeatures(null)?.size ?: 0 }.getOrDefault(-1)
+                val renderedFeatures = runCatching {
+                    if (point == null || layers.isEmpty()) 0
+                    else map.queryRenderedFeatures(point, *layers.map { it.id }.toTypedArray()).size
+                }.getOrDefault(-1)
+                val nearbyFeatures = runCatching {
+                    if (point == null || layers.isEmpty()) 0
+                    else map.queryRenderedFeatures(android.graphics.RectF(
+                        point.x - 40f, point.y - 40f, point.x + 40f, point.y + 40f
+                    ), *layers.map { it.id }.toTypedArray()).size
+                }.getOrDefault(-1)
                 val sprite = style?.getImage("mapbox-location-icon")
                 var spriteAmber = 0
                 if (sprite != null) {
@@ -286,6 +300,10 @@ class CategoryAEmulatorTest {
                         .apply { isAccessible = true }.getBoolean(controller),
                     "native_asset_matches_controller" to (expectedDrawable != null && expectedDrawable == actualDrawable),
                     "location_layer_count" to layers.size,
+                    "location_source_present" to (locationSource != null),
+                    "location_source_features" to sourceFeatures,
+                    "rendered_location_features" to renderedFeatures,
+                    "rendered_nearby_location_features" to nearbyFeatures,
                     "visible_location_layers" to layers.count { it.visibility.value == "visible" },
                     "sprite_amber_pixels" to spriteAmber,
                     "render_mode" to if (lc.isLocationComponentActivated) lc.renderMode else 0,
