@@ -51,7 +51,8 @@ BOOLEAN_FIELDS = {
     "display_capture_available", "source_location_stale",
     "source_foreground_icon_registered", "source_foreground_stale_icon_registered",
     "foreground_layer_visible", "background_layer_visible",
-    "expected_passed", "actual_passed",
+    "expected_passed", "actual_passed", "control_source_present",
+    "control_layer_present", "control_on_screen",
 }
 NUMBER_FIELDS = {
     "elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons",
@@ -66,6 +67,7 @@ NUMBER_FIELDS = {
     "foreground_rendered_features", "background_rendered_features",
     "timeout_ms", "expected_pixels_min", "expected_pixels_max",
     "actual_native_pixels", "actual_display_pixels",
+    "control_rendered_features",
 }
 STATUSES = {
     "STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE",
@@ -181,6 +183,9 @@ def first_failure(records, passed):
     if passed:
         return None
     for rec in records:
+        if rec["phase"] == "batch-error" and rec.get("check_id") in CHECK_IDS:
+            return {"check_id": rec["check_id"], "failure_kind": "assertion"}
+    for rec in records:
         if rec.get("passed") is False and rec["phase"] not in SAMPLE_PHASES:
             return {"check_id": rec["phase"], "failure_kind": "assertion"}
     return {"check_id": "unclassified", "failure_kind": "runner"}
@@ -263,6 +268,8 @@ def self_test():
         "failure_kind": "timeout", "expected_pixels_min": 101,
         "actual_native_pixels": 0, "actual_display_pixels": 0,
         "timeout_ms": 10_000, "elapsed_ms": 10_112,
+        "control_source_present": True, "control_layer_present": True,
+        "control_on_screen": False, "control_rendered_features": 0,
     }
     assert sanitized_record(valid) == valid
     assert sanitized_record({**valid, "latitude": 53.4}) is None
