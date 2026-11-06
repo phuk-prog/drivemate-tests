@@ -291,6 +291,46 @@ class CategoryAEmulatorTest {
         }
     }
 
+
+    /** Verify that the same registered weak sprite can really be rasterized by a map symbol.
+     * The temporary layer and source are removed before the original marker assertion.
+     */
+    private fun calibrateNativeSymbol() {
+        val sourceId = "dm-test-symbol-source"
+        val layerId = "dm-test-symbol-layer"
+        main {
+            val map = nativeMap() ?: throw AssertionError("native-map-missing")
+            val style = map.style ?: throw AssertionError("native-style-missing")
+            val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-fix-missing")
+            assertNotNull("weak-sprite-missing", style.getImage("mapbox-location-icon"))
+            style.addSource(org.maplibre.android.style.sources.GeoJsonSource(sourceId,
+                org.maplibre.geojson.Feature.fromGeometry(
+                    org.maplibre.geojson.Point.fromLngLat(fix.longitude, fix.latitude))))
+            style.addLayer(org.maplibre.android.style.layers.SymbolLayer(layerId, sourceId).withProperties(
+                org.maplibre.android.style.layers.PropertyFactory.iconImage("mapbox-location-icon"),
+                org.maplibre.android.style.layers.PropertyFactory.iconSize(2f),
+                org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
+                org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)))
+        }
+        try {
+            SystemClock.sleep(500)
+            val nativePixels = amberPixels()
+            val screen = markerOnDisplay()
+            report("native-symbol-control", "native_symbol_amber_pixels" to nativePixels,
+                "screen_amber_pixels" to screen.first,
+                "display_capture_available" to screen.second)
+            assertTrue("map-symbol-positive-control-not-painted", nativePixels > 0)
+            assertTrue("map-symbol-screen-control-not-painted", screen.second && screen.first > 0)
+        } finally {
+            main {
+                nativeMap()?.style?.let { style ->
+                    if (style.getLayer(layerId) != null) style.removeLayer(layerId)
+                    if (style.getSource(sourceId) != null) style.removeSource(sourceId)
+                }
+            }
+        }
+    }
+
     private fun markerOnDisplay(): Pair<Int, Boolean> {
         val centre = main {
             val map = nativeMap() ?: return@main null
@@ -354,7 +394,23 @@ class CategoryAEmulatorTest {
                 // Only counts and booleans leave the emulator; no coordinates or screenshots.
                 val locationSource = style?.getSource("mapbox-location-source") as?
                     org.maplibre.android.style.sources.GeoJsonSource
-                val sourceFeatures = runCatching { locationSource?.querySourceFeatures(null)?.size ?: 0 }.getOrDefault(-1)
+                val sourceFeatureList = runCatching { locationSource?.querySourceFeatures(null).orEmpty() }
+                    .getOrDefault(emptyList())
+                val sourceFeatures = sourceFeatureList.size
+                val locationFeature = sourceFeatureList.firstOrNull()
+                val sourceIsStale = locationFeature?.getBooleanProperty("mapbox-property-location-stale") == true
+                val foregroundImage = locationFeature?.getStringProperty("mapbox-property-foreground-icon")
+                val foregroundStaleImage = locationFeature?.getStringProperty("mapbox-property-foreground-stale-icon")
+                val foregroundLayer = style?.getLayer("mapbox-location-foreground-layer")
+                val backgroundLayer = style?.getLayer("mapbox-location-background-layer")
+                val foregroundRendered = runCatching {
+                    if (point == null) 0 else map.queryRenderedFeatures(
+                        point, "mapbox-location-foreground-layer").size
+                }.getOrDefault(-1)
+                val backgroundRendered = runCatching {
+                    if (point == null) 0 else map.queryRenderedFeatures(
+                        point, "mapbox-location-background-layer").size
+                }.getOrDefault(-1)
                 val renderedFeatures = runCatching {
                     if (point == null || layers.isEmpty()) 0
                     else map.queryRenderedFeatures(point, *layers.map { it.id }.toTypedArray()).size
@@ -388,6 +444,13 @@ class CategoryAEmulatorTest {
                     "location_layer_count" to layers.size,
                     "location_source_present" to (locationSource != null),
                     "location_source_features" to sourceFeatures,
+                    "source_location_stale" to sourceIsStale,
+                    "source_foreground_icon_registered" to (foregroundImage == "mapbox-location-icon"),
+                    "source_foreground_stale_icon_registered" to (foregroundStaleImage == "mapbox-location-stale-icon"),
+                    "foreground_layer_visible" to (foregroundLayer?.visibility?.value == "visible"),
+                    "background_layer_visible" to (backgroundLayer?.visibility?.value == "visible"),
+                    "foreground_rendered_features" to foregroundRendered,
+                    "background_rendered_features" to backgroundRendered,
                     "rendered_location_features" to renderedFeatures,
                     "rendered_nearby_location_features" to nearbyFeatures,
                     "visible_location_layers" to layers.count { it.visibility.value == "visible" },
@@ -447,6 +510,7 @@ class CategoryAEmulatorTest {
                 feed(80f)
                 await("weak-state") { main { session.accuracyWeak && !session.positionReliable } }
                 assertEquals("poor-fix-must-not-move-position", heldTimestamp, main { session.location!!.elapsedRealtimeNanos })
+                if (icon == CarIcon.entries.first()) calibrateNativeSymbol()
                 marker("marker-weak-${icon.ordinal}", true)
                 isolatedStyle("style-reloaded-${icon.ordinal}")
                 marker("marker-reloaded-${icon.ordinal}", true)
