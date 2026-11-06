@@ -185,8 +185,21 @@ jobs:
           "$adb" -s emulator-5554 uninstall com.drivemate.app.test >/dev/null 2>&1 || true
           "$adb" -s emulator-5554 uninstall com.drivemate.app >/dev/null 2>&1 || true
           "$adb" -s emulator-5554 emu kill >/dev/null 2>&1 || true
-          if [ -f "$RUNNER_TEMP/position-emulator.pid" ]; then kill "$(cat "$RUNNER_TEMP/position-emulator.pid")" 2>/dev/null || true; fi
-          rm -rf "$GITHUB_WORKSPACE/app-src" "$RUNNER_TEMP/position-home" "$RUNNER_TEMP/position-"*.log
+          if [ -f "$RUNNER_TEMP/position-emulator.pid" ]; then
+            emulator_pid="$(cat "$RUNNER_TEMP/position-emulator.pid")"
+            kill "$emulator_pid" 2>/dev/null || true
+            for attempt in $(seq 1 20); do
+              kill -0 "$emulator_pid" 2>/dev/null || break
+              sleep 1
+            done
+            kill -KILL "$emulator_pid" 2>/dev/null || true
+          fi
+          # Remove private material independently of AVD shutdown/deletion races.
+          rm -rf "$GITHUB_WORKSPACE/app-src" "$RUNNER_TEMP/position-"*.log
+          for attempt in $(seq 1 5); do
+            rm -rf "$RUNNER_TEMP/position-home" 2>/dev/null && break
+            sleep 1
+          done
           find "$RUNNER_TEMP" -name '*.apk' -delete 2>/dev/null || true
           test ! -e "$GITHUB_WORKSPACE/app-src"
           test -z "$(find "$GITHUB_WORKSPACE" -name '*.apk' -print -quit)"
