@@ -537,9 +537,11 @@ class CategoryAEmulatorTest {
                 marker("marker-reloaded-${icon.ordinal}", true)
                 feed(50f)
                 await("exact-accuracy-threshold") { main { !session.locationAvailability.value.weakAccuracy } }
-                marker("marker-threshold-${icon.ordinal}", false)
+                // 50 m clears weak accuracy, but guidance requires <=25 m. Restore a
+                // guidance-quality fix before requiring a reliably visible marker.
                 freshFix("marker-recovered-fix")
                 await("reliable-recovery") { main { !session.locationAvailability.value.weakAccuracy && session.positionReliable } }
+                marker("marker-threshold-${icon.ordinal}", false)
                 marker("marker-recovered-${icon.ordinal}", false)
             }
 
