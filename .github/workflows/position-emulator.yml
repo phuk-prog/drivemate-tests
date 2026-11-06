@@ -156,6 +156,14 @@ jobs:
               return {'lines': len(lines), 'reliable': state.get('reliable'),
                       'uncertain': state.get('uncertain'), 'mode': mode[0] if mode else None}
 
+          def last_reliable_flag():
+              # Only the reliable value of the app's latest DM_POSITION line: a boolean, no position data.
+              lines = position_lines()
+              if not lines:
+                  return None
+              state = dict(re.findall(r'(reliable|uncertain)=(true|false)', lines[-1]))
+              return state.get('reliable')
+
           def main():
               adb('install', '-r', os.environ['APK'], timeout=120)
               adb('shell', 'pm', 'clear', PACKAGE)
@@ -174,24 +182,48 @@ jobs:
                   raise AssertionError('Main screen not reached')
 
               # Give the app a steady fix stream (Manchester), then stop it.
-              lines_before_feed = len(position_lines() or [])
               fixes_sent = 0
-              for _ in range(8):
+              for index in range(8):
                   adb('emu', 'geo', 'fix', '-2.2374', '53.4808')
                   fixes_sent += 1
-                  time.sleep(1)
+                  if index < 7:
+                      time.sleep(1)
+              # The clock starts at the last fix sent; the app receives that fix after this point.
               last_fix = time.monotonic()
+              # The emulator keeps replaying its last fix after "geo fix" (the last run logged reliable
+              # positions for about 60 s after the feed stopped). Stop the app's receipt of locations with an
+              # app-op instead: permission stays granted and the location providers stay on, so the
+              # position-uncertain warning is not hidden by a location-off status.
+              time.sleep(2)
+              for op in ('FINE_LOCATION', 'COARSE_LOCATION'):
+                  adb('shell', 'appops', 'set', PACKAGE, op, 'ignore')
+                  if 'ignore' not in adb('shell', 'appops', 'get', PACKAGE, op):
+                      raise RuntimeError('Location feed stop not applied')
+              lines_at_stop = len(position_lines() or [])
 
               warned = None
+              timeline = []
+              last_flag = None
+              next_sample = 0.0
               deadline = last_fix + 60
               while time.monotonic() < deadline:
+                  now = time.monotonic()
+                  if now >= next_sample:
+                      # Timeline of the app's reliable flag after the stop: [seconds after last fix, value].
+                      flag = last_reliable_flag()
+                      if flag != last_flag and len(timeline) < 10:
+                          timeline.append([round(now - last_fix, 1), flag])
+                      last_flag = flag
+                      next_sample = now + 1
                   if visible('Position uncertain'):
                       warned = time.monotonic() - last_fix
                       break
                   time.sleep(0.5)
-              later = (position_lines() or [])[lines_before_feed:]
-              report(lines_after_feed=len(later),
-                     reliable_lines_after_feed=sum('reliable=true' in line for line in later),
+              later = (position_lines() or [])[lines_at_stop:]
+              report(lines_after_stop=len(later),
+                     reliable_lines_after_stop=sum('reliable=true' in line for line in later),
+                     reliable_timeline_s=timeline,
+                     stop_method='appops ignore',
                      fixes_sent=fixes_sent,
                      warned_after_s=None if warned is None else round(warned, 1),
                      labels_visible={label: visible(label) for label in LABELS},
