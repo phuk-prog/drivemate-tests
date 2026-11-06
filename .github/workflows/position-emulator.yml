@@ -115,6 +115,18 @@ jobs:
                       return True
               return False
 
+          LABELS = ['Main menu', 'Position uncertain', 'Not now', 'Driving view', 'Search']
+
+          def report(**fields):
+              # Sanitized diagnostics only: counts, timings, booleans and fixed UI labels.
+              print('Diagnostics: ' + json.dumps(fields, sort_keys=True))
+
+          def app_running():
+              try:
+                  return bool(adb('shell', 'pidof', PACKAGE, timeout=10).strip())
+              except RuntimeError:
+                  return False
+
           def main():
               adb('install', '-r', os.environ['APK'], timeout=120)
               adb('shell', 'pm', 'clear', PACKAGE)
@@ -133,8 +145,10 @@ jobs:
                   raise AssertionError('Main screen not reached')
 
               # Give the app a steady fix stream (Manchester), then stop it.
+              fixes_sent = 0
               for _ in range(8):
                   adb('emu', 'geo', 'fix', '-2.2374', '53.4808')
+                  fixes_sent += 1
                   time.sleep(1)
               last_fix = time.monotonic()
 
@@ -145,6 +159,10 @@ jobs:
                       warned = time.monotonic() - last_fix
                       break
                   time.sleep(0.5)
+              report(fixes_sent=fixes_sent,
+                     warned_after_s=None if warned is None else round(warned, 1),
+                     labels_visible={label: visible(label) for label in LABELS},
+                     app_running=app_running())
               if warned is None:
                   raise AssertionError('Position warning never shown after fixes stopped')
               # The warning must not appear before ten seconds. Allow 0.5 s for polling jitter.
