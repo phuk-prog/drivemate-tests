@@ -1,0 +1,168 @@
+name: Position warning on emulator (disposable test APK)
+run-name: "Position warning check: ${{ inputs.app_sha }}"
+on:
+  workflow_dispatch:
+    inputs:
+      app_sha:
+        description: Full 40-character private app commit SHA to check
+        required: true
+        default: '0c0c4dba04873c9a878db399ef773d649b851326'
+        type: string
+permissions:
+  contents: read
+jobs:
+  position:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: apk-owner
+    env:
+      APP_SHA: ${{ inputs.app_sha }}
+    steps:
+      - name: Validate exact app revision
+        run: '[[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: phuk-prog/drivemate
+          ref: ${{ env.APP_SHA }}
+          token: ${{ secrets.DRIVEMATE_APP_TOKEN }}
+          persist-credentials: false
+          path: app-src
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          log-accepted-android-sdk-licenses: false
+      - name: Install emulator and build tooling
+        run: |
+          if ! sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'emulator' 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/position-sdk.log" 2>&1; then
+            echo "::error::Emulator tooling installation failed; raw output withheld"
+            exit 1
+          fi
+      - name: Build disposable debug test APK
+        working-directory: app-src
+        env:
+          DRIVEMATE_KEYSTORE_PATH: ''
+          DRIVEMATE_KEYSTORE_PASSWORD: ''
+          DRIVEMATE_KEY_ALIAS: ''
+          DRIVEMATE_KEY_PASSWORD: ''
+        run: |
+          if ! ./gradlew :app:assembleDebug --no-daemon --max-workers=4 > "$RUNNER_TEMP/position-build.log" 2>&1; then
+            echo "::error::Temporary debug APK build failed; private compiler output withheld"
+            exit 1
+          fi
+          echo "APK=$GITHUB_WORKSPACE/app-src/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_ENV"
+      - name: Boot isolated Android emulator
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          sudo chown "$(id -u)" /dev/kvm
+          export ANDROID_USER_HOME="$RUNNER_TEMP/position-home"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'no\n' | avdmanager create avd --force --name position-api28 --device pixel_2 --package 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/position-avd.log" 2>&1
+          nohup "$ANDROID_HOME/emulator/emulator" -avd position-api28 -port 5554 -accel on -no-window -gpu guest -no-snapshot -no-audio -no-boot-anim -memory 1536 -cores 2 > "$RUNNER_TEMP/position-emulator.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/position-emulator.pid"
+          adb="$ANDROID_HOME/platform-tools/adb"
+          timeout 240 "$adb" -s emulator-5554 wait-for-device
+          deadline=$((SECONDS + 240))
+          until [ "$("$adb" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
+            test "$SECONDS" -lt "$deadline"
+            sleep 5
+          done
+          test "$("$adb" -s emulator-5554 shell getprop ro.build.version.sdk | tr -d '\r')" = 28
+      - name: Check the uncertain-position warning waits ten seconds
+        timeout-minutes: 8
+        run: |
+          python3 - <<'PY_POSITION'
+          import json, os, subprocess, time, xml.etree.ElementTree as ET
+
+          PACKAGE = 'com.drivemate.app'
+          ADB = os.path.join(os.environ['ANDROID_HOME'], 'platform-tools', 'adb')
+          SERIAL = 'emulator-5554'
+
+          def adb(*args, timeout=35):
+              result = subprocess.run([ADB, '-s', SERIAL, *args], capture_output=True, timeout=timeout)
+              if result.returncode != 0:
+                  raise RuntimeError('ADB command failed')
+              return result.stdout.decode('utf-8', errors='replace')
+
+          def dump():
+              adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/position-ui.xml')
+              return ET.fromstring(adb('exec-out', 'cat', '/sdcard/position-ui.xml'))
+
+          def visible(text):
+              return any(node.get('text') == text or text in node.get('content-desc', '').split('\n')
+                         for node in dump().iter('node'))
+
+          def tap_text(text):
+              root = dump()
+              for node in root.iter('node'):
+                  if node.get('text') == text:
+                      left, top, right, bottom = [int(v) for v in node.get('bounds').replace('][', ',').strip('[]').split(',')]
+                      adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
+                      return True
+              return False
+
+          def main():
+              adb('install', '-r', os.environ['APK'], timeout=120)
+              adb('shell', 'pm', 'clear', PACKAGE)
+              adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.ACCESS_FINE_LOCATION')
+              adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.ACCESS_COARSE_LOCATION')
+              adb('shell', 'am', 'start', '-n', PACKAGE + '/.MainActivity', timeout=30)
+              deadline = time.monotonic() + 90
+              while time.monotonic() < deadline:
+                  if tap_text('Not now'):
+                      time.sleep(1)
+                      continue
+                  if visible('Main menu'):
+                      break
+                  time.sleep(1)
+              else:
+                  raise AssertionError('Main screen not reached')
+
+              # Give the app a steady fix stream (Manchester), then stop it.
+              for _ in range(8):
+                  adb('emu', 'geo', 'fix', '-2.2374', '53.4808')
+                  time.sleep(1)
+              last_fix = time.monotonic()
+
+              warned = None
+              deadline = last_fix + 60
+              while time.monotonic() < deadline:
+                  if visible('Position uncertain'):
+                      warned = time.monotonic() - last_fix
+                      break
+                  time.sleep(0.5)
+              if warned is None:
+                  raise AssertionError('Position warning never shown after fixes stopped')
+              # The warning must not appear before ten seconds. Allow 0.5 s for polling jitter.
+              if warned < 9.5:
+                  raise AssertionError('Position warning shown before ten seconds')
+
+              result = {'app_sha': os.environ['APP_SHA'], 'warning_wait_ok': True,
+                        'apk_created_here': True, 'apk_published': False}
+              print(json.dumps(result, sort_keys=True))
+
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception as error:
+                  print('::error::Position warning check failed: ' + type(error).__name__ + '; details withheld')
+                  raise SystemExit(1)
+          PY_POSITION
+        env:
+          APP_SHA: ${{ inputs.app_sha }}
+      - name: Delete test APK and runner output
+        if: always()
+        run: |
+          adb="$ANDROID_HOME/platform-tools/adb"
+          "$adb" -s emulator-5554 uninstall com.drivemate.app >/dev/null 2>&1 || true
+          "$adb" -s emulator-5554 emu kill >/dev/null 2>&1 || true
+          if [ -f "$RUNNER_TEMP/position-emulator.pid" ]; then kill "$(cat "$RUNNER_TEMP/position-emulator.pid")" 2>/dev/null || true; fi
+          rm -rf "$GITHUB_WORKSPACE/app-src" "$RUNNER_TEMP/position-home" "$RUNNER_TEMP/position-"*.log
+          find "$RUNNER_TEMP" -name '*.apk' -delete 2>/dev/null || true
+          echo "Temporary APK, private checkout and runner output removed"
