@@ -280,8 +280,11 @@ jobs:
           adb="$ANDROID_HOME/platform-tools/adb"
           cleanup() {
             "$adb" -s emulator-5554 emu kill >> "$log" 2>&1 || true
-            if [ -n "$emulator_pid" ]; then kill "$emulator_pid" 2>/dev/null || true; fi
-            rm -rf "$ANDROID_USER_HOME"
+            if [ -n "$emulator_pid" ]; then
+              kill "$emulator_pid" 2>/dev/null || true
+              for _ in $(seq 1 30); do kill -0 "$emulator_pid" 2>/dev/null || break; sleep 1; done
+            fi
+            for _ in 1 2 3 4 5; do rm -rf "$ANDROID_USER_HOME" 2>/dev/null && break; sleep 2; done
           }
           trap cleanup EXIT
           report_bootstrap_failure() {
