@@ -283,28 +283,8 @@ class BackupRestoreInterruptionTest {
         var rejectMirror = false
         var rejectAuthority = false
         var authoritative = Settings()
-        val hooked = object : SharedPreferences by actual {
-            override fun edit(): SharedPreferences.Editor {
-                val delegate = actual.edit()
-                return object : SharedPreferences.Editor by delegate {
-                    override fun putString(key: String, value: String?): SharedPreferences.Editor {
-                        delegate.putString(key, value); return this
-                    }
-                    override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
-                        delegate.putBoolean(key, value); return this
-                    }
-                    override fun putInt(key: String, value: Int): SharedPreferences.Editor {
-                        delegate.putInt(key, value); return this
-                    }
-                    override fun commit(): Boolean = if (rejectMirror) false else delegate.commit()
-                }
-            }
-        }
-        val context = object : ContextWrapper(base) {
-            override fun getApplicationContext(): Context = this
-            override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
-                if (name == "drivemate") hooked else super.getSharedPreferences(name, mode)
-        }
+        val hooked = hookedPreferences(actual) { editor -> if (rejectMirror) false else editor.commit() }
+        val context = contextWithPreferences(base, hooked)
         val authority = object : SettingsStore {
             override suspend fun load(fallback: Settings) = authoritative
             override suspend fun save(settings: Settings) {

@@ -29,28 +29,8 @@ class StartupMirrorFailureTest {
         val base = RuntimeEnvironment.getApplication()
         val actual = base.getSharedPreferences("drivemate", Context.MODE_PRIVATE)
         assertTrue(actual.edit().clear().commit())
-        val hooked = object : SharedPreferences by actual {
-            override fun edit(): SharedPreferences.Editor {
-                val delegate = actual.edit()
-                return object : SharedPreferences.Editor by delegate {
-                    override fun putString(key: String, value: String?): SharedPreferences.Editor {
-                        delegate.putString(key, value); return this
-                    }
-                    override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
-                        delegate.putBoolean(key, value); return this
-                    }
-                    override fun putInt(key: String, value: Int): SharedPreferences.Editor {
-                        delegate.putInt(key, value); return this
-                    }
-                    override fun commit(): Boolean = false
-                }
-            }
-        }
-        val context = object : ContextWrapper(base) {
-            override fun getApplicationContext(): Context = this
-            override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
-                if (name == "drivemate") hooked else super.getSharedPreferences(name, mode)
-        }
+        val hooked = hookedPreferences(actual) { false }
+        val context = contextWithPreferences(base, hooked)
         val loaded = Settings(avoidTolls = true)
         val authority = object : SettingsStore {
             override suspend fun load(fallback: Settings) = loaded
@@ -118,3 +98,32 @@ class StartupMirrorFailureTest {
     }
 
 }
+
+
+/** Preferences whose editors forward every write to [actual]; [commitWith] decides what commit() reports. */
+internal fun hookedPreferences(actual: SharedPreferences, commitWith: (SharedPreferences.Editor) -> Boolean): SharedPreferences =
+    object : SharedPreferences by actual {
+        override fun edit(): SharedPreferences.Editor {
+            val delegate = actual.edit()
+            return object : SharedPreferences.Editor by delegate {
+                override fun putString(key: String, value: String?): SharedPreferences.Editor {
+                    delegate.putString(key, value); return this
+                }
+                override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
+                    delegate.putBoolean(key, value); return this
+                }
+                override fun putInt(key: String, value: Int): SharedPreferences.Editor {
+                    delegate.putInt(key, value); return this
+                }
+                override fun commit(): Boolean = commitWith(delegate)
+            }
+        }
+    }
+
+/** A context whose "drivemate" preferences are [prefs]; everything else passes through. */
+internal fun contextWithPreferences(base: Context, prefs: SharedPreferences): Context =
+    object : ContextWrapper(base) {
+        override fun getApplicationContext(): Context = this
+        override fun getSharedPreferences(name: String, mode: Int): SharedPreferences =
+            if (name == "drivemate") prefs else super.getSharedPreferences(name, mode)
+    }
