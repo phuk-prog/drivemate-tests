@@ -754,7 +754,8 @@ class CategoryAEmulatorTest {
             val notice = device.wait(Until.findObject(By.text("Continue")), 15_000)
                 ?: throw AssertionError("location-notice")
             notice.click()
-            requestPermission()
+            // The system dialog appears after Continue; answer it directly. The acceptance flow
+            // denies first and re-requests later, which the observer does not need.
             permissionAnswer(true)
             await("permission-granted") { preciseGranted() }
             main { session.startLocation() }
