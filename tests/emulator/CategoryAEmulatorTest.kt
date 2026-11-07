@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit
 /** Runs the real Activity, Android location callbacks and MapLibre native renderer. No native stubs. */
 /** Screen-pixel offset of the positive control from the GPS fix (clears the location puck). */
 private const val CONTROL_OFFSET_PX = 160f
+private const val CONTROL_IMAGE_ID = "category-a-render-control-image"
 
 class CategoryAEmulatorTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -345,14 +346,16 @@ class CategoryAEmulatorTest {
 
 
     /** Bounded non-location evidence: distinguish off-screen control from missing rendering. */
+    private var controlLatLng: org.maplibre.android.geometry.LatLng? = null
+
     private fun nativeControlState(): Array<Pair<String, Any>> = main {
         val map = nativeMap()
         val style = map?.style
         val source = style?.getSource("category-a-render-control-source")
         val layer = style?.getLayer("category-a-render-control-layer")
-        val fix = map?.locationComponent?.lastKnownLocation
-        val point = if (map != null && fix != null) map.projection.toScreenLocation(
-            org.maplibre.android.geometry.LatLng(fix.latitude, fix.longitude)) else null
+        // Measure the control at its own coordinate. Earlier versions measured the GPS fix,
+        // which is a different point once the control is offset.
+        val point = controlLatLng?.let { latLng -> map?.projection?.toScreenLocation(latLng) }
         val onScreen = point != null && map != null &&
             point.x >= 0f && point.y >= 0f &&
             point.x < controller.mapView.width && point.y < controller.mapView.height
@@ -361,8 +364,11 @@ class CategoryAEmulatorTest {
         }.getOrDefault(0) else 0
         arrayOf<Pair<String, Any>>(
             "style_identity" to (style?.let { System.identityHashCode(it) } ?: 0),
+            "control_image_present" to (style?.getImage(CONTROL_IMAGE_ID) != null),
             "control_source_present" to (source != null),
             "control_layer_present" to (layer != null),
+            "control_layer_visible" to (layer?.visibility?.value == "visible"),
+            "map_zoom" to ((map?.cameraPosition?.zoom ?: 0.0).toInt()),
             "control_on_screen" to onScreen,
             "control_rendered_features" to rendered,
         )
@@ -370,7 +376,7 @@ class CategoryAEmulatorTest {
 
     /** Validate the real native symbol renderer and compositor after every style load. */
     private fun calibrateNativeSymbolCapture() {
-        val imageId = "category-a-render-control-image"
+        val imageId = CONTROL_IMAGE_ID
         val sourceId = "category-a-render-control-source"
         val layerId = "category-a-render-control-layer"
         var nativePositive = 0
@@ -389,12 +395,13 @@ class CategoryAEmulatorTest {
             val fixPoint = map.projection.toScreenLocation(
                 org.maplibre.android.geometry.LatLng(fix.latitude, fix.longitude))
             val dx = if (fixPoint.x + CONTROL_OFFSET_PX < controller.mapView.width) CONTROL_OFFSET_PX else -CONTROL_OFFSET_PX
-            val controlLatLng = map.projection.fromScreenLocation(
+            val placedLatLng = map.projection.fromScreenLocation(
                 android.graphics.PointF(fixPoint.x + dx, fixPoint.y))
             val origin = IntArray(2)
             controller.mapView.getLocationOnScreen(origin)
             controlX = origin[0] + (fixPoint.x + dx).toInt()
             controlY = origin[1] + fixPoint.y.toInt()
+            controlLatLng = placedLatLng
             style.getLayer(layerId)?.let { style.removeLayer(layerId) }
             style.getSource(sourceId)?.let { style.removeSource(sourceId) }
             if (style.getImage(imageId) == null) {
@@ -404,7 +411,7 @@ class CategoryAEmulatorTest {
             }
             style.addSource(org.maplibre.android.style.sources.GeoJsonSource(sourceId,
                 org.maplibre.geojson.Feature.fromGeometry(
-                    org.maplibre.geojson.Point.fromLngLat(controlLatLng.longitude, controlLatLng.latitude))))
+                    org.maplibre.geojson.Point.fromLngLat(placedLatLng.longitude, placedLatLng.latitude))))
             style.addLayer(org.maplibre.android.style.layers.SymbolLayer(layerId, sourceId).withProperties(
                 org.maplibre.android.style.layers.PropertyFactory.iconImage(imageId),
                 org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
