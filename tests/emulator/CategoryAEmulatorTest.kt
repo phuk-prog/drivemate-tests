@@ -31,6 +31,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /** Runs the real Activity, Android location callbacks and MapLibre native renderer. No native stubs. */
+/** Screen-pixel offset of the positive control from the GPS fix (clears the location puck). */
+private const val CONTROL_OFFSET_PX = 160f
+
 class CategoryAEmulatorTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
@@ -371,16 +374,29 @@ class CategoryAEmulatorTest {
         val layerId = "category-a-render-control-layer"
         var nativePositive = 0
         var displayPositive = 0
+        // Place the control clear of the location puck. The puck sits on the fix and can
+        // cover a 48 px control entirely, so a fix-centred control cannot prove the observer.
+        var controlX = 0
+        var controlY = 0
         main {
             val map = nativeMap() ?: throw AssertionError("native-control-map")
             val style = map.style ?: throw AssertionError("native-control-style")
             val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-control-fix")
+            val fixPoint = map.projection.toScreenLocation(
+                org.maplibre.android.geometry.LatLng(fix.latitude, fix.longitude))
+            val dx = if (fixPoint.x + CONTROL_OFFSET_PX < controller.mapView.width) CONTROL_OFFSET_PX else -CONTROL_OFFSET_PX
+            val controlLatLng = map.projection.fromScreenLocation(
+                android.graphics.PointF(fixPoint.x + dx, fixPoint.y))
+            val origin = IntArray(2)
+            controller.mapView.getLocationOnScreen(origin)
+            controlX = origin[0] + (fixPoint.x + dx).toInt()
+            controlY = origin[1] + fixPoint.y.toInt()
             val image = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
             image.eraseColor(android.graphics.Color.rgb(255, 160, 0))
             style.addImage(imageId, image)
             style.addSource(org.maplibre.android.style.sources.GeoJsonSource(sourceId,
                 org.maplibre.geojson.Feature.fromGeometry(
-                    org.maplibre.geojson.Point.fromLngLat(fix.longitude, fix.latitude))))
+                    org.maplibre.geojson.Point.fromLngLat(controlLatLng.longitude, controlLatLng.latitude))))
             style.addLayer(org.maplibre.android.style.layers.SymbolLayer(layerId, sourceId).withProperties(
                 org.maplibre.android.style.layers.PropertyFactory.iconImage(imageId),
                 org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
@@ -390,10 +406,11 @@ class CategoryAEmulatorTest {
             await("native-control-positive", 10_000, diagnostic = {
                 arrayOf<Pair<String, Any>>("expected_pixels_min" to 101,
                     "actual_native_pixels" to nativePositive,
-                    "actual_display_pixels" to displayPositive) + nativeControlState()
+                    "actual_display_pixels" to displayPositive,
+                    "control_offset_px" to CONTROL_OFFSET_PX) + nativeControlState()
             }) {
                 nativePositive = amberPixels()
-                val display = markerOnDisplay()
+                val display = displayedAmber(controlX, controlY, 40)
                 displayPositive = display.first
                 report("capture-control", "check_id" to "native-control-positive",
                     "native_symbol_amber_pixels" to nativePositive,
