@@ -1,0 +1,21 @@
+name: Harness checks (public, no secrets)
+on:
+  push:
+    branches-ignore: [main]
+    paths: ['tests/emulator/**', '.github/workflows/position-emulator.yml', '.github/workflows/harness-check.yml']
+  pull_request:
+    paths: ['tests/emulator/**', '.github/workflows/position-emulator.yml', '.github/workflows/harness-check.yml']
+permissions:
+  contents: read
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile emulator harness script
+        run: python3 -m py_compile tests/emulator/run_category_a.py
+      - name: Run sanitised diagnostic self-test (known injected failure)
+        run: python3 tests/emulator/run_category_a.py --self-test

@@ -364,6 +364,28 @@ jobs:
           # Remove generated outputs only, forcing the following full test task to rerun.
           shutil.rmtree('app-src/app/build/test-results/testDebugUnitTest')
           PY_QUALIFY
+      - name: Compile Category A emulator test sources (no APK)
+        env:
+          DRIVEMATE_KEYSTORE_PATH: ''
+          DRIVEMATE_KEYSTORE_PASSWORD: ''
+          DRIVEMATE_KEY_ALIAS: ''
+          DRIVEMATE_KEY_PASSWORD: ''
+        run: |
+          mkdir -p app-src/app/src/androidTest/java/com/drivemate/app
+          cp harness/tests/emulator/CategoryAEmulatorTest.kt app-src/app/src/androidTest/java/com/drivemate/app/
+          cat >> app-src/app/build.gradle.kts <<'GRADLE_TEST_ONLY'
+          dependencies {
+              androidTestImplementation("junit:junit:4.13.2")
+              androidTestImplementation("androidx.test:runner:1.6.2")
+              androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+          }
+          android { defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" } }
+          GRADLE_TEST_ONLY
+          if ! (cd app-src && ./gradlew :app:compileDebugAndroidTestKotlin --no-daemon --max-workers=4 > "$RUNNER_TEMP/private-androidtest-compile.log" 2>&1); then
+            echo "::error::Category A test source compilation failed; private output withheld"
+            exit 1
+          fi
+          test -z "$(find app-src -name '*.apk' -print -quit)"
       - name: Run tests and lint without publishing private output
         working-directory: app-src
         run: |

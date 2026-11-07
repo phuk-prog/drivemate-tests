@@ -6,11 +6,11 @@ on:
       app_sha:
         description: Exact private app SHA already passed by full public verification
         required: true
-        default: '707499adfd40a97b3a6cc543f60b4d40af061251'
         type: string
       verification_run_id:
-        description: Successful full public verification run for this exact app SHA
-        required: true
+        description: Optional numeric ID of a successful full verification for this app SHA (empty selects the newest)
+        required: false
+        default: ''
         type: string
 permissions:
   contents: read
@@ -31,11 +31,15 @@ jobs:
         run: |
           python3 - <<'PY_VERIFY'
           import io, json, os, re, urllib.request, zipfile
+          class Check(Exception):
+              pass
+          def check(condition, code):
+              if not condition:
+                  raise Check(code)
           def verify():
               app_sha = os.environ['APP_SHA']
-              run_id = os.environ['VERIFICATION_RUN_ID']
-              assert re.fullmatch(r'[0-9a-f]{40}', app_sha), 'Invalid app SHA'
-              assert re.fullmatch(r'[0-9]{1,15}', run_id), 'Invalid verification run ID'
+              run_id = os.environ.get('VERIFICATION_RUN_ID', '').strip()
+              check(re.fullmatch(r'[0-9a-f]{40}', app_sha) is not None, 'app_sha_format')
               base = 'https://api.github.com/repos/phuk-prog/drivemate-tests'
               class SafeRedirect(urllib.request.HTTPRedirectHandler):
                   def redirect_request(self, request, fp, code, message, headers, newurl):
@@ -51,12 +55,23 @@ jobs:
                   with opener.open(request, timeout=45) as response:
                       data = response.read()
                   return data if binary else json.loads(data)
+              if run_id == '':
+                  # No run ID supplied: select the newest successful full verification of this exact app SHA on main.
+                  listing = get('/actions/workflows/test-app.yml/runs?branch=main&status=success&per_page=50')
+                  matches = [r for r in listing['workflow_runs']
+                             if r['display_title'] == 'DriveMate verification: ' + app_sha]
+                  check(matches != [], 'no_successful_verification_for_app_sha')
+                  run_id = str(matches[0]['id'])
+              if re.fullmatch(r'[0-9]{1,15}', run_id) is None:
+                  check(re.fullmatch(r'[0-9a-f]{40}', run_id) is None, 'run_id_is_commit_sha_not_run_id')
+                  check(False, 'run_id_format')
+              print(json.dumps({'verification_run_id': run_id}, sort_keys=True))
               run = get('/actions/runs/' + run_id)
-              assert run['repository']['full_name'] == 'phuk-prog/drivemate-tests'
-              assert run['status'] == 'completed' and run['conclusion'] == 'success'
-              assert run['path'] == '.github/workflows/test-app.yml' and run['head_branch'] == 'main'
-              assert run['event'] in ('push', 'workflow_dispatch')
-              assert run['display_title'] == 'DriveMate verification: ' + app_sha
+              check(run['repository']['full_name'] == 'phuk-prog/drivemate-tests', 'run_repository')
+              check(run['status'] == 'completed' and run['conclusion'] == 'success', 'run_not_successful')
+              check(run['path'] == '.github/workflows/test-app.yml' and run['head_branch'] == 'main', 'run_workflow_or_branch')
+              check(run['event'] in ('push', 'workflow_dispatch'), 'run_event')
+              check(run['display_title'] == 'DriveMate verification: ' + app_sha, 'run_title_app_sha')
               jobs = []
               page = 1
               while True:
@@ -64,32 +79,39 @@ jobs:
                   jobs.extend(batch)
                   if len(batch) < 100: break
                   page += 1
-              assert jobs and all(j['status'] == 'completed' and j['conclusion'] == 'success' for j in jobs)
+              check(bool(jobs) and all(j['status'] == 'completed' and j['conclusion'] == 'success' for j in jobs),
+                    'jobs_not_all_successful')
               successful = {step['name'] for job in jobs for step in job.get('steps', []) if step['conclusion'] == 'success'}
               required = {'Run tests and lint without publishing private output', 'Check workflow contracts',
                           'Confirm no APK was created', 'Publish sanitized results', 'Upload sanitized results',
-                          'Remove private checkout and compiler output'}
-              assert required <= successful
+                          'Remove private checkout and compiler output', 'Compile Category A emulator test sources (no APK)'}
+              missing = sorted(required - successful)
+              if missing:
+                  print(json.dumps({'missing_steps': missing}, sort_keys=True))
+              check(not missing, 'required_steps_missing')
               artifacts = get('/actions/runs/' + run_id + '/artifacts?per_page=100')['artifacts']
               matches = [a for a in artifacts if a['name'] == 'DriveMate-verification-results' and not a['expired']]
-              assert len(matches) == 1
+              check(len(matches) == 1, 'result_artifact_missing_or_ambiguous')
               archive = get('/actions/artifacts/' + str(matches[0]['id']) + '/zip', binary=True)
               with zipfile.ZipFile(io.BytesIO(archive)) as z:
-                  assert z.namelist() == ['verification-result.json']
+                  check(z.namelist() == ['verification-result.json'], 'result_artifact_contents')
                   proof = json.loads(z.read('verification-result.json'))
-              assert proof['app_sha'] == app_sha and proof['harness_sha'] == run['head_sha']
-              assert str(proof['run_id']) == run_id and int(proof['run_attempt']) == run['run_attempt']
+              check(proof['app_sha'] == app_sha and proof['harness_sha'] == run['head_sha'], 'proof_revision_mismatch')
+              check(str(proof['run_id']) == run_id and int(proof['run_attempt']) == run['run_attempt'], 'proof_run_mismatch')
               totals = proof['unit_tests']
-              assert totals['tests'] >= 118 and all(totals[k] == 0 for k in ('failures', 'errors', 'skipped'))
+              check(totals['tests'] >= 118 and all(totals[k] == 0 for k in ('failures', 'errors', 'skipped')), 'unit_test_totals')
               contracts = proof['workflow_contracts']
-              assert contracts['tests'] >= 20 and contracts['failures'] == contracts['errors'] == 0
-              assert proof['lint']['errors'] == 0 and proof['apk_created'] is False
+              check(contracts['tests'] >= 20 and contracts['failures'] == contracts['errors'] == 0, 'contract_totals')
+              check(proof['lint']['errors'] == 0 and proof['apk_created'] is False, 'lint_or_apk_evidence')
               print(json.dumps({'app_sha': app_sha, 'verification_run_id': run_id,
                                 'verification_attempt': run['run_attempt'], 'prerequisite_valid': True}, sort_keys=True))
           try:
               verify()
+          except Check as error:
+              print('::error::Prerequisite check failed: code=' + str(error) + '; raw output withheld')
+              raise SystemExit(1)
           except Exception as error:
-              print('::error::Prerequisite verification failed: ' + type(error).__name__ + '; raw output withheld')
+              print('::error::Prerequisite check failed: code=unexpected_' + type(error).__name__ + '; raw output withheld')
               raise SystemExit(1)
           PY_VERIFY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
