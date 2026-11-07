@@ -12,7 +12,7 @@ SERIAL = "emulator-5554"
 CLASS = "com.drivemate.app.CategoryAEmulatorTest"
 
 PHASES = {
-    "activity-ready", "permission-dialog", "permission-denied", "permission-granted",
+    "activity-ready", "control-state", "permission-dialog", "permission-denied", "permission-granted",
     "permission-request-ready", "denial-callback", "controlled-provider",
     "tracker-diagnostics", "marker-native-diagnostics", "capture-control",
     "screen-control-verified", "native-control-positive", "native-control-negative",
@@ -53,7 +53,7 @@ BOOLEAN_FIELDS = {
     "foreground_layer_visible", "background_layer_visible",
     "expected_passed", "actual_passed", "control_source_present",
     "control_layer_present", "control_on_screen",
-    "control_image_present", "control_layer_visible",
+    "control_image_present", "control_layer_visible", "source_missing", "layer_missing", "style_changed",
 }
 NUMBER_FIELDS = {
     "elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons",
@@ -68,7 +68,7 @@ NUMBER_FIELDS = {
     "foreground_rendered_features", "background_rendered_features",
     "timeout_ms", "expected_pixels_min", "expected_pixels_max",
     "actual_native_pixels", "actual_display_pixels",
-    "control_rendered_features", "control_offset_px", "control_readds", "style_identity", "map_zoom",
+    "control_rendered_features", "control_offset_px", "control_readds", "style_identity", "map_zoom", "readds",
 }
 STATUSES = {
     "STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE",

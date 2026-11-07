@@ -347,6 +347,7 @@ class CategoryAEmulatorTest {
 
     /** Bounded non-location evidence: distinguish off-screen control from missing rendering. */
     private var controlLatLng: org.maplibre.android.geometry.LatLng? = null
+    private var lastControlStyle = 0
 
     private fun nativeControlState(): Array<Pair<String, Any>> = main {
         val map = nativeMap()
@@ -390,7 +391,16 @@ class CategoryAEmulatorTest {
         fun ensureControl(): Boolean = main {
             val map = nativeMap() ?: throw AssertionError("native-control-map")
             val style = map.style ?: throw AssertionError("native-control-style")
-            if (style.getSource(sourceId) != null && style.getLayer(layerId) != null) return@main false
+            val identity = System.identityHashCode(style)
+            val changed = identity != lastControlStyle
+            lastControlStyle = identity
+            val sourceMissing = style.getSource(sourceId) == null
+            val layerMissing = style.getLayer(layerId) == null
+            if (!sourceMissing && !layerMissing && !changed) return@main false
+            report("control-state", "style_identity" to identity, "style_changed" to changed,
+                "source_missing" to sourceMissing, "layer_missing" to layerMissing,
+                "readds" to controlReadds)
+            if (!sourceMissing && !layerMissing) return@main false
             val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-control-fix")
             val fixPoint = map.projection.toScreenLocation(
                 org.maplibre.android.geometry.LatLng(fix.latitude, fix.longitude))
