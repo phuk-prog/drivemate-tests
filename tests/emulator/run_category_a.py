@@ -71,7 +71,26 @@ def run_case(class_name, method):
     return records
 
 
+def adb(*args, timeout=120):
+    proc = subprocess.run([ADB, "-s", SERIAL, *args], capture_output=True, text=True, timeout=timeout)
+    return proc.returncode
+
+
+def prepare_device():
+    """Install the disposable app and test APKs and reset state before any test runs."""
+    steps = {
+        "install-app": adb("install", "-r", os.environ["APK"]),
+        "install-instrumentation": adb("install", "-r", os.environ["TEST_APK"]),
+        "clear-app": adb("shell", "pm", "clear", PACKAGE),
+        "allow-mock-location": adb("shell", "appops", "set", PACKAGE, "android:mock_location", "allow"),
+    }
+    failed = [name for name, code in steps.items() if code != 0]
+    if failed:
+        raise AssertionError("prepare:" + failed[0])
+
+
 def run_basics():
+    prepare_device()
     records = []
     for class_name, method in CASES:
         records.extend(run_case(class_name, method))
