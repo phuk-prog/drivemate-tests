@@ -67,7 +67,7 @@ NUMBER_FIELDS = {
     "foreground_rendered_features", "background_rendered_features",
     "timeout_ms", "expected_pixels_min", "expected_pixels_max",
     "actual_native_pixels", "actual_display_pixels",
-    "control_rendered_features", "control_offset_px", "control_readds",
+    "control_rendered_features", "control_offset_px", "control_readds", "style_identity",
 }
 STATUSES = {
     "STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE",
@@ -313,8 +313,15 @@ def self_test():
                      sort_keys=True))
 
 
-def main():
+OBSERVER_PHASES = {
+    "permission-granted", "grant-native-marker", "screen-control-verified",
+    "native-control-positive", "native-control-negative", "capture-control",
+}
+
+
+def main(mode="acceptance"):
     report = {
+        "mode": mode,
         "app_sha": os.environ["APP_SHA"],
         "harness_sha": os.environ["GITHUB_SHA"],
         "run_id": os.environ["GITHUB_RUN_ID"],
@@ -337,6 +344,17 @@ def main():
         adb("clear-disposable-app", "shell", "pm", "clear", PACKAGE)
         adb("allow-controlled-provider", "shell", "appops", "set",
             PACKAGE, "android:mock_location", "allow")
+        if mode == "observer":
+            records, first = run_case("observerControlsOnly", OBSERVER_PHASES)
+            all_records.extend(records)
+            report["tests"] = 1
+            report["diagnostic_records"] += first["diagnostic_records"]
+            report["rejected_diagnostic_records"] += first["rejected_diagnostic_records"]
+            report["first_failure"] = first["first_failure"]
+            if not first["passed"]:
+                raise AssertionError("observer-controls")
+            report.update({"status": "passed", "failures": 0})
+            return
         required = {
             "permission-denied", "permission-granted", "grant-native-marker",
             "screen-control-verified", "native-control-positive",
@@ -403,5 +421,7 @@ if __name__ == "__main__":
         self_test()
     elif not sys.argv[1:]:
         main()
+    elif sys.argv[1:] == ["--observer"]:
+        main("observer")
     else:
         raise SystemExit("Unsupported argument")

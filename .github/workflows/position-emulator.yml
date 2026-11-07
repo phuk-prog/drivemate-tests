@@ -12,6 +12,12 @@ on:
         required: false
         default: ''
         type: string
+      mode:
+        description: observer runs only the screen and native controls; acceptance runs all Category A checks
+        required: false
+        default: acceptance
+        type: choice
+        options: [acceptance, observer]
 permissions:
   contents: read
   actions: read
@@ -132,6 +138,8 @@ jobs:
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
           log-accepted-android-sdk-licenses: false
+      - name: Restore Gradle caches keyed on the exact app revision
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - name: Install emulator and build tooling
         run: |
           if ! sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'emulator' 'system-images;android-28;default;x86_64' > "$RUNNER_TEMP/position-sdk.log" 2>&1; then
@@ -195,7 +203,7 @@ jobs:
       - name: Run all Category A emulator acceptance checks
         id: category_a_acceptance
         timeout-minutes: 15
-        run: python3 harness/tests/emulator/run_category_a.py
+        run: python3 harness/tests/emulator/run_category_a.py ${{ inputs.mode == 'observer' && '--observer' || '' }}
       - name: Upload sanitized Category A acceptance result (pass or fail)
         if: ${{ always() && steps.category_a_acceptance.outcome != 'skipped' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -360,6 +360,7 @@ class CategoryAEmulatorTest {
             map.queryRenderedFeatures(point, "category-a-render-control-layer").size
         }.getOrDefault(0) else 0
         arrayOf<Pair<String, Any>>(
+            "style_identity" to (style?.let { System.identityHashCode(it) } ?: 0),
             "control_source_present" to (source != null),
             "control_layer_present" to (layer != null),
             "control_on_screen" to onScreen,
@@ -738,6 +739,26 @@ class CategoryAEmulatorTest {
     }
 
     /** Host revokes the permission between invocations because Android kills the app on revoke. */
+    /** Fast observer gate: proves the screen observer and native control before acceptance. */
+    @Test fun observerControlsOnly() {
+        try {
+            installControlledProvider()
+            start()
+            val notice = device.wait(Until.findObject(By.text("Continue")), 15_000)
+                ?: throw AssertionError("location-notice")
+            notice.click()
+            requestPermission()
+            permissionAnswer(true)
+            await("permission-granted") { preciseGranted() }
+            main { session.startLocation() }
+            freshFix("grant-first-fix")
+            await("grant-native-marker") { nativeEnabled() && main { session.positionReliable } }
+            isolatedStyle("native-style-loaded")
+            calibrateDisplayCapture()
+            calibrateNativeSymbolCapture()
+        } finally { close() }
+    }
+
     @Test fun revokedPermissionThenRestoredCallback() {
         try {
             installControlledProvider()
