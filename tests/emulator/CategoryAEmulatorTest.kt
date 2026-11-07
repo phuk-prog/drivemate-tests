@@ -349,6 +349,9 @@ class CategoryAEmulatorTest {
     private var controlLatLng: org.maplibre.android.geometry.LatLng? = null
     private var lastControlStyle = 0
 
+    // Sanitised records allow 0..10,000,000 only; identity hashes are unbounded and can be negative.
+    private fun styleLabel(style: Any): Int = Math.floorMod(System.identityHashCode(style), 9_999_991)
+
     private fun nativeControlState(): Array<Pair<String, Any>> = main {
         val map = nativeMap()
         val style = map?.style
@@ -364,7 +367,7 @@ class CategoryAEmulatorTest {
             map.queryRenderedFeatures(point, "category-a-render-control-layer").size
         }.getOrDefault(0) else 0
         arrayOf<Pair<String, Any>>(
-            "style_identity" to (style?.let { System.identityHashCode(it) } ?: 0),
+            "style_identity" to (style?.let { styleLabel(it) } ?: 0),
             "control_image_present" to (style?.getImage(CONTROL_IMAGE_ID) != null),
             "control_source_present" to (source != null),
             "control_layer_present" to (layer != null),
@@ -391,7 +394,7 @@ class CategoryAEmulatorTest {
         fun ensureControl(): Boolean = main {
             val map = nativeMap() ?: throw AssertionError("native-control-map")
             val style = map.style ?: throw AssertionError("native-control-style")
-            val identity = System.identityHashCode(style)
+            val identity = styleLabel(style)
             val changed = identity != lastControlStyle
             lastControlStyle = identity
             val sourceMissing = style.getSource(sourceId) == null
@@ -434,7 +437,7 @@ class CategoryAEmulatorTest {
                 arrayOf<Pair<String, Any>>("expected_pixels_min" to 101,
                     "actual_native_pixels" to nativePositive,
                     "actual_display_pixels" to displayPositive,
-                    "control_offset_px" to CONTROL_OFFSET_PX,
+                    "control_offset_px" to CONTROL_OFFSET_PX.toInt(),
                     "control_readds" to controlReadds) + nativeControlState()
             }) {
                 if (ensureControl()) controlReadds++
