@@ -67,7 +67,7 @@ NUMBER_FIELDS = {
     "foreground_rendered_features", "background_rendered_features",
     "timeout_ms", "expected_pixels_min", "expected_pixels_max",
     "actual_native_pixels", "actual_display_pixels",
-    "control_rendered_features", "control_offset_px",
+    "control_rendered_features", "control_offset_px", "control_readds",
 }
 STATUSES = {
     "STOPPED", "WAITING", "GOOGLE", "GPS", "APPROXIMATE",
