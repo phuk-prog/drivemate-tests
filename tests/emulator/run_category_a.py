@@ -9,11 +9,12 @@ import sys
 ADB = os.path.join(os.environ.get("ANDROID_HOME", ""), "platform-tools", "adb")
 SERIAL = "emulator-5554"
 PACKAGE = "com.drivemate.app"
-CLASS = "com.drivemate.app.CategoryAEmulatorTest"
-TEST = "categoryABasics"
+CASES = [("com.drivemate.app.CategoryAEmulatorTest", "categoryABasics"),
+         ("com.drivemate.app.PlainMapTest", "plainMapPaintsKnownSymbol")]
 REQUIRED = [
     "controlled-provider", "permission-denied", "permission-granted",
     "grant-first-fix", "grant-native-marker", "native-control-positive",
+    "plain-map-activity", "plain-map-style", "plain-map-paints",
 ]
 PHASES = set(REQUIRED) | {"activity-ready", "permission-request-ready", "failure-detail"}
 BOOLEAN_FIELDS = {"passed"}
@@ -52,14 +53,14 @@ def self_test():
     print(json.dumps({"self_test": "passed"}, sort_keys=True))
 
 
-def run_basics():
+def run_case(class_name, method):
     proc = subprocess.run(
-        [ADB, "-s", SERIAL, "shell", "am", "instrument", "-w", "-r", "-e", "class", f"{CLASS}#{TEST}",
+        [ADB, "-s", SERIAL, "shell", "am", "instrument", "-w", "-r", "-e", "class", f"{class_name}#{method}",
          PACKAGE + ".test/androidx.test.runner.AndroidJUnitRunner"],
         capture_output=True, text=True, timeout=600,
     )
     # Raw instrumentation output stays in the ephemeral runner; only sanitised records are kept.
-    pathlib.Path(os.environ["RUNNER_TEMP"], "position-basics.log").write_text(proc.stdout + proc.stderr)
+    pathlib.Path(os.environ["RUNNER_TEMP"], "position-" + method + ".log").write_text(proc.stdout + proc.stderr)
     records = []
     prefix = "INSTRUMENTATION_STATUS: category_a="
     for line in (proc.stdout + proc.stderr).splitlines():
@@ -67,6 +68,13 @@ def run_basics():
             record = sanitized_record(line[len(prefix):])
             if record is not None:
                 records.append(record)
+    return records
+
+
+def run_basics():
+    records = []
+    for class_name, method in CASES:
+        records.extend(run_case(class_name, method))
     return records
 
 
@@ -86,6 +94,7 @@ def main():
         records = run_basics()
         passed = {r["phase"] for r in records if r.get("passed") is True}
         report["passed_phases"] = sorted(passed & set(REQUIRED))
+        report["steps"] = [{"step": phase, "result": "passed" if phase in passed else "not passed"} for phase in REQUIRED]
         failures = [r for r in records if r["phase"] == "failure-detail"]
         if failures:
             report["first_failure"] = {k: v for k, v in failures[0].items() if k != "phase"}
@@ -100,8 +109,9 @@ def main():
         output = pathlib.Path("public-results/category-a-emulator.json")
         output.parent.mkdir(exist_ok=True)
         output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-        print(json.dumps({"status": report["status"], "passed_phases": report["passed_phases"],
-                          "first_failure": report["first_failure"]}, sort_keys=True))
+        for step in report["steps"]:
+            print("Category A basic step: " + step["step"] + " -> " + step["result"])
+        print(json.dumps({"status": report["status"], "first_failure": report["first_failure"]}, sort_keys=True))
     if report["status"] != "passed":
         raise SystemExit(1)
 
