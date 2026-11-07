@@ -53,7 +53,7 @@ BOOLEAN_FIELDS = {
     "foreground_layer_visible", "background_layer_visible",
     "expected_passed", "actual_passed", "control_source_present",
     "control_layer_present", "control_on_screen",
-    "control_image_present", "control_layer_visible", "source_missing", "layer_missing", "style_changed",
+    "control_image_present", "control_layer_visible", "style_fully_loaded", "source_missing", "layer_missing", "style_changed",
 }
 NUMBER_FIELDS = {
     "elapsed_ms", "amber_pixels", "delay_ms", "allow_buttons",

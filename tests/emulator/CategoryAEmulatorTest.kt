@@ -400,9 +400,12 @@ class CategoryAEmulatorTest {
             val sourceMissing = style.getSource(sourceId) == null
             val layerMissing = style.getLayer(layerId) == null
             if (!sourceMissing && !layerMissing && !changed) return@main false
+            val loaded = style.isFullyLoaded
             report("control-state", "style_identity" to identity, "style_changed" to changed,
                 "source_missing" to sourceMissing, "layer_missing" to layerMissing,
-                "readds" to controlReadds)
+                "style_fully_loaded" to loaded, "readds" to controlReadds)
+            // Adding to a style that is still loading registers the layer without a paint, so wait.
+            if (!loaded) return@main false
             if (!sourceMissing && !layerMissing) return@main false
             val fix = map.locationComponent.lastKnownLocation ?: throw AssertionError("native-control-fix")
             val fixPoint = map.projection.toScreenLocation(
